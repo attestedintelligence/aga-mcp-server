@@ -20,7 +20,7 @@ export interface SubjectMetadata {
   [key: string]: unknown;
 }
 
-// ── Enforcement (130–136, 162–168) ──────────────────────────────
+// ── Enforcement (130-136, 162-168) ──────────────────────────────
 
 export type EnforcementAction =
   | 'TERMINATE'           // Ref 162: immediate kill
@@ -46,7 +46,7 @@ export interface EnforcementParams {           // Ref 130
   measurement_types: MeasurementType[];
 }
 
-// ── Policy & Disclosure (112, 138–142) ──────────────────────────
+// ── Policy & Disclosure (112, 138-142) ──────────────────────────
 
 export type Sensitivity = 'S1_LOW' | 'S2_MODERATE' | 'S3_HIGH' | 'S4_CRITICAL';
 export type DisclosureMode = 'PROOF_ONLY' | 'REVEAL_MIN' | 'REVEAL_FULL';
@@ -100,7 +100,7 @@ export interface PolicyArtifact {              // Ref 122 (Weave Piece)
 
 // ── Receipts (170, 172) ─────────────────────────────────────────
 // V3: Generated for EVERY measurement, not just drift. Per NIST filing:
-// "each measurement generates a signed receipt — match or mismatch"
+// "each measurement generates a signed receipt - match or mismatch"
 
 export interface SignedReceipt {                // Ref 172
   receipt_id: string;
@@ -118,7 +118,7 @@ export interface SignedReceipt {                // Ref 172
   portal_signature: SignatureBase64;
 }
 
-// ── Continuity Chain (180–196) ──────────────────────────────────
+// ── Continuity Chain (180-196) ──────────────────────────────────
 
 export type EventType =
   | 'GENESIS'
@@ -129,7 +129,10 @@ export type EventType =
   | 'ANCHOR_BATCH'
   | 'DISCLOSURE'
   | 'SUBSTITUTION'
-  | 'KEY_ROTATION';           // V3: key lifecycle event
+  | 'KEY_ROTATION'            // V3: key lifecycle event
+  | 'BEHAVIORAL_DRIFT'       // V2: behavioral drift detection
+  | 'DELEGATION'             // V2: constrained sub-agent delegation
+  | 'RE_ATTESTATION';        // V2: re-attestation after revocation
 
 export interface GenesisPayload {
   protocol_version: string;
@@ -163,7 +166,7 @@ export interface StructuralMetadata {          // Ref 190
   previous_leaf_hash: HashHex | null;
 }
 
-// ── Checkpoints (200–214) ───────────────────────────────────────
+// ── Checkpoints (200-214) ───────────────────────────────────────
 
 export interface CheckpointReference {
   merkle_root: HashHex;
@@ -179,7 +182,7 @@ export interface AnchorBatchPayload {
   leaf_count: number;
 }
 
-// ── Evidence Bundle (240–246) ───────────────────────────────────
+// ── Evidence Bundle (240-246) ───────────────────────────────────
 
 export interface EvidenceBundle {
   artifact: PolicyArtifact;
@@ -190,7 +193,7 @@ export interface EvidenceBundle {
   bundle_signature: SignatureBase64;
 }
 
-// ── Disclosure (250–256) ────────────────────────────────────────
+// ── Disclosure (250-256) ────────────────────────────────────────
 
 export interface DisclosureRequest {
   requested_claim_id: string;
@@ -210,7 +213,7 @@ export interface SubstitutionReceipt {
   signature: SignatureBase64;
 }
 
-// ── Portal State Machine (150, 270–280) ─────────────────────────
+// ── Portal State Machine (150, 270-280) ─────────────────────────
 
 export type PortalState =
   | 'INITIALIZATION'         // Ref 270
@@ -218,6 +221,7 @@ export type PortalState =
   | 'ACTIVE_MONITORING'      // Ref 274
   | 'DRIFT_DETECTED'         // Ref 276
   | 'PHANTOM_QUARANTINE'     // Ref 278
+  | 'SAFE_STATE'             // Ref 168: graceful degradation
   | 'TERMINATED';            // Ref 280
 
 export type VerificationTier = 'BRONZE' | 'SILVER' | 'GOLD';
@@ -233,7 +237,7 @@ export interface RevocationRecord {
   timestamp: string;
 }
 
-// ── Quarantine (220–230) ────────────────────────────────────────
+// ── Quarantine (220-230) ────────────────────────────────────────
 
 export interface QuarantineState {
   active: boolean;

@@ -9,3 +9,6 @@ export * from './quarantine.js';
 export * from './checkpoint.js';
 export * from './bundle.js';
 export * from './disclosure.js';
+export * from './behavioral.js';
+export * from './delegation.js';
+export * from './identity.js';

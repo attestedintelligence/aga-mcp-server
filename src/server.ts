@@ -1,353 +1,407 @@
 /**
- * AGA MCP Server. The Portal (ref 150) as an MCP service.
+ * AGA MCP Server V2.0.0 - The Portal (ref 150) as an MCP service.
  *
- * V3 NIST-aligned behaviors:
- * 1. Every measurement generates a receipt (match OR mismatch)
- * 2. TTL checked on every measurement (fail-closed)
- * 3. Mid-session revocation via revoke_artifact tool
- * 4. Governance middleware: portal state checked before tool execution
- * 5. Auto-chaining: every operation writes to continuity chain
+ * 20 tools, 4 resources, 3 prompts.
+ * USPTO Application No. 19/433,835
+ * NIST-2025-0035, NCCoE AI Agent Identity and Authorization
  */
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import { generateKeyPair, pkToHex } from './crypto/sign.js';
-import { sha256Str } from './crypto/hash.js';
-import { computeSubjectIdFromString } from './core/subject.js';
-import { performAttestation } from './core/attestation.js';
-import { generateArtifact, hashArtifact } from './core/artifact.js';
-import { Portal } from './core/portal.js';
-import { generateReceipt } from './core/receipt.js';
-import { createGenesisEvent, appendEvent, verifyChainIntegrity } from './core/chain.js';
-import { createCheckpoint, eventInclusionProof } from './core/checkpoint.js';
-import { generateBundle, verifyBundleOffline } from './core/bundle.js';
-import { processDisclosure } from './core/disclosure.js';
-import { initQuarantine, captureInput } from './core/quarantine.js';
-import { MemoryStorage, type AGAStorage } from './storage/index.js';
-import { utcNow } from './utils/timestamp.js';
-import type { EnforcementParams, DisclosurePolicy, QuarantineState, RevocationRecord } from './core/types.js';
+import { createContext } from './context.js';
+import { createGovernanceWrapper, type ToolHandler } from './middleware/governance.js';
 
-// ── Default Policies ────────────────────────────────────────────
+// ── Tool handlers ────────────────────────────────────────────────
+import { handleServerInfo } from './tools/server-info.js';
+import { handleInitChain } from './tools/init-chain.js';
+import { handleCreateArtifact } from './tools/create-artifact.js';
+import { handleMeasureSubject } from './tools/measure-subject.js';
+import { handleVerifyArtifact } from './tools/verify-artifact.js';
+import { handleStartMonitoring } from './tools/start-monitoring.js';
+import { handleGetPortalState } from './tools/get-portal-state.js';
+import { handleTriggerMeasurement } from './tools/trigger-measurement.js';
+import { handleGenerateReceipt } from './tools/generate-receipt.js';
+import { handleExportBundle } from './tools/export-bundle.js';
+import { handleVerifyBundle } from './tools/verify-bundle.js';
+import { handleDiscloseClaim } from './tools/disclose-claim.js';
+import { handleGetChain } from './tools/get-chain.js';
+import { handleQuarantineStatus } from './tools/quarantine-status.js';
+import { handleRevokeArtifact } from './tools/revoke-artifact.js';
+import { handleSetVerificationTier } from './tools/set-verification-tier.js';
+import { handleFullLifecycle } from './tools/full-lifecycle.js';
+import { handleMeasureBehavior } from './tools/measure-behavior.js';
+import { handleDelegateSubagent } from './tools/delegate-subagent.js';
+import { handleRotateKeys } from './tools/rotate-keys.js';
 
-const DEFAULT_ENFORCEMENT: EnforcementParams = {
-  measurement_cadence_ms: 1000, ttl_seconds: 3600,
-  enforcement_triggers: ['QUARANTINE', 'TERMINATE'],
-  re_attestation_required: true,
-  measurement_types: ['FILE_SYSTEM_STATE', 'CONFIG_MANIFEST'],
-};
+// ── Resources ────────────────────────────────────────────────────
+import { PROTOCOL_SPECIFICATION, SPECIFICATION_URI } from './resources/specification.js';
+import { generateSampleBundle, SAMPLE_BUNDLE_URI } from './resources/sample-bundle.js';
+import { CRYPTO_PRIMITIVES_DOC, CRYPTO_PRIMITIVES_URI } from './resources/crypto-primitives.js';
+import { PATENT_CLAIMS_DOC, PATENT_CLAIMS_URI } from './resources/patent-claims.js';
 
-const DEFAULT_CLAIMS: DisclosurePolicy = {
-  claims_taxonomy: [
-    { claim_id: 'identity.name', sensitivity: 'S3_HIGH', substitutes: ['identity.pseudonym', 'identity.org'], inference_risks: [], permitted_modes: ['PROOF_ONLY'] },
-    { claim_id: 'identity.pseudonym', sensitivity: 'S2_MODERATE', substitutes: ['identity.org'], inference_risks: [], permitted_modes: ['PROOF_ONLY', 'REVEAL_MIN'] },
-    { claim_id: 'identity.org', sensitivity: 'S1_LOW', substitutes: [], inference_risks: [], permitted_modes: ['PROOF_ONLY', 'REVEAL_MIN', 'REVEAL_FULL'] },
-    { claim_id: 'identity.age', sensitivity: 'S3_HIGH', substitutes: ['identity.age_range', 'identity.is_adult'], inference_risks: [], permitted_modes: ['PROOF_ONLY'] },
-    { claim_id: 'identity.age_range', sensitivity: 'S2_MODERATE', substitutes: ['identity.is_adult'], inference_risks: [], permitted_modes: ['PROOF_ONLY', 'REVEAL_MIN', 'REVEAL_FULL'] },
-    { claim_id: 'identity.is_adult', sensitivity: 'S1_LOW', substitutes: [], inference_risks: [], permitted_modes: ['PROOF_ONLY', 'REVEAL_FULL'] },
-  ],
-  substitution_rules: [],
-};
-
-const CLAIM_VALUES: Record<string, unknown> = {
-  'identity.name': 'Alice Johnson', 'identity.pseudonym': 'AJ-7742', 'identity.org': 'NeuroCrypt',
-  'identity.age': 32, 'identity.age_range': '25-34', 'identity.is_adult': true,
-};
+// ── Prompts ──────────────────────────────────────────────────────
+import { NCCOE_DEMO_PROMPT } from './prompts/nccoe-demo.js';
+import { GOVERNANCE_REPORT_PROMPT } from './prompts/governance-report.js';
+import { DRIFT_ANALYSIS_PROMPT } from './prompts/drift-analysis.js';
 
 // ── Server Factory ──────────────────────────────────────────────
 
 export async function createAGAServer(): Promise<McpServer> {
-  const server = new McpServer({ name: 'aga-mcp-server', version: '0.1.0' });
-  const storage: AGAStorage = new MemoryStorage();
-  await storage.initialize();
+  const server = new McpServer({ name: 'aga-mcp-server', version: '2.0.0' });
+  const ctx = await createContext();
 
-  const issuerKP = generateKeyPair();
-  const portalKP = generateKeyPair();
-  const chainKP  = generateKeyPair();
-  const portal   = new Portal();
-  let quarantine: QuarantineState | null = null;
-  let chainInitialized = false;
+  const quarantineRef = { get current() { return ctx.quarantine; } };
 
-  // ── Auto-chain helper (auto-inits if needed) ──────────────────
-  async function autoChain(type: Parameters<typeof appendEvent>[0], payload: unknown) {
-    if (!chainInitialized) {
-      const genesis = createGenesisEvent(chainKP, sha256Str('AGA Protocol Specification v1.0.0'));
-      await storage.storeEvent(genesis);
-      chainInitialized = true;
-      portal.sequenceCounter = 0;
-      portal.lastLeafHash = genesis.leaf_hash;
-    }
-    const prev = await storage.getLatestEvent();
-    if (!prev) throw new Error('Chain initialization failed');
-    const event = appendEvent(type, payload, prev, chainKP);
-    await storage.storeEvent(event);
-    portal.sequenceCounter = event.sequence_number;
-    portal.lastLeafHash = event.leaf_hash;
-    return event;
+  function governedTool(
+    name: string, description: string, schema: any,
+    handler: ToolHandler
+  ) {
+    const wrap = createGovernanceWrapper(ctx.portal, quarantineRef, name, ctx.behavioralMonitor);
+    server.tool(name, description, schema, wrap(handler));
   }
 
-  const j = (x: unknown) => ({ content: [{ type: 'text' as const, text: JSON.stringify(x, null, 2) }] });
+  // ══════════════════════════════════════════════════════════════
+  // 20 TOOLS
+  // ══════════════════════════════════════════════════════════════
 
-  // ══════════════════════════════════════════════════════════════
-  // TOOL: get_server_info
-  // ══════════════════════════════════════════════════════════════
-  server.tool('get_server_info', 'Get AGA server info, public keys, and portal state.', {}, async () => j({
-    server: 'AGA MCP Server', version: '0.1.0',
-    protocol: 'Attested Governance Artifacts v1.0.0',
-    patent: 'USPTO Application No. 19/433,835',
-    nist_references: ['NIST-2025-0035', 'NCCoE AI Agent Identity'],
-    issuer_public_key: pkToHex(issuerKP.publicKey),
-    portal_public_key: pkToHex(portalKP.publicKey),
-    chain_public_key: pkToHex(chainKP.publicKey),
-    chain_initialized: chainInitialized,
-    portal_state: portal.state,
-  }));
+  // 1. aga_server_info (ungoverned)
+  server.tool('aga_server_info',
+    'Get AGA server info, public keys, portal state, and framework alignment.',
+    {},
+    async () => handleServerInfo({} as any, ctx),
+  );
 
-  // ══════════════════════════════════════════════════════════════
-  // TOOL: get_portal_state — V3 RESTORED (was dropped in V2)
-  // ══════════════════════════════════════════════════════════════
-  server.tool('get_portal_state', 'Get current portal state, loaded artifact info, and enforcement status.', {}, async () => j({
-    state: portal.state,
-    artifact_loaded: !!portal.artifact,
-    sealed_hash: portal.artifact?.sealed_hash ?? null,
-    ttl_seconds: portal.artifact?.enforcement_parameters.ttl_seconds ?? null,
-    issued_at: portal.artifact?.issued_timestamp ?? null,
-    enforcement_triggers: portal.artifact?.enforcement_parameters.enforcement_triggers ?? [],
-    sequence_counter: portal.sequenceCounter,
-    quarantine_active: quarantine?.active ?? false,
-  }));
+  // Also register as get_server_info for backward compat
+  server.tool('get_server_info',
+    'Get AGA server info (alias for aga_server_info).',
+    {},
+    async () => handleServerInfo({} as any, ctx),
+  );
 
-  // ══════════════════════════════════════════════════════════════
-  // TOOL: init_chain (Claim 3a)
-  // ══════════════════════════════════════════════════════════════
-  server.tool('init_chain', 'Initialize continuity chain with genesis event. (Claim 3a)',
+  // 2. aga_init_chain (ungoverned)
+  server.tool('aga_init_chain',
+    'Initialize continuity chain with genesis event. (Claim 3a)',
     { specification_hash: z.string().optional() },
-    async ({ specification_hash }) => {
-      if (chainInitialized) return j({ success: false, error: 'Chain already initialized' });
-      const genesis = createGenesisEvent(chainKP, specification_hash ?? sha256Str('AGA Protocol Specification v1.0.0'));
-      await storage.storeEvent(genesis);
-      chainInitialized = true;
-      portal.sequenceCounter = 0;
-      portal.lastLeafHash = genesis.leaf_hash;
-      return j({ success: true, genesis_event_id: genesis.event_id, genesis_leaf_hash: genesis.leaf_hash });
-    }
+    async (args) => handleInitChain(args, ctx),
   );
 
-  // ══════════════════════════════════════════════════════════════
-  // TOOL: attest_subject (Claims 1a-1d)
-  // ══════════════════════════════════════════════════════════════
-  server.tool('attest_subject',
-    'Attest subject, generate sealed Policy Artifact. Auto-loads into portal. (Claims 1a-1d)',
+  // Also register as init_chain for backward compat
+  server.tool('init_chain',
+    'Initialize continuity chain (alias for aga_init_chain). (Claim 3a)',
+    { specification_hash: z.string().optional() },
+    async (args) => handleInitChain(args, ctx),
+  );
+
+  // 3. aga_create_artifact (ungoverned)
+  server.tool('aga_create_artifact',
+    'Attest subject, generate sealed Policy Artifact, load into portal. Accepts content or pre-computed hashes. (Claims 1a-1d)',
     {
-      subject_content: z.string().describe('Content/bytes of the subject'),
-      subject_metadata: z.object({ filename: z.string().optional(), version: z.string().optional(), author: z.string().optional(), content_type: z.string().optional() }),
+      subject_content: z.string().optional().describe('Content/bytes of the subject'),
+      subject_bytes_hash: z.string().optional().describe('Pre-computed SHA-256 bytes hash'),
+      subject_metadata_hash: z.string().optional().describe('Pre-computed SHA-256 metadata hash'),
+      subject_metadata: z.object({
+        filename: z.string().optional(),
+        version: z.string().optional(),
+        author: z.string().optional(),
+        content_type: z.string().optional(),
+      }).optional(),
+      measurement_cadence_ms: z.number().optional(),
+      enforcement_action: z.string().optional(),
+      ttl_seconds: z.number().optional(),
+      measurement_types: z.array(z.string()).optional(),
       evidence_items: z.array(z.object({ label: z.string(), content: z.string() })).default([]),
+      behavioral_baseline: z.object({
+        permitted_tools: z.array(z.string()),
+        rate_limits: z.record(z.number()),
+        forbidden_sequences: z.array(z.array(z.string())),
+        window_ms: z.number(),
+      }).optional(),
     },
-    async ({ subject_content, subject_metadata, evidence_items }) => {
-      const subId = computeSubjectIdFromString(subject_content, subject_metadata);
-      const policyRef = sha256Str(JSON.stringify(DEFAULT_ENFORCEMENT));
-      const att = performAttestation({ subject_identifier: subId, policy_reference: policyRef, evidence_items });
-      if (!att.success || !att.sealed_hash || !att.seal_salt) return j({ success: false, error: att.rejection_reason });
-
-      const artifact = generateArtifact({
-        subject_identifier: subId, policy_reference: policyRef, policy_version: 1,
-        sealed_hash: att.sealed_hash, seal_salt: att.seal_salt,
-        enforcement_parameters: DEFAULT_ENFORCEMENT, disclosure_policy: DEFAULT_CLAIMS,
-        evidence_commitments: att.evidence_commitments, issuer_keypair: issuerKP,
-      });
-      await storage.storeArtifact(artifact);
-
-      portal.reset();
-      portal.loadArtifact(artifact, pkToHex(issuerKP.publicKey));
-      quarantine = null;
-
-      await autoChain('POLICY_ISSUANCE', { artifact_hash: hashArtifact(artifact), sealed_hash: artifact.sealed_hash });
-
-      return j({
-        success: true, artifact_hash: hashArtifact(artifact), sealed_hash: artifact.sealed_hash,
-        subject_identifier: subId, portal_state: portal.state,
-        issuer_public_key: pkToHex(issuerKP.publicKey),
-      });
-    }
+    async (args) => handleCreateArtifact(args, ctx),
   );
 
-  // ══════════════════════════════════════════════════════════════
-  // TOOL: measure_integrity (Claims 1e-1g)
-  // V3: Generates receipt for EVERY measurement (match or mismatch)
-  // V3: Checks TTL and revocation (fail-closed)
-  // ══════════════════════════════════════════════════════════════
-  server.tool('measure_integrity',
-    'Measure subject state, compare to sealed reference. Generates signed receipt for every measurement. (Claims 1e-1g)',
+  // 4. aga_measure_subject (governed)
+  governedTool('aga_measure_subject',
+    'Measure subject state, compare to sealed reference. Generates signed receipt. (Claims 1e-1g)',
     {
-      subject_content: z.string().describe('Current content of the subject'),
-      subject_metadata: z.object({ filename: z.string().optional(), version: z.string().optional(), author: z.string().optional(), content_type: z.string().optional() }),
+      subject_content: z.string().optional().describe('Raw content to measure'),
+      subject_bytes_hash: z.string().optional().describe('Pre-computed SHA-256 bytes hash (64 hex)'),
+      subject_metadata_hash: z.string().optional().describe('Pre-computed SHA-256 metadata hash (64 hex)'),
+      subject_metadata: z.object({
+        filename: z.string().optional(),
+        version: z.string().optional(),
+        author: z.string().optional(),
+        content_type: z.string().optional(),
+      }).optional(),
     },
-    async ({ subject_content, subject_metadata }) => {
-      if (!portal.artifact) return j({ success: false, error: 'No artifact loaded. Call attest_subject first.' });
-      if (portal.state === 'TERMINATED') return j({ success: false, error: 'Portal is terminated. Re-attest required.' });
-
-      const result = portal.measure(new TextEncoder().encode(subject_content), subject_metadata);
-      const artRef = hashArtifact(portal.artifact);
-      const currentStr = result.currentBytesHash ? `${result.currentBytesHash}||${result.currentMetaHash}` : 'UNAVAILABLE';
-      const sealedStr = `${result.expectedBytesHash}||${result.expectedMetaHash}`;
-
-      // Determine enforcement action
-      let action = null as import('./core/types.js').EnforcementAction | null;
-      let driftDesc: string | null = null;
-
-      if (!result.ttl_ok) {
-        driftDesc = 'TTL expired — fail-closed termination';
-        action = 'TERMINATE';
-      } else if (result.revoked) {
-        driftDesc = 'Artifact revoked — fail-closed termination';
-        action = 'TERMINATE';
-      } else if (!result.match) {
-        driftDesc = 'Subject modified — hash mismatch';
-        action = portal.artifact.enforcement_parameters.enforcement_triggers[0] ?? 'ALERT_ONLY';
-        portal.enforce(action);
-        if (action === 'QUARANTINE') quarantine = initQuarantine();
-      }
-
-      // V3: Receipt for EVERY measurement — match or mismatch
-      const receipt = generateReceipt({
-        subjectId: portal.artifact.subject_identifier, artifactRef: artRef,
-        currentHash: currentStr, sealedHash: sealedStr,
-        driftDetected: !result.match, driftDescription: driftDesc,
-        action, measurementType: portal.artifact.enforcement_parameters.measurement_types.join(','),
-        seq: portal.sequenceCounter + 1, prevLeaf: portal.lastLeafHash, portalKP,
-      });
-      await storage.storeReceipt(receipt);
-      await autoChain('INTERACTION_RECEIPT', { receipt_id: receipt.receipt_id, drift_detected: !result.match, enforcement_action: action });
-
-      return j({
-        success: true, match: result.match, drift_detected: !result.match,
-        ttl_ok: result.ttl_ok, revoked: result.revoked,
-        enforcement_action: action, portal_state: portal.state,
-        receipt_id: receipt.receipt_id,
-      });
-    }
+    async (args) => handleMeasureSubject({ ...args, subject_metadata: args.subject_metadata ?? {} }, ctx),
   );
 
-  // ══════════════════════════════════════════════════════════════
-  // TOOL: revoke_artifact — V3 NEW (NCCoE Phase 3b)
-  // ══════════════════════════════════════════════════════════════
-  server.tool('revoke_artifact',
-    'Revoke an active policy artifact mid-session. Portal terminates on next measurement. (NCCoE Phase 3b)',
+  // 5. aga_verify_artifact (ungoverned)
+  server.tool('aga_verify_artifact',
+    'Verify an artifact signature against an issuer public key.',
     {
-      sealed_hash: z.string().describe('Sealed hash of artifact to revoke'),
+      artifact: z.any().describe('The policy artifact to verify'),
+      issuer_public_key: z.string().optional().describe('Issuer public key (hex)'),
+    },
+    async (args) => {
+      const pk = args.issuer_public_key ?? (await import('./crypto/sign.js')).pkToHex(ctx.issuerKP.publicKey);
+      return handleVerifyArtifact({ artifact: args.artifact ?? ctx.activeArtifact, issuer_public_key: pk }, ctx);
+    },
+  );
+
+  // 6. aga_start_monitoring (governed)
+  governedTool('aga_start_monitoring',
+    'Start or restart behavioral monitoring with a new baseline.',
+    {
+      behavioral_baseline: z.object({
+        permitted_tools: z.array(z.string()),
+        rate_limits: z.record(z.number()),
+        forbidden_sequences: z.array(z.array(z.string())),
+        window_ms: z.number(),
+      }).optional(),
+    },
+    async (args) => handleStartMonitoring(args, ctx),
+  );
+
+  // 7. aga_get_portal_state (ungoverned)
+  server.tool('aga_get_portal_state',
+    'Get current portal state, loaded artifact info, and enforcement status.',
+    {},
+    async () => handleGetPortalState({} as any, ctx),
+  );
+
+  // 8. aga_trigger_measurement (governed)
+  governedTool('aga_trigger_measurement',
+    'Trigger a measurement of subject content and generate a receipt.',
+    {
+      subject_content: z.string().optional().describe('Raw content to measure'),
+      subject_bytes_hash: z.string().optional().describe('Pre-computed SHA-256 bytes hash (64 hex)'),
+      subject_metadata_hash: z.string().optional().describe('Pre-computed SHA-256 metadata hash (64 hex)'),
+      measurement_type: z.string().optional(),
+      subject_metadata: z.record(z.string()).optional(),
+    },
+    async (args) => handleTriggerMeasurement(args, ctx),
+  );
+
+  // 9. aga_generate_receipt (governed)
+  governedTool('aga_generate_receipt',
+    'Generate a signed measurement receipt manually.',
+    {
+      subject_content: z.string().optional(),
+      drift_detected: z.boolean().optional(),
+      drift_description: z.string().optional(),
+      measurement_type: z.string().optional(),
+      action_type: z.string().optional(),
+      action_detail: z.string().optional(),
+    },
+    async (args) => handleGenerateReceipt(args, ctx),
+  );
+
+  // 10. aga_export_bundle (governed)
+  governedTool('aga_export_bundle',
+    'Package artifact + receipts + Merkle proofs for offline verification. (Claim 9)',
+    {},
+    async () => handleExportBundle({} as any, ctx),
+  );
+
+  // 11. aga_verify_bundle (ungoverned - verification is always allowed)
+  server.tool('aga_verify_bundle',
+    'Verify evidence bundle offline - 4-step verification. (Section J)',
+    {
+      bundle: z.any(),
+      pinned_public_key: z.string().optional(),
+    },
+    async (args) => {
+      const pk = args.pinned_public_key ?? (await import('./crypto/sign.js')).pkToHex(ctx.issuerKP.publicKey);
+      return handleVerifyBundle({ bundle: args.bundle, pinned_public_key: pk }, ctx);
+    },
+  );
+
+  // 12. aga_disclose_claim (governed)
+  governedTool('aga_disclose_claim',
+    'Request disclosure of a claim. Auto-substitutes if sensitivity denied. (Claim 2)',
+    {
+      claim_id: z.string(),
+      requester_id: z.string().default('anonymous'),
+      mode: z.enum(['PROOF_ONLY', 'REVEAL_MIN', 'REVEAL_FULL']).default('REVEAL_MIN'),
+      disclosure_mode: z.enum(['PROOF_ONLY', 'REVEAL_MIN', 'REVEAL_FULL']).optional(),
+    },
+    async (args) => handleDiscloseClaim({
+      claim_id: args.claim_id,
+      requester_id: args.requester_id,
+      mode: args.disclosure_mode ?? args.mode,
+    }, ctx),
+  );
+
+  // 13. aga_get_chain (ungoverned)
+  server.tool('aga_get_chain',
+    'Get continuity chain events with optional verification and filtering. (Claim 3c)',
+    {
+      start_seq: z.number().optional(),
+      end_seq: z.number().optional(),
+      verify: z.boolean().optional(),
+      filter_type: z.string().optional().describe('Filter: all, behavioral, delegations, receipts, revocations, attestations, disclosure, keys'),
+    },
+    async (args) => handleGetChain(args, ctx),
+  );
+
+  // 14. aga_quarantine_status (ungoverned)
+  server.tool('aga_quarantine_status',
+    'Get quarantine state and forensic capture status. (Claim 5)',
+    {},
+    async () => handleQuarantineStatus({} as any, ctx),
+  );
+
+  // 15. aga_revoke_artifact (governed)
+  governedTool('aga_revoke_artifact',
+    'Revoke an active policy artifact mid-session. Supports TERMINATED or SAFE_STATE transition. (NCCoE Phase 3b)',
+    {
+      sealed_hash: z.string().optional().describe('Sealed hash of artifact to revoke'),
       reason: z.string().describe('Reason for revocation'),
+      transition_to: z.enum(['TERMINATED', 'SAFE_STATE']).optional(),
     },
-    async ({ sealed_hash, reason }) => {
-      portal.revoke(sealed_hash);
-      const record: RevocationRecord = {
-        artifact_sealed_hash: sealed_hash, reason,
-        revoked_by: pkToHex(issuerKP.publicKey), timestamp: utcNow(),
-      };
-      await autoChain('REVOCATION', record);
-      return j({ success: true, revoked: sealed_hash, portal_state: portal.state, reason });
-    }
+    async (args) => handleRevokeArtifact(args, ctx),
+  );
+
+  // 16. aga_set_verification_tier (ungoverned)
+  server.tool('aga_set_verification_tier',
+    'Set the verification tier (BRONZE, SILVER, GOLD).',
+    {
+      tier: z.enum(['BRONZE', 'SILVER', 'GOLD']),
+    },
+    async (args) => handleSetVerificationTier(args, ctx),
+  );
+
+  // 17. aga_demonstrate_lifecycle (ungoverned)
+  server.tool('aga_demonstrate_lifecycle',
+    'Execute full AGA lifecycle demo: attest → measure → drift → revoke → bundle → verify.',
+    {
+      subject_content: z.string().optional(),
+      subject_metadata: z.record(z.string()).optional(),
+      scenario: z.string().optional().describe('Scenario: drone, scada, or custom'),
+      include_drift: z.boolean().optional(),
+      include_revocation: z.boolean().optional(),
+      include_behavioral: z.boolean().optional(),
+    },
+    async (args) => handleFullLifecycle(args, ctx),
+  );
+
+  // 18. aga_measure_behavior (ungoverned)
+  server.tool('aga_measure_behavior',
+    'Measure behavioral patterns or record tool invocation. (NIST-2025-0035)',
+    {
+      tool_name: z.string().optional().describe('Tool name to record/test'),
+      record_only: z.boolean().optional().describe('If true, just record without measuring'),
+    },
+    async (args) => handleMeasureBehavior(args, ctx),
+  );
+
+  // 19. aga_delegate_to_subagent (governed)
+  governedTool('aga_delegate_to_subagent',
+    'Derive constrained policy artifact for sub-agent. Scope only diminishes. (NCCoE)',
+    {
+      sub_agent_id: z.string().optional(),
+      permitted_tools: z.array(z.string()).optional(),
+      enforcement_triggers: z.array(z.string()).optional(),
+      measurement_types: z.array(z.string()).optional(),
+      ttl_seconds: z.number().optional(),
+      requested_ttl_seconds: z.number().optional(),
+      delegation_purpose: z.string().optional(),
+      delegation_reason: z.string().optional(),
+    },
+    async (args) => handleDelegateSubagent(args, ctx),
+  );
+
+  // 20. aga_rotate_keys (governed)
+  governedTool('aga_rotate_keys',
+    'Rotate a keypair (issuer, portal, or chain). Old key should be revoked.',
+    {
+      key_type: z.enum(['issuer', 'portal', 'chain']).optional(),
+      keypair: z.enum(['issuer', 'portal', 'chain']).optional(),
+      reason: z.string().optional(),
+    },
+    async (args) => handleRotateKeys(args, ctx),
   );
 
   // ══════════════════════════════════════════════════════════════
-  // TOOL: verify_chain (Claim 3c)
+  // 4 RESOURCES
   // ══════════════════════════════════════════════════════════════
-  server.tool('verify_chain', 'Verify continuity chain integrity. (Claim 3c)', {}, async () => {
-    const events = await storage.getAllEvents();
-    if (!events.length) return j({ success: false, error: 'No events in chain' });
-    const result = verifyChainIntegrity(events);
-    return j({ success: true, chain_valid: result.valid, events_verified: events.length, broken_at: result.brokenAt, error: result.error });
-  });
 
-  // ══════════════════════════════════════════════════════════════
-  // TOOL: create_checkpoint (Claims 3d-3f)
-  // ══════════════════════════════════════════════════════════════
-  server.tool('create_checkpoint', 'Batch events into Merkle tree, anchor. (Claims 3d-3f)',
-    { anchor_network: z.string().default('local') },
-    async ({ anchor_network }) => {
-      const lastCP = await storage.getLatestCheckpoint();
-      const startSeq = lastCP ? lastCP.batch_end_sequence + 1 : 0;
-      const latest = await storage.getLatestEvent();
-      if (!latest) return j({ success: false, error: 'No events' });
-      const events = await storage.getEvents(startSeq, latest.sequence_number);
-      if (!events.length) return j({ success: false, error: 'No new events since last checkpoint' });
-      const { checkpoint, payload } = createCheckpoint(events, anchor_network);
-      await storage.storeCheckpoint(checkpoint);
-      await autoChain('ANCHOR_BATCH', payload);
-      return j({ success: true, merkle_root: checkpoint.merkle_root, events_checkpointed: events.length, transaction_id: checkpoint.transaction_id });
-    }
+  server.resource(
+    'protocol-specification',
+    SPECIFICATION_URI,
+    { mimeType: 'text/markdown', description: 'AGA Protocol Specification v2.0.0 with SPIFFE integration and framework alignment' },
+    async () => ({ contents: [{ uri: SPECIFICATION_URI, mimeType: 'text/markdown', text: PROTOCOL_SPECIFICATION }] }),
+  );
+
+  server.resource(
+    'sample-bundle',
+    SAMPLE_BUNDLE_URI,
+    { mimeType: 'application/json', description: 'Pre-generated cryptographically signed evidence bundle' },
+    async () => {
+      const { bundle, issuerPkHex } = generateSampleBundle();
+      const text = JSON.stringify({ issuer_public_key: issuerPkHex, bundle: JSON.parse(bundle) }, null, 2);
+      return { contents: [{ uri: SAMPLE_BUNDLE_URI, mimeType: 'application/json', text }] };
+    },
+  );
+
+  server.resource(
+    'crypto-primitives',
+    CRYPTO_PRIMITIVES_URI,
+    { mimeType: 'text/markdown', description: 'AGA cryptographic primitives documentation' },
+    async () => ({ contents: [{ uri: CRYPTO_PRIMITIVES_URI, mimeType: 'text/markdown', text: CRYPTO_PRIMITIVES_DOC }] }),
+  );
+
+  server.resource(
+    'patent-claims',
+    PATENT_CLAIMS_URI,
+    { mimeType: 'text/markdown', description: 'USPTO 19/433,835 patent claims mapped to 20 tools' },
+    async () => ({ contents: [{ uri: PATENT_CLAIMS_URI, mimeType: 'text/markdown', text: PATENT_CLAIMS_DOC }] }),
   );
 
   // ══════════════════════════════════════════════════════════════
-  // TOOL: generate_evidence_bundle (Claim 9)
+  // 3 PROMPTS
   // ══════════════════════════════════════════════════════════════
-  server.tool('generate_evidence_bundle', 'Package artifact + receipts + Merkle proofs for offline verification. (Claim 9)', {}, async () => {
-    const artifact = await storage.getLatestArtifact();
-    if (!artifact) return j({ success: false, error: 'No artifact' });
-    const cp = await storage.getLatestCheckpoint();
-    if (!cp) return j({ success: false, error: 'No checkpoint. Call create_checkpoint first.' });
-    const receipts = await storage.getReceiptsByArtifact(hashArtifact(artifact));
-    const batchEvents = await storage.getEvents(cp.batch_start_sequence, cp.batch_end_sequence);
-    const proofs = receipts
-      .filter(r => r.sequence_number >= cp.batch_start_sequence && r.sequence_number <= cp.batch_end_sequence)
-      .map(r => eventInclusionProof(batchEvents, r.sequence_number));
-    const bundle = generateBundle(artifact, receipts, proofs, cp, portalKP);
-    return j({ success: true, bundle, offline_verifiable: true, receipt_count: receipts.length, proof_count: proofs.length });
-  });
 
-  // ══════════════════════════════════════════════════════════════
-  // TOOL: verify_bundle_offline (Section J)
-  // ══════════════════════════════════════════════════════════════
-  server.tool('verify_bundle_offline', 'Verify evidence bundle offline. (Section J)',
-    { bundle: z.any(), pinned_public_key: z.string() },
-    async ({ bundle, pinned_public_key }) => j({ success: true, verification: verifyBundleOffline(bundle, pinned_public_key) })
+  server.prompt(
+    NCCOE_DEMO_PROMPT.name,
+    NCCOE_DEMO_PROMPT.description,
+    {
+      agent_code: z.string().optional().describe('The agent source code to attest'),
+      include_behavioral: z.string().optional().describe('Include behavioral drift detection phase'),
+    },
+    async (args) => ({
+      messages: [{
+        role: 'user' as const,
+        content: { type: 'text' as const, text: NCCOE_DEMO_PROMPT.template(args) },
+      }],
+    }),
   );
 
-  // ══════════════════════════════════════════════════════════════
-  // TOOL: request_claim (Claim 2)
-  // ══════════════════════════════════════════════════════════════
-  server.tool('request_claim', 'Request disclosure of a claim. Auto-substitutes if denied. (Claim 2)',
-    { claim_id: z.string(), requester_id: z.string().default('anonymous'), mode: z.enum(['PROOF_ONLY', 'REVEAL_MIN', 'REVEAL_FULL']).default('REVEAL_MIN') },
-    async ({ claim_id, requester_id, mode }) => {
-      const latest = await storage.getLatestEvent();
-      const result = processDisclosure(
-        { requested_claim_id: claim_id, requester_id, mode, timestamp: utcNow() },
-        DEFAULT_CLAIMS, CLAIM_VALUES, 1, latest?.sequence_number ?? 0, portalKP
-      );
-      if (result.substitution_receipt) await autoChain('SUBSTITUTION', result.substitution_receipt);
-      else await autoChain('DISCLOSURE', { claim_id, mode, permitted: result.permitted });
-      return j({ success: true, ...result });
-    }
+  server.prompt(
+    GOVERNANCE_REPORT_PROMPT.name,
+    GOVERNANCE_REPORT_PROMPT.description,
+    {},
+    async () => ({
+      messages: [{
+        role: 'user' as const,
+        content: { type: 'text' as const, text: GOVERNANCE_REPORT_PROMPT.template() },
+      }],
+    }),
   );
 
-  // ══════════════════════════════════════════════════════════════
-  // TOOL: list_claims
-  // ══════════════════════════════════════════════════════════════
-  server.tool('list_claims', 'List available claims with sensitivity levels.', {}, async () => {
-    return j({ claims: DEFAULT_CLAIMS.claims_taxonomy.map(c => ({ claim_id: c.claim_id, sensitivity: c.sensitivity, substitutes: c.substitutes, permitted_modes: c.permitted_modes })) });
-  });
-
-  // ══════════════════════════════════════════════════════════════
-  // TOOL: get_receipts — V3 NEW
-  // ══════════════════════════════════════════════════════════════
-  server.tool('get_receipts', 'Get all signed receipts, optionally filtered by artifact.',
-    { artifact_hash: z.string().optional() },
-    async ({ artifact_hash }) => {
-      const receipts = artifact_hash
-        ? await storage.getReceiptsByArtifact(artifact_hash)
-        : await storage.getAllReceipts();
-      return j({ count: receipts.length, receipts: receipts.map(r => ({ receipt_id: r.receipt_id, drift_detected: r.drift_detected, enforcement_action: r.enforcement_action, measurement_type: r.measurement_type, timestamp: r.timestamp })) });
-    }
-  );
-
-  // ══════════════════════════════════════════════════════════════
-  // TOOL: get_chain_events — V3 NEW
-  // ══════════════════════════════════════════════════════════════
-  server.tool('get_chain_events', 'Get continuity chain events.',
-    { start_seq: z.number().optional(), end_seq: z.number().optional() },
-    async ({ start_seq, end_seq }) => {
-      const events = (start_seq !== undefined && end_seq !== undefined)
-        ? await storage.getEvents(start_seq, end_seq)
-        : await storage.getAllEvents();
-      return j({ count: events.length, events: events.map(e => ({ sequence_number: e.sequence_number, event_type: e.event_type, event_id: e.event_id, timestamp: e.timestamp, leaf_hash: e.leaf_hash.slice(0, 16) + '...' })) });
-    }
+  server.prompt(
+    DRIFT_ANALYSIS_PROMPT.name,
+    DRIFT_ANALYSIS_PROMPT.description,
+    {
+      drift_type: z.string().optional().describe('Type of drift: binary, behavioral, or both'),
+    },
+    async (args) => ({
+      messages: [{
+        role: 'user' as const,
+        content: { type: 'text' as const, text: DRIFT_ANALYSIS_PROMPT.template(args) },
+      }],
+    }),
   );
 
   return server;

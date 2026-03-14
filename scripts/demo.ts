@@ -13,7 +13,7 @@ import { initQuarantine, captureInput } from '../src/core/quarantine.js';
 const log = (s: string) => process.stdout.write(s + '\n');
 log('');
 log('================================================================');
-log('  AGA PROTOCOL DEMO — NCCoE Lab Scenario');
+log('  AGA PROTOCOL DEMO - NCCoE Lab Scenario');
 log('  USPTO Application No. 19/433,835');
 log('  Referenced in: NIST-2025-0035, NCCoE AI Agent Identity');
 log('================================================================');

@@ -1,7 +1,7 @@
 import type { AGAStorage } from './interface.js';
 import type { PolicyArtifact, ContinuityEvent, SignedReceipt, CheckpointReference } from '../core/types.js';
 
-// Dynamic import — better-sqlite3 is optional (requires native build tools)
+// Dynamic import - better-sqlite3 is optional (requires native build tools)
 let Database: any;
 try {
   Database = (await import('better-sqlite3')).default;

@@ -21,7 +21,7 @@ import { createCheckpoint, eventInclusionProof } from '../../src/core/checkpoint
 import { generateBundle, verifyBundleOffline } from '../../src/core/bundle.js';
 import { initQuarantine, captureInput, releaseQuarantine } from '../../src/core/quarantine.js';
 
-describe('NCCoE Lab Demo — Full AGA Lifecycle', () => {
+describe('NCCoE Lab Demo - Full AGA Lifecycle', () => {
   const issuerKP = generateKeyPair();
   const portalKP = generateKeyPair();
   const chainKP = generateKeyPair();
@@ -127,7 +127,7 @@ describe('NCCoE Lab Demo — Full AGA Lifecycle', () => {
       subjectId: subId, artifactRef: artRef,
       currentHash: `${m3.currentBytesHash}||${m3.currentMetaHash}`,
       sealedHash: `${m3.expectedBytesHash}||${m3.expectedMetaHash}`,
-      driftDetected: true, driftDescription: 'Agent binary modified — prompt injection',
+      driftDetected: true, driftDescription: 'Agent binary modified - prompt injection',
       action: 'QUARANTINE', measurementType: 'EXECUTABLE_IMAGE',
       seq: 3, prevLeaf: null, portalKP,
     });

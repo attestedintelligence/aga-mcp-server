@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "aga": {
+      "command": "node",
+      "args": [
+        "C:\\Users\\neuro\\AIH\\aga-mcp-server\\dist\\index.js"
+      ]
+    }
+  }
+}

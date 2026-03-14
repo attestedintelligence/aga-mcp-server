@@ -1,13 +1,21 @@
 {
   "name": "@attested-intelligence/aga-mcp-server",
-  "version": "0.1.0",
-  "description": "MCP server implementing the Attested Governance Artifact protocol — cryptographic compliance for autonomous systems",
-  "author": "NeuroCrypt",
+  "version": "2.0.0",
+  "description": "MCP server implementing the Attested Governance Artifact (AGA) protocol - cryptographic compliance enforcement for autonomous AI systems. USPTO 19/433,835. 20 tools, 4 resources, 3 prompts.",
+  "author": "Attested Intelligence Holdings LLC",
   "license": "MIT",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
-  "bin": { "aga-mcp-server": "dist/index.js" },
+  "files": [
+    "dist/",
+    "README.md",
+    "LICENSE",
+    "PATENTS.md"
+  ],
+  "bin": {
+    "aga-mcp-server": "dist/index.js"
+  },
   "scripts": {
     "build": "tsc",
     "start": "node dist/index.js",
@@ -16,8 +24,10 @@
     "test:watch": "vitest",
     "test:crypto": "vitest run tests/crypto/",
     "test:core": "vitest run tests/core/",
+    "test:tools": "vitest run tests/tools/",
     "test:integration": "vitest run tests/integration/",
     "demo": "tsx scripts/demo.ts",
+    "benchmark": "tsx scripts/benchmark.ts",
     "lint": "tsc --noEmit",
     "prepublishOnly": "npm run build && npm run test"
   },
@@ -39,6 +49,24 @@
     "typescript": "^5.7.0",
     "vitest": "^2.1.0"
   },
-  "engines": { "node": ">=20.0.0" },
-  "keywords": ["mcp","attestation","governance","ai-governance","neurocrypt","runtime-integrity","continuity-chain"]
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "keywords": [
+    "mcp",
+    "mcp-server",
+    "attestation",
+    "governance",
+    "ai-governance",
+    "ai-safety",
+    "runtime-integrity",
+    "continuity-chain",
+    "zero-trust",
+    "nist",
+    "nccoe",
+    "spiffe",
+    "ed25519",
+    "evidence-bundle",
+    "policy-enforcement"
+  ]
 }

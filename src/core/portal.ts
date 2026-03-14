@@ -1,5 +1,5 @@
 /**
- * Portal (Sentinel) — Runtime Enforcement Boundary. Ref 150, 270-280.
+ * Portal (Sentinel) - Runtime Enforcement Boundary. Ref 150, 270-280.
  * V3: TTL + revocation checked every measurement. Fail-closed semantics.
  * Aligned with NCCoE filing Sections 3-4 and NIST-2025-0035.
  */
@@ -47,6 +47,7 @@ export class Portal {
   measure(subjectBytes: Uint8Array, meta: SubjectMetadata): MeasurementResult {
     if (!this.artifact) throw new Error('No artifact loaded');
     if (this.state === 'TERMINATED') throw new Error('Portal is terminated');
+    if (this.state === 'SAFE_STATE') throw new Error('Portal is in safe state - artifact revoked');
     const empty = { currentBytesHash: '', currentMetaHash: '',
       expectedBytesHash: this.artifact.subject_identifier.bytes_hash,
       expectedMetaHash: this.artifact.subject_identifier.metadata_hash };
@@ -75,16 +76,19 @@ export class Portal {
   enforce(action: EnforcementAction): void {
     if (this.state !== 'DRIFT_DETECTED') throw new Error(`Cannot enforce in state ${this.state}`);
     switch (action) {
-      case 'TERMINATE': case 'SAFE_STATE': this.state = 'TERMINATED'; break;
+      case 'TERMINATE': this.state = 'TERMINATED'; break;
+      case 'SAFE_STATE': this.state = 'SAFE_STATE'; break;
       case 'QUARANTINE': this.state = 'PHANTOM_QUARANTINE'; break;
       case 'ALERT_ONLY': this.state = 'ACTIVE_MONITORING'; break;
       default: break;
     }
   }
 
-  revoke(sealedHash: string): void {
+  revoke(sealedHash: string, transitionTo?: 'TERMINATED' | 'SAFE_STATE'): void {
     this.revocations.add(sealedHash);
-    if (this.artifact?.sealed_hash === sealedHash) this.state = 'TERMINATED';
+    if (this.artifact?.sealed_hash === sealedHash) {
+      this.state = transitionTo === 'SAFE_STATE' ? 'SAFE_STATE' : 'TERMINATED';
+    }
   }
 
   isRevoked(sealedHash: string): boolean { return this.revocations.has(sealedHash); }
