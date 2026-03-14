@@ -2,9 +2,6 @@
 
 MCP server implementing the Attested Governance Artifact (AGA) protocol - cryptographic compliance enforcement for autonomous AI systems.
 
-**Patent Pending:** USPTO Application No. 19/433,835
-**Referenced in:** NIST-2025-0035, NCCoE AI Agent Identity and Authorization
-
 ## What It Does
 
 This server acts as a **Portal** (zero-trust Policy Enforcement Point) for AI agents. Every tool call is attested, measured against a sealed cryptographic reference, and logged to a tamper-evident continuity chain with signed receipts.
