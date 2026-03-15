@@ -1,11 +1,7 @@
-# AGA MCP Server — Complete Implementation Specification
+# AGA MCP Server - Complete Implementation Specification
 
 **Package:** `@attested-intelligence/aga-mcp-server@0.1.0`
 **Repository:** https://github.com/attestedintelligence/aga-mcp-server
-**Location:** `C:\Users\neuro\AIH\aga-mcp-server`
-**Patent:** USPTO Application No. 19/433,835
-**NIST References:** NIST-2025-0035 (AI Agent Transparency), NCCoE AI Agent Identity and Authorization
-**Date:** 2026-03-05
 
 ---
 
@@ -589,7 +585,7 @@ Future (v1.0.0):
 
 ### Build + Test + Demo
 ```bash
-cd C:\Users\neuro\AIH\aga-mcp-server
+cd C:\aga-mcp-server
 npm run build          # TypeScript compilation
 npm test               # 63 tests
 npm run demo           # Full NCCoE lab scenario output
@@ -624,9 +620,5 @@ npx tsx scripts/generate-keypair.ts
 | MemoryStorage as default | Sufficient for MCP server lifecycle (state is session-scoped); SQLite available when build tools are installed |
 | Governance middleware as wrapper | Non-invasive — existing tool handlers unchanged, enforcement added as a layer |
 | Behavioral monitor in middleware | Natural interception point — every governed tool call passes through anyway |
-| Scope-only-diminishes delegation | NCCoE filing requirement — prevents privilege escalation through delegation chains |
 
 ---
-
-*This document reflects the state of the codebase as of v0.4.0 (commit 8f77321), 2026-03-05.*
-*Generated for Attested Intelligence Holdings LLC — patent prosecution and NIST filing reference.*
