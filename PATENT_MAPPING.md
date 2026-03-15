@@ -20,14 +20,3 @@
 | 10 pinned key | portal load | core/portal.ts | `Portal.loadArtifact()` |
 | 11 phantom execution | `measure_integrity` | core/quarantine.ts | `captureInput()` |
 | 12 graceful degradation | `measure_integrity` | core/portal.ts | TTL + fail-closed |
-
-## NIST Filing Alignment
-
-| NIST Promise | Implementation |
-|---|---|
-| "each measurement generates a signed receipt" | `measure_integrity` generates receipt for match AND mismatch |
-| "fail-closed semantics" | Portal checks TTL + revocation on every measurement |
-| "mid-session revocation" (NCCoE 3b) | `revoke_artifact` tool + REVOCATION chain event |
-| "phantom execution" | `QUARANTINE` enforcement → forensic capture buffer |
-| "offline verification" | `generate_evidence_bundle` + `verify_bundle_offline` |
-| "graduated enforcement" | TERMINATE / QUARANTINE / SAFE_STATE / ALERT_ONLY |
