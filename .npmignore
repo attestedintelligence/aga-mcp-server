@@ -1,0 +1,10 @@
+tests/
+scripts/
+*.test.ts
+*.sqlite
+.gitignore
+vitest.config.ts
+tsconfig.json
+config/
+PATENT_MAPPING.md
+.github/
