@@ -1,6 +1,6 @@
 {
   "name": "@attested-intelligence/aga-mcp-server",
-  "version": "2.2.1",
+  "version": "2.2.2",
   "description": "MCP server for cryptographic AI agent governance. Seal policy artifacts, enforce at runtime, prove with signed receipts and offline-verifiable evidence bundles.",
   "mcpName": "io.github.attestedintelligence/aga-mcp-server",
   "author": "Attested Intelligence Holdings LLC",
