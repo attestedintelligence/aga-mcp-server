@@ -3,7 +3,7 @@
     "aga": {
       "command": "node",
       "args": [
-        "REPLACE_WITH_ABSOLUTE_PATH/aga-mcp-server/dist/index.js"
+        "/path/to/AGA/dist/index.js"
       ]
     }
   }

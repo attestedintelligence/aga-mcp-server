@@ -2,10 +2,24 @@ import { signStr, sigToB64, b64ToSig, hexToPk, verifyStr, pkToHex } from '../cry
 import { verifyProof } from '../crypto/merkle.js';
 import { canonicalize } from '../utils/canonical.js';
 import type { KeyPair, MerkleInclusionProof } from '../crypto/types.js';
-import type { EvidenceBundle, PolicyArtifact, SignedReceipt, CheckpointReference } from './types.js';
+import type { EvidenceBundle, PolicyArtifact, SignedReceipt, CheckpointReference, VerificationTier } from './types.js';
 
-export function generateBundle(artifact: PolicyArtifact, receipts: SignedReceipt[], proofs: MerkleInclusionProof[], checkpoint: CheckpointReference, kp: KeyPair): EvidenceBundle {
-  const unsigned = { artifact, receipts, merkle_proofs: proofs, checkpoint_reference: checkpoint, public_key: pkToHex(kp.publicKey) };
+/**
+ * Generate an evidence bundle. Original signature preserved for backward compatibility.
+ * Tiered bundle generation (CAISI §3b):
+ *   BRONZE - artifact + receipts only (proofs omitted)
+ *   SILVER - artifact + receipts + Merkle proofs
+ *   GOLD   - artifact + receipts + Merkle proofs + anchor checkpoint reference
+ */
+export function generateBundle(artifact: PolicyArtifact, receipts: SignedReceipt[], proofs: MerkleInclusionProof[], checkpoint: CheckpointReference, kp: KeyPair, tier?: VerificationTier): EvidenceBundle {
+  const effectiveTier = tier ?? 'GOLD';
+  const bundleProofs = effectiveTier === 'BRONZE' ? [] : proofs;
+  const bundleCheckpoint: CheckpointReference = effectiveTier === 'GOLD' ? checkpoint : {
+    ...checkpoint,
+    transaction_id: effectiveTier === 'BRONZE' ? '' : checkpoint.transaction_id,
+    anchor_network: effectiveTier === 'BRONZE' ? '' : checkpoint.anchor_network,
+  };
+  const unsigned = { artifact, receipts, merkle_proofs: bundleProofs, checkpoint_reference: bundleCheckpoint, public_key: pkToHex(kp.publicKey), verification_tier: effectiveTier };
   return { ...unsigned, bundle_signature: sigToB64(signStr(canonicalize(unsigned), kp.secretKey)) };
 }
 

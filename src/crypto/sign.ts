@@ -1,4 +1,5 @@
 import * as ed from '@noble/ed25519';
+import { sha256 } from '@noble/hashes/sha256';
 import { sha512 } from '@noble/hashes/sha512';
 import { bytesToHex, hexToBytes } from '@noble/hashes/utils';
 import type { KeyPair, Signature, SignatureBase64 } from './types.js';
@@ -33,3 +34,9 @@ export const sigToB64 = (s: Signature): SignatureBase64 => Buffer.from(s).toStri
 export const b64ToSig = (b: SignatureBase64): Signature => new Uint8Array(Buffer.from(b, 'base64'));
 export const pkToHex = (pk: Uint8Array): string => bytesToHex(pk);
 export const hexToPk = (h: string): Uint8Array => hexToBytes(h);
+
+/** Key fingerprint: SHA-256 prefix of public key hex, 16-char hex identifier. */
+export function keyFingerprint(publicKeyHex: string): string {
+  const hash = bytesToHex(sha256(new TextEncoder().encode(publicKeyHex)));
+  return hash.slice(0, 16);
+}

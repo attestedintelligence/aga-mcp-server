@@ -18,6 +18,15 @@ export interface MeasurementResult {
   expectedMetaHash: HashHex;
   ttl_ok: boolean;
   revoked: boolean;
+  degraded?: boolean;
+}
+
+/** Degradation event record for the continuity chain. */
+export interface DegradationEvent {
+  reason: string;
+  timestamp: string;
+  artifact_reference: HashHex;
+  previous_state: string;
 }
 
 export class Portal {
@@ -26,6 +35,7 @@ export class Portal {
   sequenceCounter = 0;
   lastLeafHash: HashHex | null = null;
   revocations: Set<string> = new Set();
+  degradationLog: DegradationEvent[] = [];
 
   loadArtifact(artifact: PolicyArtifact, pinnedPkHex: string): { ok: boolean; error?: string } {
     this.state = 'ARTIFACT_VERIFICATION';
@@ -47,14 +57,24 @@ export class Portal {
   measure(subjectBytes: Uint8Array, meta: SubjectMetadata): MeasurementResult {
     if (!this.artifact) throw new Error('No artifact loaded');
     if (this.state === 'TERMINATED') throw new Error('Portal is terminated');
-    if (this.state === 'SAFE_STATE') throw new Error('Portal is in safe state - artifact revoked');
+    // SAFE_STATE allows continued measurement for logging
     const empty = { currentBytesHash: '', currentMetaHash: '',
       expectedBytesHash: this.artifact.subject_identifier.bytes_hash,
       expectedMetaHash: this.artifact.subject_identifier.metadata_hash };
 
-    // Fail-closed: TTL check
+    // Graceful degradation: TTL expiry -> SAFE_STATE + DEGRADATION event + continued logging
     const ttl_ok = !isExpired(this.artifact.issued_timestamp, this.artifact.enforcement_parameters.ttl_seconds);
-    if (!ttl_ok) { this.state = 'TERMINATED'; return { match: false, ttl_ok: false, revoked: false, ...empty }; }
+    if (!ttl_ok) {
+      const prevState = this.state;
+      this.state = 'SAFE_STATE';
+      this.degradationLog.push({
+        reason: 'TTL_EXPIRED',
+        timestamp: utcNow(),
+        artifact_reference: this.artifact.sealed_hash,
+        previous_state: prevState,
+      });
+      return { match: false, ttl_ok: false, revoked: false, degraded: true, ...empty };
+    }
 
     // Fail-closed: revocation check
     if (this.revocations.has(this.artifact.sealed_hash)) {
@@ -76,19 +96,16 @@ export class Portal {
   enforce(action: EnforcementAction): void {
     if (this.state !== 'DRIFT_DETECTED') throw new Error(`Cannot enforce in state ${this.state}`);
     switch (action) {
-      case 'TERMINATE': this.state = 'TERMINATED'; break;
-      case 'SAFE_STATE': this.state = 'SAFE_STATE'; break;
+      case 'TERMINATE': case 'SAFE_STATE': this.state = 'TERMINATED'; break;
       case 'QUARANTINE': this.state = 'PHANTOM_QUARANTINE'; break;
       case 'ALERT_ONLY': this.state = 'ACTIVE_MONITORING'; break;
       default: break;
     }
   }
 
-  revoke(sealedHash: string, transitionTo?: 'TERMINATED' | 'SAFE_STATE'): void {
+  revoke(sealedHash: string): void {
     this.revocations.add(sealedHash);
-    if (this.artifact?.sealed_hash === sealedHash) {
-      this.state = transitionTo === 'SAFE_STATE' ? 'SAFE_STATE' : 'TERMINATED';
-    }
+    if (this.artifact?.sealed_hash === sealedHash) this.state = 'TERMINATED';
   }
 
   isRevoked(sealedHash: string): boolean { return this.revocations.has(sealedHash); }

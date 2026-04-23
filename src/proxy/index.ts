@@ -11,7 +11,6 @@
  *   aga-proxy export --output bundle.json
  *   aga-proxy verify bundle.json
  *
- * Patent: USPTO App. No. 19/433,835
  * Copyright (c) 2026 Attested Intelligence Holdings LLC
  * SPDX-License-Identifier: MIT
  */

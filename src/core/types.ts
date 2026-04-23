@@ -1,6 +1,6 @@
 /**
  * V3: Aligned with NIST-2025-0035 and NCCoE AI Agent Identity filings.
- */
+*/
 import type { HashHex, SignatureBase64, SaltHex, MerkleInclusionProof } from '../crypto/types.js';
 
 // ── Subject (100, 102, 104, 106, 126) ──────────────────────────
@@ -19,7 +19,7 @@ export interface SubjectMetadata {
   [key: string]: unknown;
 }
 
-// ── Enforcement (130-136, 162-168) ──────────────────────────────
+// ── Enforcement (130–136, 162–168) ──────────────────────────────
 
 export type EnforcementAction =
   | 'TERMINATE'           // Ref 162: immediate kill
@@ -43,9 +43,17 @@ export interface EnforcementParams {           // Ref 130
   enforcement_triggers: EnforcementAction[];   // Ref 136
   re_attestation_required: boolean;
   measurement_types: MeasurementType[];
+  behavioral_baseline?: BehavioralBaselineRef; // NCCoE §6: optional behavioral baseline reference
 }
 
-// ── Policy & Disclosure (112, 138-142) ──────────────────────────
+/** Inline behavioral baseline reference for EnforcementParams (NCCoE §6, CAISI §1a) */
+export interface BehavioralBaselineRef {
+  permitted_tools: string[];
+  forbidden_sequences: string[][];
+  rate_limits: Record<string, number>;
+}
+
+// ── Policy & Disclosure (112, 138–142) ──────────────────────────
 
 export type Sensitivity = 'S1_LOW' | 'S2_MODERATE' | 'S3_HIGH' | 'S4_CRITICAL';
 export type DisclosureMode = 'PROOF_ONLY' | 'REVEAL_MIN' | 'REVEAL_FULL';
@@ -117,7 +125,7 @@ export interface SignedReceipt {                // Ref 172
   portal_signature: SignatureBase64;
 }
 
-// ── Continuity Chain (180-196) ──────────────────────────────────
+// ── Continuity Chain (180–196) ──────────────────────────────────
 
 export type EventType =
   | 'GENESIS'
@@ -129,9 +137,10 @@ export type EventType =
   | 'DISCLOSURE'
   | 'SUBSTITUTION'
   | 'KEY_ROTATION'            // V3: key lifecycle event
-  | 'BEHAVIORAL_DRIFT'       // V2: behavioral drift detection
-  | 'DELEGATION'             // V2: constrained sub-agent delegation
-  | 'RE_ATTESTATION';        // V2: re-attestation after revocation
+  | 'BEHAVIORAL_DRIFT'        // NCCoE §6: behavioral pattern deviation
+  | 'DELEGATION'              // NCCoE §4: sub-agent delegation
+  | 'DEGRADATION'             // CAISI §4a: graceful degradation event
+  | 'RE_ATTESTATION';         // TTL re-attestation
 
 export interface GenesisPayload {
   protocol_version: string;
@@ -165,7 +174,7 @@ export interface StructuralMetadata {          // Ref 190
   previous_leaf_hash: HashHex | null;
 }
 
-// ── Checkpoints (200-214) ───────────────────────────────────────
+// ── Checkpoints (200–214) ───────────────────────────────────────
 
 export interface CheckpointReference {
   merkle_root: HashHex;
@@ -181,7 +190,7 @@ export interface AnchorBatchPayload {
   leaf_count: number;
 }
 
-// ── Evidence Bundle (240-246) ───────────────────────────────────
+// ── Evidence Bundle (240–246) ───────────────────────────────────
 
 export interface EvidenceBundle {
   artifact: PolicyArtifact;
@@ -190,9 +199,10 @@ export interface EvidenceBundle {
   checkpoint_reference: CheckpointReference;
   public_key: string;
   bundle_signature: SignatureBase64;
+  verification_tier?: VerificationTier;         // CAISI §3b: Bronze/Silver/Gold tiering
 }
 
-// ── Disclosure (250-256) ────────────────────────────────────────
+// ── Disclosure (250–256) ────────────────────────────────────────
 
 export interface DisclosureRequest {
   requested_claim_id: string;
@@ -212,7 +222,7 @@ export interface SubstitutionReceipt {
   signature: SignatureBase64;
 }
 
-// ── Portal State Machine (150, 270-280) ─────────────────────────
+// ── Portal State Machine (150, 270–280) ─────────────────────────
 
 export type PortalState =
   | 'INITIALIZATION'         // Ref 270
@@ -220,7 +230,7 @@ export type PortalState =
   | 'ACTIVE_MONITORING'      // Ref 274
   | 'DRIFT_DETECTED'         // Ref 276
   | 'PHANTOM_QUARANTINE'     // Ref 278
-  | 'SAFE_STATE'             // Ref 168: graceful degradation
+  | 'SAFE_STATE'             // Graceful degradation (TTL expiry)
   | 'TERMINATED';            // Ref 280
 
 export type VerificationTier = 'BRONZE' | 'SILVER' | 'GOLD';
@@ -236,7 +246,7 @@ export interface RevocationRecord {
   timestamp: string;
 }
 
-// ── Quarantine (220-230) ────────────────────────────────────────
+// ── Quarantine (220–230) ────────────────────────────────────────
 
 export interface QuarantineState {
   active: boolean;
@@ -244,4 +254,32 @@ export interface QuarantineState {
   inputs_captured: number;
   outputs_severed: boolean;
   forensic_buffer: Array<{ timestamp: string; type: string; data: unknown }>;
+  forensic_receipts?: string[];  // Receipt IDs from forensic capture
 }
+
+// ── Delegation (NCCoE §4) ──────────────────────────────────────
+
+export interface DelegationRecord {
+  sub_agent_id: string;
+  parent_artifact_reference: HashHex;
+  child_artifact: PolicyArtifact;
+  permitted_tools: string[];
+  ttl_seconds: number;
+  delegation_timestamp: string;
+  chain_sequence: number;
+}
+
+// ── Key Lifecycle ──────────────────────────────────────────────
+
+export interface KeyRotationRecord {
+  keypair_type: string;            // e.g. 'issuer', 'portal', 'chain'
+  old_public_key: string;
+  new_public_key: string;
+  reason: string;
+  rotation_timestamp: string;
+  chain_sequence: number;
+}
+
+// ── Sensitivity Level Aliases ────────────────────────────────────
+// Existing Sensitivity type uses S1_LOW etc. These aliases map to the short forms.
+export type SensitivityLevel = 'S1' | 'S2' | 'S3' | 'S4';

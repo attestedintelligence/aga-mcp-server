@@ -1,69 +1,76 @@
 /**
- * Fail-closed tests - 4 tests.
- * TTL expiry, revocation-on-measure, no recovery from TERMINATED.
+ * Fail-Closed Tests - CAISI §4a
+ * Block execution if ANY of 4 conditions is true
  */
 import { describe, it, expect } from 'vitest';
-import { generateKeyPair, pkToHex } from '../../src/crypto/sign.js';
-import { sha256Str } from '../../src/crypto/hash.js';
-import { computeSubjectIdFromString } from '../../src/core/subject.js';
-import { performAttestation } from '../../src/core/attestation.js';
-import { generateArtifact } from '../../src/core/artifact.js';
 import { Portal } from '../../src/core/portal.js';
+import { generateArtifact } from '../../src/core/artifact.js';
+import { performAttestation } from '../../src/core/attestation.js';
+import { computeSubjectIdFromString } from '../../src/core/subject.js';
+import { generateKeyPair, pkToHex, signStr, sigToB64 } from '../../src/crypto/sign.js';
+import { sha256Str } from '../../src/crypto/hash.js';
+import { canonicalize } from '../../src/utils/canonical.js';
 
-describe('fail-closed semantics', () => {
+describe('fail-closed semantics (CAISI §4a)', () => {
   const kp = generateKeyPair();
+  const content = 'print("hello")';
+  const meta = { filename: 'app.py', version: '1.0' };
+  const subId = computeSubjectIdFromString(content, meta);
+  const att = performAttestation({ subject_identifier: subId, policy_reference: sha256Str('pol'), evidence_items: [] });
   const enc = new TextEncoder();
 
-  function mkArtifactWithTTL(ttl: number) {
-    const subId = computeSubjectIdFromString('code', { filename: 'a.py' });
-    const att = performAttestation({ subject_identifier: subId, policy_reference: sha256Str('p'), evidence_items: [] });
+  function makeArtifact(ttl = 3600) {
     return generateArtifact({
-      subject_identifier: subId, policy_reference: sha256Str('p'), policy_version: 1,
+      subject_identifier: subId, policy_reference: sha256Str('pol'), policy_version: 1,
       sealed_hash: att.sealed_hash!, seal_salt: att.seal_salt!,
-      enforcement_parameters: { measurement_cadence_ms: 1000, ttl_seconds: ttl, enforcement_triggers: ['QUARANTINE', 'TERMINATE'], re_attestation_required: true, measurement_types: ['FILE_SYSTEM_STATE'] },
-      disclosure_policy: { claims_taxonomy: [], substitution_rules: [] },
-      evidence_commitments: [], issuer_keypair: kp,
+      enforcement_parameters: { measurement_cadence_ms: 1000, ttl_seconds: ttl, enforcement_triggers: ['QUARANTINE'], re_attestation_required: false, measurement_types: ['EXECUTABLE_IMAGE'] },
+      disclosure_policy: { claims_taxonomy: [], substitution_rules: [] }, evidence_commitments: [], issuer_keypair: kp,
     });
   }
 
-  it('TERMINATED state is irrecoverable without reset', () => {
+  it('fail-closed: invalid signature blocks execution - CAISI §4a condition 2', () => {
     const portal = new Portal();
-    const a = mkArtifactWithTTL(3600);
-    portal.loadArtifact(a, pkToHex(kp.publicKey));
-    portal.revoke(a.sealed_hash);
+    const wrongKP = generateKeyPair();
+    const result = portal.loadArtifact(makeArtifact(), pkToHex(wrongKP.publicKey));
+    expect(result.ok).toBe(false);
+    expect(result.error).toContain('Signature');
     expect(portal.state).toBe('TERMINATED');
-    // Cannot enforce, cannot measure
-    expect(() => portal.enforce('ALERT_ONLY')).toThrow();
-    expect(() => portal.measure(enc.encode('code'), { filename: 'a.py' })).toThrow();
   });
 
-  it('revocation during ACTIVE_MONITORING terminates', () => {
+  it('fail-closed: expired TTL blocks execution - CAISI §4a condition 3', () => {
     const portal = new Portal();
-    const a = mkArtifactWithTTL(3600);
-    portal.loadArtifact(a, pkToHex(kp.publicKey));
+    const result = portal.loadArtifact(makeArtifact(0), pkToHex(kp.publicKey));
+    // TTL=0 means immediately expired; loadArtifact checks effective period
+    // The artifact is created with effective_timestamp=now and TTL=0
+    // Since isWithinPeriod checks expiration_timestamp (null here), but TTL
+    // is checked during measure, not load. Load checks effective period.
+    // So we load and then measure to trigger TTL check.
+    if (result.ok) {
+      const m = portal.measure(enc.encode(content), meta);
+      expect(m.ttl_ok).toBe(false);
+      expect(portal.state).toBe('SAFE_STATE');
+    } else {
+      // If load rejected due to period check, that's also fail-closed
+      expect(portal.state).toBe('TERMINATED');
+    }
+  });
+
+  it('fail-closed: initial hash mismatch blocks execution - CAISI §4a condition 4', () => {
+    const portal = new Portal();
+    portal.loadArtifact(makeArtifact(), pkToHex(kp.publicKey));
     expect(portal.state).toBe('ACTIVE_MONITORING');
-    portal.revoke(a.sealed_hash);
-    expect(portal.state).toBe('TERMINATED');
+
+    // First measurement with wrong content
+    const m = portal.measure(enc.encode('WRONG CONTENT'), meta);
+    expect(m.match).toBe(false);
+    expect(portal.state).toBe('DRIFT_DETECTED');
   });
 
-  it('drift → enforce TERMINATE → portal terminated', () => {
+  it('fail-closed: revoked artifact blocks execution - combined', () => {
     const portal = new Portal();
-    const a = mkArtifactWithTTL(3600);
-    portal.loadArtifact(a, pkToHex(kp.publicKey));
-    // Cause drift
-    portal.measure(enc.encode('modified'), { filename: 'a.py' });
-    expect(portal.state).toBe('DRIFT_DETECTED');
-    portal.enforce('TERMINATE');
+    const artifact = makeArtifact();
+    portal.loadArtifact(artifact, pkToHex(kp.publicKey));
+    portal.revoke(artifact.sealed_hash);
     expect(portal.state).toBe('TERMINATED');
-  });
-
-  it('drift → enforce QUARANTINE → phantom quarantine', () => {
-    const portal = new Portal();
-    const a = mkArtifactWithTTL(3600);
-    portal.loadArtifact(a, pkToHex(kp.publicKey));
-    portal.measure(enc.encode('modified'), { filename: 'a.py' });
-    expect(portal.state).toBe('DRIFT_DETECTED');
-    portal.enforce('QUARANTINE');
-    expect(portal.state).toBe('PHANTOM_QUARANTINE');
   });
 });

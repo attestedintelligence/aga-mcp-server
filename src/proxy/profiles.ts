@@ -1,7 +1,6 @@
 /**
  * AGA Governance Proxy - Built-in Policy Profiles
  *
- * Patent: USPTO App. No. 19/433,835
  * Copyright (c) 2026 Attested Intelligence Holdings LLC
  * SPDX-License-Identifier: MIT
  */

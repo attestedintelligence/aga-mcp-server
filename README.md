@@ -1,165 +1,209 @@
-# @attested-intelligence/aga-mcp-server v2.1.0
+# AGA - Attested Governance Artifacts
 
-[![MCP Badge](https://lobehub.com/badge/mcp/attested-intelligence-aga-mcp-server)](https://lobehub.com/mcp/attested-intelligence-aga-mcp-server)
+Cryptographic runtime governance for AI agents and autonomous systems.
 
-MCP server and governance proxy implementing the Attested Governance Artifact (AGA) protocol - cryptographic compliance enforcement for autonomous AI systems.
-
-## What It Does
-
-This server acts as a **Portal** (zero-trust Policy Enforcement Point) for AI agents. Every tool call is attested, measured against a sealed cryptographic reference, and logged to a tamper-evident continuity chain with signed receipts.
-
-**20 tools, 3 resources, 3 prompts, governance proxy, 199 tests**
-
-## Governance Proxy (New in v2.1.0)
-
-Sits between any MCP client (OpenClaw, Claude Desktop, etc.) and any downstream MCP server. Intercepts every `tools/call`, evaluates it against a sealed policy, and produces Ed25519-signed receipts in the canonical Ed25519-SHA256-JCS format (compatible with the Python SDK, gateway, and browser verifier).
-
-```
-MCP Client --> AGA Proxy (:18800) --> Downstream MCP Server
-                  |
-                  +-- Policy evaluation
-                  +-- Signed receipt per tool call
-                  +-- Merkle tree + evidence bundle
-```
-
-### Proxy Quick Start
+[![npm](https://img.shields.io/npm/v/@attested-intelligence/aga-mcp-server)](https://www.npmjs.com/package/@attested-intelligence/aga-mcp-server)
+[![PyPI](https://img.shields.io/pypi/v/aga-governance)](https://pypi.org/project/aga-governance/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Tests](https://img.shields.io/badge/tests-355%2B-brightgreen)](https://github.com/attestedintelligence/aga-mcp-server)
 
 ```bash
-# Start with a downstream MCP server
-npx tsx src/proxy/index.ts start --upstream "node server.js" --profile standard
-
-# Policy profiles: permissive, standard, restrictive
-npx tsx src/proxy/index.ts start --upstream-url http://localhost:3000 --profile restrictive
-
-# Export evidence bundle (verifiable at attestedintelligence.com/verify)
-npx tsx src/proxy/index.ts export --output bundle.json
-
-# Verify a bundle
-npx tsx src/proxy/index.ts verify bundle.json
+# Try it now
+pip install aga-governance
+python -m aga demo
+python -m aga verify demo-bundle.json
 ```
 
-### Proxy Features
+## What This Does
 
-- **Policy modes**: allowlist, denylist, audit_only
-- **Rate limiting**: per-tool calls/minute with sliding window
-- **Path constraints**: restrict file tools to allowed prefixes
-- **Denied patterns**: block dangerous argument patterns
-- **Receipt format**: Ed25519-SHA256-JCS (canonical across all AGA SDKs)
-- **Evidence bundles**: verifiable at `attestedintelligence.com/verify`
-- **Two-process boundary**: proxy holds all signing keys, client holds none
+Every tool call an AI agent makes passes through the AGA gateway. Each call is evaluated against policy, and the decision (PERMITTED or DENIED) is recorded as a signed, hash-linked governance receipt. Receipts are collected into evidence bundles that any third party can verify offline using standard cryptography.
 
-## 20 MCP Tools
+**Record. Prove. Verify.**
 
-| # | Tool | Description |
-| --- | --- | --- |
-| 1 | `aga_server_info` | Server identity, keys, portal state, framework alignment |
-| 2 | `aga_init_chain` | Initialize continuity chain with genesis event |
-| 3 | `aga_create_artifact` | Attest subject, generate sealed Policy Artifact |
-| 4 | `aga_measure_subject` | Measure subject, compare to sealed ref, generate receipt |
-| 5 | `aga_verify_artifact` | Verify artifact signature against issuer key |
-| 6 | `aga_start_monitoring` | Start/restart behavioral monitoring with baseline |
-| 7 | `aga_get_portal_state` | Current portal enforcement state and TTL |
-| 8 | `aga_trigger_measurement` | Trigger measurement with specific type |
-| 9 | `aga_generate_receipt` | Generate signed measurement receipt manually |
-| 10 | `aga_export_bundle` | Package artifact + receipts + Merkle proofs |
-| 11 | `aga_verify_bundle` | 4-step offline bundle verification |
-| 12 | `aga_disclose_claim` | Privacy-preserving disclosure with auto-substitution |
-| 13 | `aga_get_chain` | Get chain events with optional integrity verification |
-| 14 | `aga_quarantine_status` | Quarantine state and forensic capture status |
-| 15 | `aga_revoke_artifact` | Mid-session artifact revocation |
-| 16 | `aga_set_verification_tier` | Set verification tier (BRONZE/SILVER/GOLD) |
-| 17 | `aga_demonstrate_lifecycle` | Full lifecycle: attest, measure, checkpoint, verify |
-| 18 | `aga_measure_behavior` | Behavioral drift detection (tool patterns) |
-| 19 | `aga_delegate_to_subagent` | Constrained sub-agent delegation (scope only diminishes) |
-| 20 | `aga_rotate_keys` | Key rotation with chain event |
+## Use with Claude Desktop
 
-## 3 Resources
-
-| Resource | URI | Description |
-| --- | --- | --- |
-| Protocol Spec | `aga://specification/protocol-v2` | Full protocol specification with SPIFFE alignment |
-| Sample Bundle | `aga://resources/sample-bundle` | Sample evidence bundle documentation |
-| Crypto Primitives | `aga://resources/crypto-primitives` | Cryptographic primitives documentation |
-
-## 3 Prompts
-
-| Prompt | Description |
-|--------|-------------|
-| `nccoe-demo` | 4-phase NCCoE lab demo with behavioral drift |
-| `governance-report` | Session governance summary report |
-| `drift-analysis` | Drift event analysis and remediation |
-
-## CoSAI MCP Security Threat Coverage
-
-The AGA MCP Server addresses all 12 threat categories identified in the
-[CoSAI MCP Security whitepaper](https://github.com/cosai-oasis/ws4-secure-design-agentic-systems/blob/main/model-context-protocol-security.md)
-(Coalition for Secure AI / OASIS, January 2026).
-
-| CoSAI Category | Threat Domain | AGA Governance Mechanism |
-|---|---|---|
-| T1: Improper Authentication | Identity & Access | Ed25519 artifact signatures, pinned issuer keys, TTL re-attestation, key rotation chain events |
-| T2: Missing Access Control | Identity & Access | Portal as mandatory enforcement boundary, sealed constraints, delegation with scope diminishment |
-| T3: Input Validation Failures | Input Handling | Runtime measurement against sealed reference, behavioral drift detection |
-| T4: Data/Control Boundary Failures | Input Handling | Behavioral baseline (permitted tools, forbidden sequences, rate limits), phantom execution forensics |
-| T5: Inadequate Data Protection | Data & Code | Salted commitments, privacy-preserving disclosure with substitution, inference risk prevention |
-| T6: Missing Integrity Controls | Data & Code | Content-addressable hash binding, 10 measurement embodiments, continuous runtime verification |
-| T7: Session/Transport Security | Network & Transport | TTL-based artifact expiration, fail-closed on expiry, mid-session revocation, Ed25519 signed receipts |
-| T8: Network Isolation Failures | Network & Transport | Two-process architecture, agent holds no credentials, NETWORK_ISOLATE enforcement action |
-| T9: Trust Boundary Failures | Trust & Design | Enforcement pre-committed by human authorities in sealed artifact, not delegated to LLM |
-| T10: Resource Management | Trust & Design | Per-tool rate limits in behavioral baseline, configurable measurement cadence (10ms to 3600s) |
-| T11: Supply Chain Failures | Operational | Content-addressable hashing at attestation, runtime hash comparison blocks modified components |
-| T12: Insufficient Observability | Operational | Signed receipts, tamper-evident continuity chain, Merkle anchoring, offline evidence bundles |
-
-Full mapping details available via the `aga://specification` resource.
-
-## Quick Start
-
-```bash
-npm install && npm run build && npm test
-```
-
-## Connect to an MCP Client
-
-Add to your MCP client config:
+Add to your Claude Desktop MCP config (`claude_desktop_config.json`):
 
 ```json
 {
   "mcpServers": {
-    "aga": { "command": "node", "args": ["/path/to/aga-mcp-server/dist/index.js"] }
+    "aga": {
+      "command": "npx",
+      "args": ["-y", "@attested-intelligence/aga-mcp-server"]
+    }
   }
 }
 ```
 
-## Architecture
+Claude can then seal artifacts, measure integrity, generate evidence bundles, and verify compliance through natural language.
+
+## MCP Tools (20)
+
+| Category | Tools |
+|----------|-------|
+| **Identity** | `get_server_info`, `get_portal_state` |
+| **Lifecycle** | `init_chain`, `attest_subject`, `revoke_artifact` |
+| **Enforcement** | `measure_integrity`, `measure_behavior`, `verify_chain` |
+| **Evidence** | `create_checkpoint`, `generate_evidence_bundle`, `verify_bundle_offline` |
+| **Privacy** | `request_claim`, `list_claims` |
+| **Delegation** | `delegate_to_subagent` |
+| **Audit** | `get_receipts`, `get_chain_events` |
+
+## Quick Start
+
+### Verify an evidence bundle (3 commands)
+
+```bash
+pip install aga-governance
+curl -s https://aga-mcp-gateway.attestedintelligence.workers.dev/bundle -o evidence-bundle.json
+python -m aga verify evidence-bundle.json
+```
+
+### Or verify in your browser
+
+Go to [attestedintelligence.com/verify](https://attestedintelligence.com/verify) and click "Run Verification." Zero installs required.
+
+## How It Works
 
 ```
-MCP Client
-    | JSON-RPC over stdio
-    v
-src/server.ts - 20 tools + 3 resources + 3 prompts
-    |
-    +-- src/tools/          20 individual tool handlers
-    +-- src/core/           Protocol logic (artifact, chain, portal, etc.)
-    +-- src/crypto/         Ed25519 + SHA-256 + Merkle + canonical JSON
-    +-- src/middleware/     Zero-trust governance PEP
-    +-- src/storage/        In-memory + optional SQLite
-    +-- src/resources/      Protocol docs + crypto primitives
-    +-- src/prompts/        Demo + report + analysis prompts
-    +-- src/proxy/          Governance proxy (NEW in v2.1.0)
-    +-- src/adapters/       OpenClaw config adapter
+AI Agent                  AGA Gateway                    Verifier
+   |                          |                              |
+   |-- tools/call ----------->|                              |
+   |                    [Evaluate Policy]                    |
+   |                    [Sign Receipt]                       |
+   |                    [Chain to Previous]                  |
+   |<-- PERMITTED/DENIED -----|                              |
+   |                          |                              |
+   |                    [Export Bundle]                       |
+   |                          |--------- evidence.json ----->|
+   |                          |                  [Verify Signatures]
+   |                          |                  [Verify Chain]
+   |                          |                  [Verify Merkle Tree]
+   |                          |                  [PASS / FAIL]
 ```
 
-## Test Coverage
+## MCP Governance Proxy
 
-| Suite | Tests | What |
-|-------|-------|------|
-| Crypto | 33 | SHA-256, Ed25519, Merkle, salt, canonical, keys |
-| Core | 56 | Artifact, chain, portal, governance, behavioral, delegation, privacy, revocation, fail-closed |
-| Tools | 25 | All 20 tool handlers |
-| Integration | 38 | Bundle tamper, lifecycle, performance, NCCoE demo, crucible compatibility |
-| Proxy | 40 | Policy evaluator, round-trip, cross-verification, OpenClaw adapter |
-| **Total** | **199** | |
+Run AGA as a transparent proxy between any MCP client and any MCP server. Every tool call gets evaluated against policy and produces a signed receipt.
+
+```bash
+# Start the proxy with an upstream MCP server
+npx tsx src/proxy/index.ts start --upstream "npx -y @modelcontextprotocol/server-filesystem /tmp/test" --profile standard
+
+# Export the evidence bundle
+npx tsx src/proxy/index.ts export --output evidence.json
+
+# Verify
+npx tsx src/proxy/index.ts verify evidence.json
+```
+
+The proxy intercepts `tools/call` requests, evaluates them against a sealed policy artifact, and generates signed receipts. Permitted calls are forwarded to the downstream server. Denied calls return an MCP error. Every decision is hash-linked into a tamper-evident chain.
+
+Three built-in policy profiles:
+- **permissive** - log everything, block nothing (default)
+- **standard** - rate limits + blocks destructive operations
+- **restrictive** - explicit tool allowlist, all unknown tools denied
+
+## Verification (5 steps)
+
+1. **Algorithm Check** - Bundle declares Ed25519-SHA256-JCS, fail closed on anything else
+2. **Receipt Signatures** - Ed25519 over RFC 8785 canonical JSON (signature field excluded)
+3. **Chain Integrity** - Each receipt's `previous_receipt_hash` = SHA-256 of the preceding receipt
+4. **Merkle Proofs** - Walk siblings/directions to root, compare against bundle root
+5. **Bundle Consistency** - Proof count = receipt count, leaf hashes match receipt hashes
+
+## Cryptographic Primitives
+
+| Primitive | Purpose |
+|-----------|---------|
+| Ed25519 | Receipt signatures |
+| SHA-256 | Hash chaining, Merkle trees, leaf computation |
+| RFC 8785 (JCS) | Canonical JSON for deterministic signing |
+| Merkle Trees | Binding all receipts to a single verifiable root |
+
+## Live Gateway
+
+The demo gateway is deployed on Cloudflare Workers:
+
+```bash
+# Check status
+curl https://aga-mcp-gateway.attestedintelligence.workers.dev/health
+
+# Export evidence bundle
+curl https://aga-mcp-gateway.attestedintelligence.workers.dev/bundle -o evidence-bundle.json
+```
+
+## Python SDK
+
+```bash
+pip install aga-governance
+```
+
+```python
+from aga import AgentSession
+
+with AgentSession(gateway_id="my-gateway") as session:
+    session.record_tool_call(
+        tool_name="search_web",
+        decision="PERMITTED",
+        reason="tool in allowlist",
+        request_id="req-1",
+    )
+    bundle = session.export_bundle()
+    result = session.verify()
+    assert result["overall_valid"]
+```
+
+## Test Suite
+
+355+ automated tests across TypeScript and Python:
+
+- **TypeScript MCP Server:** 218 tests (vitest)
+- **Python SDK:** 137 tests (pytest)
+- **Cross-language test vectors:** 37 vectors across 9 categories
+
+```bash
+npm test                              # TypeScript tests
+```
+
+For the Python SDK, install `aga-governance` from PyPI: https://pypi.org/project/aga-governance/
+
+## Project Structure
+
+```
+src/                   # Core protocol: artifacts, receipts, chain, Merkle, crypto, portal state machine
+  core/                # Governance primitives (artifact, receipt, chain, portal, bundle)
+  crypto/              # Ed25519, SHA-256, BLAKE2b, Merkle, JCS canonicalization
+  proxy/               # MCP governance proxy (transparent interception + policy enforcement)
+  tools/               # MCP tool handlers (20 tools)
+  middleware/          # Zero-trust governance enforcement wrapper
+independent-verifier/  # Standalone verifier with zero AGA imports
+scenarios/             # Deployment scenarios (SCADA, drone, AI agent)
+tests/                 # TypeScript test suite (218 tests)
+```
+
+## Links
+
+- [Website](https://attestedintelligence.com)
+- [Technology](https://attestedintelligence.com/technology)
+- [Live Verifier](https://attestedintelligence.com/verify)
+- [Trust and Scope](https://attestedintelligence.com/trust)
+- [Diligence Materials](https://attestedintelligence.com/diligence)
+- [MCP Server (npm)](https://www.npmjs.com/package/@attested-intelligence/aga-mcp-server)
+- [Python SDK (PyPI)](https://pypi.org/project/aga-governance/)
+
+## Security
+
+See [SECURITY.md](SECURITY.md) for vulnerability reporting.
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup and guidelines.
 
 ## License
 
-MIT - Attested Intelligence Holdings LLC
+[MIT](LICENSE)
+
+---
+
+Attested Intelligence Holdings LLC

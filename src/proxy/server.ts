@@ -10,7 +10,6 @@
  * Architecture: Client → Proxy (:18800) → Downstream MCP Server
  * The proxy holds ALL signing keys. The client holds NONE.
  *
- * Patent: USPTO App. No. 19/433,835
  * Copyright (c) 2026 Attested Intelligence Holdings LLC
  * SPDX-License-Identifier: MIT
  */

@@ -6,7 +6,7 @@ async function main() {
   const server = await createAGAServer();
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  console.error('AGA MCP Server v2.0.0 running on stdio');
+  console.error('AGA MCP Server running on stdio');
 }
 
 main().catch(e => { console.error('Fatal:', e); process.exit(1); });

@@ -2,7 +2,6 @@
  * AGA Governance Proxy - Tool Policy Evaluator
  * Ported from aga-mcp-gateway/src/governance/policy.ts with rate limiting.
  *
- * Patent: USPTO App. No. 19/433,835
  * Copyright (c) 2026 Attested Intelligence Holdings LLC
  * SPDX-License-Identifier: MIT
  */

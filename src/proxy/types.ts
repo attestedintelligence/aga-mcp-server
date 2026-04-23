@@ -2,7 +2,6 @@
  * AGA Governance Proxy - Types
  * Adapted from aga-mcp-gateway/src/governance/types.ts
  *
- * Patent: USPTO App. No. 19/433,835
  * Copyright (c) 2026 Attested Intelligence Holdings LLC
  * SPDX-License-Identifier: MIT
  */

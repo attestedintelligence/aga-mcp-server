@@ -1,9 +1,18 @@
 {
   "name": "@attested-intelligence/aga-mcp-server",
-  "version": "2.1.0",
-  "description": "MCP server and governance proxy implementing the Attested Governance Artifact (AGA) protocol - cryptographic compliance enforcement for autonomous AI systems. 20 tools, 3 resources, 3 prompts, governance proxy.",
+  "version": "2.2.1",
+  "description": "MCP server for cryptographic AI agent governance. Seal policy artifacts, enforce at runtime, prove with signed receipts and offline-verifiable evidence bundles.",
+  "mcpName": "io.github.attestedintelligence/aga-mcp-server",
   "author": "Attested Intelligence Holdings LLC",
   "license": "MIT",
+  "homepage": "https://attestedintelligence.com/technology",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/attestedintelligence/aga-mcp-server"
+  },
+  "bugs": {
+    "url": "https://github.com/attestedintelligence/aga-mcp-server/issues"
+  },
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -24,14 +33,22 @@
     "test:watch": "vitest",
     "test:crypto": "vitest run tests/crypto/",
     "test:core": "vitest run tests/core/",
-    "test:tools": "vitest run tests/tools/",
     "test:integration": "vitest run tests/integration/",
     "test:proxy": "vitest run tests/proxy/",
     "proxy": "tsx src/proxy/index.ts",
     "proxy:start": "tsx src/proxy/index.ts start",
     "demo": "tsx scripts/demo.ts",
     "benchmark": "tsx scripts/benchmark.ts",
+    "verify": "cd independent-verifier && npm test",
     "lint": "tsc --noEmit",
+    "demo:standalone": "npx tsx standalone/main.ts",
+    "demo:scada": "npx tsx standalone/main.ts --scenario=scada",
+    "demo:drone": "npx tsx standalone/main.ts --scenario=drone",
+    "demo:agent": "npx tsx standalone/main.ts --scenario=ai-agent",
+    "demo:all": "npx tsx standalone/main.ts --scenario=all --non-interactive",
+    "watch": "npx tsx standalone/main.ts --watch",
+    "build:exe": "npx tsx standalone/build.ts",
+    "verify:evidence": "npx tsx standalone/verify-evidence.ts",
     "prepublishOnly": "npm run build && npm run test"
   },
   "dependencies": {
@@ -49,6 +66,7 @@
     "@types/better-sqlite3": "^7.6.12",
     "@types/node": "^22.10.0",
     "@types/uuid": "^10.0.0",
+    "postject": "^1.0.0-alpha.6",
     "tsx": "^4.19.0",
     "typescript": "^5.7.0",
     "vitest": "^2.1.0"
@@ -59,18 +77,17 @@
   "keywords": [
     "mcp",
     "mcp-server",
+    "model-context-protocol",
+    "ai-governance",
+    "ai-agent-security",
+    "agentic-ai",
     "attestation",
     "governance",
-    "ai-governance",
-    "ai-safety",
+    "cryptographic-enforcement",
     "runtime-integrity",
-    "continuity-chain",
-    "zero-trust",
-    "nist",
-    "nccoe",
-    "spiffe",
+    "evidence-bundles",
     "ed25519",
-    "evidence-bundle",
-    "policy-enforcement"
+    "policy-artifacts",
+    "attested-intelligence"
   ]
 }

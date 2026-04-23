@@ -1,9 +1,15 @@
 /**
- * Governance Middleware: wraps every MCP tool handler.
+ * Governance Middleware - wraps every MCP tool handler.
  *
  * NCCoE filing Section 4: "The portal operates as a Policy Enforcement Point (PEP)...
  * Every tool invocation, API call, actuator command, and data access passes through
  * the portal, which evaluates it against the sealed artifact's enforcement parameters."
+ *
+ * Behavior:
+ * - TERMINATED state → reject all governed tools
+ * - PHANTOM_QUARANTINE → capture tool call as forensic input, reject
+ * - ACTIVE_MONITORING → allow, log to chain
+ * - Ungoverned tools (get_server_info, get_portal_state, list_claims) → always allow
  */
 import type { Portal } from '../core/portal.js';
 import type { QuarantineState } from '../core/types.js';
@@ -16,13 +22,14 @@ export type ToolResult = { content: Array<{ type: 'text'; text: string }> };
 export type ToolHandler<T = any> = (args: T) => Promise<ToolResult>;
 
 const UNGOVERNED_TOOLS = new Set([
-  // V1 names (backward compat)
-  'get_server_info', 'get_portal_state', 'get_receipts', 'get_chain_events',
-  'list_claims', 'init_chain', 'attest_subject', 'verify_chain',
-  // V2 names
-  'aga_server_info', 'aga_get_portal_state', 'aga_init_chain', 'aga_create_artifact',
-  'aga_verify_artifact', 'aga_verify_bundle', 'aga_get_chain', 'aga_quarantine_status',
-  'aga_set_verification_tier', 'aga_demonstrate_lifecycle', 'aga_measure_behavior',
+  'get_server_info',
+  'get_portal_state',
+  'get_receipts',
+  'get_chain_events',
+  'list_claims',
+  'init_chain',        // must work before attestation
+  'attest_subject',    // creates the governance relationship
+  'verify_chain',      // read-only verification
 ]);
 
 export function createGovernanceWrapper(
@@ -41,18 +48,22 @@ export function createGovernanceWrapper(
         content: [{ type: 'text', text: JSON.stringify(x, null, 2) }]
       });
 
-      if (portal.state === 'TERMINATED' || portal.state === 'SAFE_STATE') {
+      // TERMINATED → reject everything
+      if (portal.state === 'TERMINATED') {
         return j({
           success: false,
-          error: `GOVERNANCE_BLOCKED: Portal is ${portal.state.toLowerCase()}. Agent governance has been revoked. Re-attestation required.`,
+          error: 'GOVERNANCE_BLOCKED: Portal is terminated. Agent governance has been revoked. Re-attestation required.',
           portal_state: portal.state,
           tool: toolName,
         });
       }
 
+      // PHANTOM_QUARANTINE → capture as forensic input, reject
       if (portal.state === 'PHANTOM_QUARANTINE' && quarantine.current?.active) {
         captureInput(quarantine.current, `tool_call:${toolName}`, {
-          tool: toolName, args, timestamp: new Date().toISOString(),
+          tool: toolName,
+          args,
+          timestamp: new Date().toISOString(),
         });
         return j({
           success: false,
@@ -63,15 +74,17 @@ export function createGovernanceWrapper(
         });
       }
 
+      // INITIALIZATION or ARTIFACT_VERIFICATION → not yet governed
       if (portal.state === 'INITIALIZATION' || portal.state === 'ARTIFACT_VERIFICATION') {
         return j({
           success: false,
-          error: 'GOVERNANCE_NOT_READY: No active policy artifact. Call aga_create_artifact first.',
+          error: 'GOVERNANCE_NOT_READY: No active policy artifact. Call attest_subject first.',
           portal_state: portal.state,
           tool: toolName,
         });
       }
 
+      // ACTIVE_MONITORING or DRIFT_DETECTED → record + allow through
       if (behavioralMonitor) {
         const argsHash = sha256Str(canonicalize(args));
         behavioralMonitor.recordInvocation(toolName, argsHash);
