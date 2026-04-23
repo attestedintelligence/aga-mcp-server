@@ -1,0 +1,264 @@
+{
+  "_comment": "AGA Comprehensive Test Vectors -- Cross-Language Contract",
+  "_version": "2.0",
+  "_date": "2026-03-18",
+  "_owner": "Attested Intelligence Holdings LLC",
+  "_encoding": "4-byte big-endian length prefix per field, SHA-256, raw bytes for hashes",
+  "_verified": "All vectors independently computed and verified 2026-03-18",
+
+  "leaf_hash_vectors": [
+    {
+      "id": "collision-prevention-A",
+      "description": "Field boundary ambiguity test A. Must differ from B under length-prefix.",
+      "inputs": {
+        "schema_version": "1.0a",
+        "protocol_version": "bc",
+        "event_type": "POLICY_ISSUANCE",
+        "event_id": "e1",
+        "sequence_number": 1,
+        "timestamp": "2026-03-18T15:22:09Z",
+        "previous_leaf_hash_hex": "0000000000000000000000000000000000000000000000000000000000000000"
+      },
+      "expected_leaf_hash_hex": "eed2a912020afadd7f9c6dd00307a189f8a565a2b65acaa5cf9410e4a3ce4d26"
+    },
+    {
+      "id": "collision-prevention-B",
+      "description": "Field boundary ambiguity test B. Would collide with A under naive concatenation.",
+      "inputs": {
+        "schema_version": "1.0",
+        "protocol_version": "abc",
+        "event_type": "POLICY_ISSUANCE",
+        "event_id": "e1",
+        "sequence_number": 1,
+        "timestamp": "2026-03-18T15:22:09Z",
+        "previous_leaf_hash_hex": "0000000000000000000000000000000000000000000000000000000000000000"
+      },
+      "expected_leaf_hash_hex": "7679d87e74dba62db423c4c5f3ffa59e77fe14a7efcb671ca713f7f2567d4f59"
+    },
+    {
+      "id": "payload-exclusion",
+      "description": "Two events with identical structural metadata but different payloads MUST produce this hash.",
+      "inputs": {
+        "schema_version": "1.0",
+        "protocol_version": "1.0",
+        "event_type": "INTERACTION_RECEIPT",
+        "event_id": "rid-123",
+        "sequence_number": 42,
+        "timestamp": "2026-03-18T16:00:00Z",
+        "previous_leaf_hash_hex": "0000000000000000000000000000000000000000000000000000000000000000"
+      },
+      "expected_leaf_hash_hex": "905204eca6238a2aa8dddf6efe309d28f88c48a1e57548276ce20313fc464928"
+    },
+    {
+      "id": "timestamp-normalized",
+      "description": "After normalizing any equivalent timestamp to 2026-03-18T15:22:09Z, this hash must result.",
+      "note": "Inputs like '2026-03-18T15:22:09+00:00' and '2026-03-18T15:22:09.000Z' must normalize to the timestamp below before hashing.",
+      "inputs": {
+        "schema_version": "1.0",
+        "protocol_version": "1.0",
+        "event_type": "INTERACTION_RECEIPT",
+        "event_id": "ts-test-001",
+        "sequence_number": 7,
+        "timestamp": "2026-03-18T15:22:09Z",
+        "previous_leaf_hash_hex": "0000000000000000000000000000000000000000000000000000000000000000"
+      },
+      "expected_leaf_hash_hex": "244bd2d0dd16bd52831e6cc4c11fa3cc76427be295dc332312441ac626dbbbaf"
+    },
+    {
+      "id": "timestamp-subseconds",
+      "description": "Nonzero sub-seconds must be preserved in normalization.",
+      "inputs": {
+        "schema_version": "1.0",
+        "protocol_version": "1.0",
+        "event_type": "INTERACTION_RECEIPT",
+        "event_id": "ts-test-002",
+        "sequence_number": 8,
+        "timestamp": "2026-03-18T15:22:09.123Z",
+        "previous_leaf_hash_hex": "0000000000000000000000000000000000000000000000000000000000000000"
+      },
+      "expected_leaf_hash_hex": "14d60da14be600daa4fc3bac9e71279b683694b68bfcead5685c3ca1bd3eced0"
+    }
+  ],
+
+  "seal_vectors": [
+    {
+      "id": "seal-basic",
+      "description": "Basic seal computation. Hex-decode all inputs to raw bytes before length-prefix and hash.",
+      "inputs": {
+        "bytes_hash_hex": "fc6ee62a49c42ee5274d3ba7ba8aff98053fc0b1385390ea84c142d3e8d54665",
+        "metadata_hash_hex": "45447b7afbd5e544f7d0f1df0fccd26014d9850130abd3f020b89ff96b82079f",
+        "policy_reference_hex": "823412d1eacb67956220e532959f0104603057c88704863ca38e7cd188fda812",
+        "salt_hex": "12e2aa1b6048d6be8adcb752812a2875"
+      },
+      "expected_sealed_hash_hex": "adeeb5f58a35374a71f3efed3ec08fbfe4462209c3a0725b4ef292f5d810463d"
+    }
+  ],
+
+  "merkle_vectors": [
+    {
+      "id": "merkle-4-leaves",
+      "description": "Binary Merkle tree with 4 leaves. Leaves are the leaf hashes from other vectors.",
+      "inputs": {
+        "leaves_hex": [
+          "eed2a912020afadd7f9c6dd00307a189f8a565a2b65acaa5cf9410e4a3ce4d26",
+          "7679d87e74dba62db423c4c5f3ffa59e77fe14a7efcb671ca713f7f2567d4f59",
+          "905204eca6238a2aa8dddf6efe309d28f88c48a1e57548276ce20313fc464928",
+          "adeeb5f58a35374a71f3efed3ec08fbfe4462209c3a0725b4ef292f5d810463d"
+        ]
+      },
+      "expected": {
+        "node_0_1_hex": "9e1ddd67cfea80e1897624cc8527aeff165ce29457705babaff2940b1421e2e4",
+        "node_2_3_hex": "0367d2e619b9256e66f18328d03b25c7ee65306a3d440bc43bb4137dcd4b5e92",
+        "merkle_root_hex": "66c0ec681fac9d8715f33056b0e4424e7e7c2b3c04f912dd47ef7f66ecaf710d"
+      },
+      "inclusion_proof_for_leaf_0": {
+        "sibling_hashes_hex": [
+          "7679d87e74dba62db423c4c5f3ffa59e77fe14a7efcb671ca713f7f2567d4f59",
+          "0367d2e619b9256e66f18328d03b25c7ee65306a3d440bc43bb4137dcd4b5e92"
+        ],
+        "directions": ["right", "right"],
+        "note": "Verify: SHA256(leaf0 + sibling[0]) = node_0_1, then SHA256(node_0_1 + sibling[1]) = root"
+      }
+    },
+    {
+      "id": "merkle-3-leaves-odd",
+      "description": "Binary Merkle tree with 3 leaves. Last leaf promoted (no sibling).",
+      "inputs": {
+        "leaves_hex": [
+          "eed2a912020afadd7f9c6dd00307a189f8a565a2b65acaa5cf9410e4a3ce4d26",
+          "7679d87e74dba62db423c4c5f3ffa59e77fe14a7efcb671ca713f7f2567d4f59",
+          "905204eca6238a2aa8dddf6efe309d28f88c48a1e57548276ce20313fc464928"
+        ]
+      },
+      "expected": {
+        "node_0_1_hex": "9e1ddd67cfea80e1897624cc8527aeff165ce29457705babaff2940b1421e2e4",
+        "merkle_root_hex": "4700f2159c8734fabc6990ff8ddce82159b8bbd8dabc76c73556b4cdd591fcdc",
+        "note": "root = SHA256(node_0_1 + leaf2) -- leaf2 promoted directly"
+      }
+    }
+  ],
+
+  "canonicalization_vectors": [
+    {
+      "id": "canonical-key-order",
+      "description": "RFC 8785: keys sorted by code point order, no whitespace",
+      "input_json": {"z": 1, "a": 2, "m": 3},
+      "expected_canonical_string": "{\"a\":2,\"m\":3,\"z\":1}",
+      "expected_canonical_hex": "7b2261223a322c226d223a332c227a223a317d",
+      "expected_sha256": "ebba85cfdc0a724b6cc327ecc545faeb38b9fe02eca603b430eb872f5cf75370"
+    },
+    {
+      "id": "canonical-nested",
+      "description": "RFC 8785: nested objects sorted recursively",
+      "input_json": {"b": {"z": 1, "a": 2}, "a": 3},
+      "expected_canonical_string": "{\"a\":3,\"b\":{\"a\":2,\"z\":1}}",
+      "expected_canonical_hex": "7b2261223a332c2262223a7b2261223a322c227a223a317d7d",
+      "expected_sha256": "b375125e33a203b70f14be432a2d7b0823e92ae82f505063e8b21ca5b7a73f42"
+    },
+    {
+      "id": "canonical-empty",
+      "description": "RFC 8785: empty object",
+      "input_json": {},
+      "expected_canonical_string": "{}",
+      "expected_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+    },
+    {
+      "id": "canonical-mixed-types",
+      "description": "RFC 8785: mixed string and number values",
+      "input_json": {"name": "test-value", "num": 42},
+      "expected_canonical_string": "{\"name\":\"test-value\",\"num\":42}",
+      "expected_sha256": "8909540f3b1d496158b90c6313b3eb7d0a8827ed75a1a21cb7b6141a5849e0c1"
+    },
+    {
+      "id": "canonical-floats-rfc8785",
+      "description": "RFC 8785 float handling: 1.0 becomes 1, scientific notation normalized. WARNING: Python stdlib json.dumps FAILS this (outputs 1.0 not 1). Requires proper RFC 8785 library. This vector is INTENTIONALLY difficult.",
+      "input_json": {"a": 1.0, "b": 12300, "c": 1e-10},
+      "expected_canonical_string": "{\"a\":1,\"b\":12300,\"c\":1e-10}",
+      "expected_sha256": "f919d0e3904b7d3f6b54c48833ca5df0bd4702f47656cff4fe9c53d5c6d7931d",
+      "note": "Go implementation MUST use the vendored RFC 8785 library for this. Python verifier skips with warning if stdlib cannot match."
+    }
+  ],
+
+  "timestamp_normalization_vectors": [
+    {
+      "id": "tz-offset-to-z",
+      "input": "2026-03-18T15:22:09+00:00",
+      "expected_normalized": "2026-03-18T15:22:09Z"
+    },
+    {
+      "id": "already-z",
+      "input": "2026-03-18T15:22:09Z",
+      "expected_normalized": "2026-03-18T15:22:09Z"
+    },
+    {
+      "id": "zero-subseconds-stripped",
+      "input": "2026-03-18T15:22:09.000Z",
+      "expected_normalized": "2026-03-18T15:22:09Z"
+    },
+    {
+      "id": "nonzero-subseconds-preserved",
+      "input": "2026-03-18T15:22:09.123Z",
+      "expected_normalized": "2026-03-18T15:22:09.123Z"
+    },
+    {
+      "id": "trailing-zero-stripped",
+      "input": "2026-03-18T15:22:09.120Z",
+      "expected_normalized": "2026-03-18T15:22:09.12Z"
+    },
+    {
+      "id": "negative-offset-converted",
+      "input": "2026-03-18T11:22:09-04:00",
+      "expected_normalized": "2026-03-18T15:22:09Z"
+    }
+  ],
+
+  "ed25519_test_data": {
+    "description": "Deterministic seed for Ed25519 test key pair. Both Go and Python generate the key from this seed and must produce identical signatures for the test message.",
+    "seed_hex": "168534233e55e1a8ddf97d10c388210cc028d360440e18ffe92e6319b1770c4f",
+    "seed_derivation": "SHA-256(b'aga-test-vector-seed-do-not-use-in-production')",
+    "test_message_utf8": "{\"schema_version\":\"1.0\",\"sealed_hash\":\"abc123\"}",
+    "test_message_sha256": "2666c8f2eb37717880ce92870cbff8735c922e277b97cf2f78c592e58450d506",
+    "note": "Ed25519 signatures are deterministic for a given key+message. Both implementations must produce the same 64-byte signature."
+  },
+
+  "agent_governance_vectors": [
+    {
+      "id": "system-prompt-normalization",
+      "description": "System prompt with trailing whitespace normalized (strip + NFC) before hashing. Different whitespace variants must produce same hash.",
+      "inputs": [
+        "You are a helpful AI assistant.\n  \n",
+        "You are a helpful AI assistant.  \n\t"
+      ],
+      "expected_normalized": "You are a helpful AI assistant.",
+      "expected_sha256": "c8472cd9daed5e7c20aa53689e441e10620a002aacd58686aeac2cb188addb5c"
+    },
+    {
+      "id": "tool-call-arguments-hash",
+      "description": "Tool call arguments are canonicalized (RFC 8785 sorted keys, no whitespace) then SHA-256 hashed.",
+      "input_arguments": {"path": "/data/public/report.csv", "encoding": "utf-8"},
+      "expected_canonical": "{\"encoding\":\"utf-8\",\"path\":\"/data/public/report.csv\"}",
+      "expected_sha256": "46a577e32cb0adfb2730304d9dd5d43cea44a28ee651d3952fc194dbb43c0a0f"
+    },
+    {
+      "id": "model-identity-hash",
+      "description": "Model identity hash = SHA-256 of concatenated provider + model_id + endpoint.",
+      "inputs": {
+        "provider": "anthropic",
+        "model_id": "claude-sonnet-4-20250514",
+        "endpoint": "https://api.anthropic.com/v1/messages"
+      },
+      "expected_sha256": "b8a8eb30f6a18903044431f7483d7693eb7d2e218c7c80b1ea0b1779b719b527"
+    }
+  ],
+
+  "assertions": [
+    "leaf:collision-prevention-A.hash != leaf:collision-prevention-B.hash",
+    "Two events matching leaf:payload-exclusion metadata with ANY payloads produce same hash",
+    "normalizeTimestamp('2026-03-18T15:22:09+00:00') == '2026-03-18T15:22:09Z'",
+    "normalizeTimestamp('2026-03-18T15:22:09.000Z') == '2026-03-18T15:22:09Z'",
+    "normalizeTimestamp('2026-03-18T15:22:09.123Z') == '2026-03-18T15:22:09.123Z'",
+    "merkle:merkle-4-leaves.root verifiable via inclusion proof for any leaf",
+    "All canonicalization vectors: JSON.canonicalize(input) == expected_canonical_string",
+    "Ed25519: Sign(seed_key, message) produces identical 64-byte signature in Go and Python"
+  ]
+}

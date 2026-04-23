@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "aga": {
+      "command": "node",
+      "args": [
+        "/path/to/AGA/dist/index.js"
+      ]
+    }
+  }
+}

@@ -1,0 +1,92 @@
+{
+  "name": "@attested-intelligence/aga-mcp-server",
+  "version": "2.2.1",
+  "description": "MCP server for cryptographic AI agent governance. Seal policy artifacts, enforce at runtime, prove with signed receipts and offline-verifiable evidence bundles.",
+  "author": "Attested Intelligence Holdings LLC",
+  "license": "MIT",
+  "homepage": "https://attestedintelligence.com/technology",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/attestedintelligence/aga-mcp-server"
+  },
+  "bugs": {
+    "url": "https://github.com/attestedintelligence/aga-mcp-server/issues"
+  },
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist/",
+    "README.md",
+    "LICENSE"
+  ],
+  "bin": {
+    "aga-mcp-server": "dist/index.js",
+    "aga-proxy": "dist/proxy/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsx src/index.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:crypto": "vitest run tests/crypto/",
+    "test:core": "vitest run tests/core/",
+    "test:integration": "vitest run tests/integration/",
+    "test:proxy": "vitest run tests/proxy/",
+    "proxy": "tsx src/proxy/index.ts",
+    "proxy:start": "tsx src/proxy/index.ts start",
+    "demo": "tsx scripts/demo.ts",
+    "benchmark": "tsx scripts/benchmark.ts",
+    "verify": "cd independent-verifier && npm test",
+    "lint": "tsc --noEmit",
+    "demo:standalone": "npx tsx standalone/main.ts",
+    "demo:scada": "npx tsx standalone/main.ts --scenario=scada",
+    "demo:drone": "npx tsx standalone/main.ts --scenario=drone",
+    "demo:agent": "npx tsx standalone/main.ts --scenario=ai-agent",
+    "demo:all": "npx tsx standalone/main.ts --scenario=all --non-interactive",
+    "watch": "npx tsx standalone/main.ts --watch",
+    "build:exe": "npx tsx standalone/build.ts",
+    "verify:evidence": "npx tsx standalone/verify-evidence.ts",
+    "prepublishOnly": "npm run build && npm run test"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.0",
+    "@noble/ed25519": "^2.1.0",
+    "@noble/hashes": "^1.7.0",
+    "commander": "^14.0.3",
+    "uuid": "^11.1.0",
+    "zod": "^3.24.0"
+  },
+  "optionalDependencies": {
+    "better-sqlite3": "^11.7.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.12",
+    "@types/node": "^22.10.0",
+    "@types/uuid": "^10.0.0",
+    "postject": "^1.0.0-alpha.6",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0",
+    "vitest": "^2.1.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "keywords": [
+    "mcp",
+    "mcp-server",
+    "model-context-protocol",
+    "ai-governance",
+    "ai-agent-security",
+    "agentic-ai",
+    "attestation",
+    "governance",
+    "cryptographic-enforcement",
+    "runtime-integrity",
+    "evidence-bundles",
+    "ed25519",
+    "policy-artifacts",
+    "attested-intelligence"
+  ]
+}
