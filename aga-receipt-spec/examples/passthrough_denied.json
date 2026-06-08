@@ -1,0 +1,24 @@
+{
+  "_comment": "Example PASSTHROUGH_DENIED continuity event. Signatures are placeholder values.",
+  "schema_version": "2.4.0",
+  "protocol_version": "1.0",
+  "event_type": "PASSTHROUGH_DENIED",
+  "event_id": "evt-passthrough-denied-001",
+  "sequence_number": 42,
+  "timestamp": "2026-04-15T12:00:00Z",
+  "previous_leaf_hash": "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2",
+  "forensic_only": false,
+  "payload": {
+    "tool_name": "github.create_repo",
+    "request_id": "req-91ac",
+    "reason": "policy.passthrough.blocked",
+    "policy_id": "policy-prod-default",
+    "upstream": "mcp://github.example",
+    "denied_at": "2026-04-15T12:00:00Z"
+  },
+  "payload_hash": "b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3",
+  "leaf_hash": "c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4",
+  "signatures": [
+    "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff"
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "_comment": "Example PASSTHROUGH_RECEIPT continuity event. Signatures are placeholder values.",
+  "schema_version": "2.4.0",
+  "protocol_version": "1.0",
+  "event_type": "PASSTHROUGH_RECEIPT",
+  "event_id": "evt-passthrough-receipt-001",
+  "sequence_number": 43,
+  "timestamp": "2026-04-15T12:00:01Z",
+  "previous_leaf_hash": "c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4",
+  "forensic_only": false,
+  "payload": {
+    "tool_name": "github.read_file",
+    "request_id": "req-91ad",
+    "upstream": "mcp://github.example",
+    "arguments_hash": "46a577e32cb0adfb2730304d9dd5d43cea44a28ee651d3952fc194dbb43c0a0f",
+    "result_hash": "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2",
+    "latency_ms": 87,
+    "delivered_at": "2026-04-15T12:00:01Z"
+  },
+  "payload_hash": "d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5",
+  "leaf_hash": "e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6",
+  "signatures": [
+    "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff"
+  ]
+}

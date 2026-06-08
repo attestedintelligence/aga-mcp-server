@@ -1,0 +1,42 @@
+{
+  "name": "@attested-intelligence/aga-verify",
+  "version": "2.0.0",
+  "description": "Standalone, dependency-free verifier for canonical AGA SEP Evidence Bundles (Ed25519 + SHA-256 via Node's built-in crypto; zero AGA imports, zero third-party deps).",
+  "type": "module",
+  "license": "MIT",
+  "author": "Attested Intelligence Holdings LLC",
+  "homepage": "https://attestedintelligence.com/technology",
+  "keywords": [
+    "aga",
+    "evidence-bundle",
+    "verifier",
+    "ed25519",
+    "merkle",
+    "offline-verification",
+    "attested-intelligence",
+    "ai-governance"
+  ],
+  "bin": {
+    "aga-verify": "dist/aga-verify.mjs"
+  },
+  "files": [
+    "dist/",
+    "verify.ts",
+    "example-bundle.json",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "node build.mjs",
+    "test": "vitest run",
+    "prepublishOnly": "node build.mjs && vitest run"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "esbuild": "^0.27.4",
+    "tsx": "^4.19.0",
+    "vitest": "^2.1.0"
+  }
+}

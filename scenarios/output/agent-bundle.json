@@ -1,0 +1,144 @@
+{
+  "schema_version": "2.0",
+  "bundle_id": "rcpt-672aeeea-a651-4ec0-8c6a-346d83b83599",
+  "algorithm": "Ed25519-SHA256-JCS",
+  "generated_at": "2026-06-06T17:22:13.967Z",
+  "gateway_id": "ai-agent-scenario",
+  "public_key": "59305217f3009ae52e598785ff30351550058853f94fb52ef797b535819ebcee",
+  "policy_reference": "",
+  "receipts": [
+    {
+      "receipt_id": "rcpt-62af262e-7123-47d8-bf16-612b17df1381",
+      "receipt_version": "1.0",
+      "algorithm": "Ed25519-SHA256-JCS",
+      "timestamp": "2026-06-06T17:22:13.965Z",
+      "request_id": "0",
+      "method": "tools/call",
+      "tool_name": "EXECUTABLE_IMAGE",
+      "decision": "PERMITTED",
+      "reason": "clean measurement (no drift)",
+      "policy_reference": "",
+      "arguments_hash": "d75f39ce7c674f6e63ed0d36113262a5b3411c7974c4962f8a4b545996edd7d3||88fa13c6d55d6642c88dc4cc49ed53be26bafd26a3d67fdfd0b70c8ee39dbd63",
+      "previous_receipt_hash": "",
+      "gateway_id": "ai-agent-scenario",
+      "public_key": "59305217f3009ae52e598785ff30351550058853f94fb52ef797b535819ebcee",
+      "signature": "994249e7665405955e6f82b8d70e5ac9211564942a981f334e649d19a0a6149e0f5d21144847a6c479562063c527167101118c6c7869e50df57bb0036320950b"
+    },
+    {
+      "receipt_id": "rcpt-fdc19680-4ff5-48bc-9ef4-4edba9bf2031",
+      "receipt_version": "1.0",
+      "algorithm": "Ed25519-SHA256-JCS",
+      "timestamp": "2026-06-06T17:22:13.966Z",
+      "request_id": "1",
+      "method": "tools/call",
+      "tool_name": "EXECUTABLE_IMAGE",
+      "decision": "PERMITTED",
+      "reason": "clean measurement (no drift)",
+      "policy_reference": "",
+      "arguments_hash": "d75f39ce7c674f6e63ed0d36113262a5b3411c7974c4962f8a4b545996edd7d3||88fa13c6d55d6642c88dc4cc49ed53be26bafd26a3d67fdfd0b70c8ee39dbd63",
+      "previous_receipt_hash": "09f54dcbc60f60554c7491790c87a897f47276c9041abd2b768d75704c2a5f39",
+      "gateway_id": "ai-agent-scenario",
+      "public_key": "59305217f3009ae52e598785ff30351550058853f94fb52ef797b535819ebcee",
+      "signature": "3dca259be09b8ff1fdcfd1fba335c28e55d156e3379ad779f5af9bcaf98ed5e17b051f5722f906a598709d3a4302bca476c0e2583221121fa9caf8d0036f340a"
+    },
+    {
+      "receipt_id": "rcpt-ab783010-8972-40ed-816d-d45dd4a235d0",
+      "receipt_version": "1.0",
+      "algorithm": "Ed25519-SHA256-JCS",
+      "timestamp": "2026-06-06T17:22:13.966Z",
+      "request_id": "2",
+      "method": "tools/call",
+      "tool_name": "EXECUTABLE_IMAGE",
+      "decision": "PERMITTED",
+      "reason": "clean measurement (no drift)",
+      "policy_reference": "",
+      "arguments_hash": "d75f39ce7c674f6e63ed0d36113262a5b3411c7974c4962f8a4b545996edd7d3||88fa13c6d55d6642c88dc4cc49ed53be26bafd26a3d67fdfd0b70c8ee39dbd63",
+      "previous_receipt_hash": "e66406314c7414db0a1d24c6960618913d63e60a807be67afc5357c66f84bbb0",
+      "gateway_id": "ai-agent-scenario",
+      "public_key": "59305217f3009ae52e598785ff30351550058853f94fb52ef797b535819ebcee",
+      "signature": "9c04ee84db8b02d131d8e1e06d6336c95bf6530a3464222f7831761facfdc8178acf4ceaa63e2b6337f3c15105440ff90d0e7aefde53ca1e0e6ae81838f63808"
+    },
+    {
+      "receipt_id": "rcpt-8d216ddc-4a27-4fc9-9a4c-b9f1e95f0a80",
+      "receipt_version": "1.0",
+      "algorithm": "Ed25519-SHA256-JCS",
+      "timestamp": "2026-06-06T17:22:13.967Z",
+      "request_id": "3",
+      "method": "tools/call",
+      "tool_name": "EXECUTABLE_IMAGE",
+      "decision": "DENIED",
+      "reason": "Behavioral drift: forbidden tool sequence (data exfiltration pattern)",
+      "policy_reference": "",
+      "arguments_hash": "950e5c3896a95e42d179500a6b61543f707285b8ee889327eb1be92daeec7f60",
+      "previous_receipt_hash": "65a4a9b5e066d076d169935ef72a58dcdd49db3b4b518334bdc71b6ada89b261",
+      "gateway_id": "ai-agent-scenario",
+      "public_key": "59305217f3009ae52e598785ff30351550058853f94fb52ef797b535819ebcee",
+      "signature": "da8f148fbfbdea4a7c4de04702c05e317bcae3d3a2fb0712b7f88d138ace203a8030f949a80db4273f824b0d45495985f325e0c40d47f2842d15edeb50282c00"
+    }
+  ],
+  "merkle_root": "a1d5afe7fb98fd350c04713f0381503161d0b35defaf215b15f299b3a3e61ba4",
+  "merkle_proofs": [
+    {
+      "leaf_hash": "09f54dcbc60f60554c7491790c87a897f47276c9041abd2b768d75704c2a5f39",
+      "leaf_index": 0,
+      "siblings": [
+        "e66406314c7414db0a1d24c6960618913d63e60a807be67afc5357c66f84bbb0",
+        "c45c3fe7bbe7f98d9c41695677519260c62383e0fec7b6c6727ac61193755d09"
+      ],
+      "directions": [
+        "right",
+        "right"
+      ],
+      "merkle_root": "a1d5afe7fb98fd350c04713f0381503161d0b35defaf215b15f299b3a3e61ba4"
+    },
+    {
+      "leaf_hash": "e66406314c7414db0a1d24c6960618913d63e60a807be67afc5357c66f84bbb0",
+      "leaf_index": 1,
+      "siblings": [
+        "09f54dcbc60f60554c7491790c87a897f47276c9041abd2b768d75704c2a5f39",
+        "c45c3fe7bbe7f98d9c41695677519260c62383e0fec7b6c6727ac61193755d09"
+      ],
+      "directions": [
+        "left",
+        "right"
+      ],
+      "merkle_root": "a1d5afe7fb98fd350c04713f0381503161d0b35defaf215b15f299b3a3e61ba4"
+    },
+    {
+      "leaf_hash": "65a4a9b5e066d076d169935ef72a58dcdd49db3b4b518334bdc71b6ada89b261",
+      "leaf_index": 2,
+      "siblings": [
+        "eb6b9f101e36f7c30c9598eb2a7c4660ab098f0e866d1a9cbbaa3c8a7b2183fa",
+        "de484228fb67713bf7da3424182991a246eec93652196facd093609df75c20b1"
+      ],
+      "directions": [
+        "right",
+        "left"
+      ],
+      "merkle_root": "a1d5afe7fb98fd350c04713f0381503161d0b35defaf215b15f299b3a3e61ba4"
+    },
+    {
+      "leaf_hash": "eb6b9f101e36f7c30c9598eb2a7c4660ab098f0e866d1a9cbbaa3c8a7b2183fa",
+      "leaf_index": 3,
+      "siblings": [
+        "65a4a9b5e066d076d169935ef72a58dcdd49db3b4b518334bdc71b6ada89b261",
+        "de484228fb67713bf7da3424182991a246eec93652196facd093609df75c20b1"
+      ],
+      "directions": [
+        "left",
+        "left"
+      ],
+      "merkle_root": "a1d5afe7fb98fd350c04713f0381503161d0b35defaf215b15f299b3a3e61ba4"
+    }
+  ],
+  "checkpoint": {
+    "algorithm": "Ed25519-SHA256-JCS",
+    "gateway_id": "ai-agent-scenario",
+    "generated_at": "2026-06-06T17:22:13.967Z",
+    "head_leaf_hash": "eb6b9f101e36f7c30c9598eb2a7c4660ab098f0e866d1a9cbbaa3c8a7b2183fa",
+    "leaf_count": 4,
+    "merkle_root": "a1d5afe7fb98fd350c04713f0381503161d0b35defaf215b15f299b3a3e61ba4",
+    "signature": "f1eb31e373c6078e116a7dc839274c5d1aa899b912bdf96b7d72ceb1f77dfe056a6033187c5e0dde9eb8e9e72d28bbc3155ce959f4a701c2eb422274231c3307"
+  },
+  "offline_capable": true
+}

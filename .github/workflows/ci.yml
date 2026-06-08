@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [20, 22]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+      - run: npm ci
+      - run: npm run build
+      - run: npm test
+
+  independent-verifier:
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm ci
+      - run: npm run build
+      - run: cd independent-verifier && npm ci && npm test
+
+  verify-zero-imports:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify independent verifier has zero AGA imports
+        run: |
+          if grep -r "from.*\.\./src\|require.*\.\./src\|from.*aga" independent-verifier/verify.ts independent-verifier/src/ 2>/dev/null; then
+            echo "FAIL: Independent verifier contains AGA imports"
+            exit 1
+          fi
+          echo "PASS: Zero AGA imports confirmed"

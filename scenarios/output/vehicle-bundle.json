@@ -1,0 +1,180 @@
+{
+  "schema_version": "2.0",
+  "bundle_id": "rcpt-2207b16c-0733-4373-9def-f9f9576f12fd",
+  "algorithm": "Ed25519-SHA256-JCS",
+  "generated_at": "2026-06-06T17:22:11.845Z",
+  "gateway_id": "vehicle-scenario",
+  "public_key": "83d4b99e554a6971f045b9013d5a6eb0bde51461988e05156c5cafdcd60a3aae",
+  "policy_reference": "",
+  "receipts": [
+    {
+      "receipt_id": "rcpt-f2ae3f4a-f7b1-44c5-8cdc-27f22fdb79e0",
+      "receipt_version": "1.0",
+      "algorithm": "Ed25519-SHA256-JCS",
+      "timestamp": "2026-06-06T17:22:11.841Z",
+      "request_id": "0",
+      "method": "tools/call",
+      "tool_name": "EXECUTABLE_IMAGE",
+      "decision": "PERMITTED",
+      "reason": "clean measurement (no drift)",
+      "policy_reference": "",
+      "arguments_hash": "8a419689c1ec2cce8a816971dca8e3387bb8294d45120b671943feaedc9e65d9||394502aaeb217da5a1693745ddaa4635d5579d43ddb9eec6d4180b57aab9ab0e",
+      "previous_receipt_hash": "",
+      "gateway_id": "vehicle-scenario",
+      "public_key": "83d4b99e554a6971f045b9013d5a6eb0bde51461988e05156c5cafdcd60a3aae",
+      "signature": "cec5ed2500f6ac23c83d53835cf95608a0be73d2a1ee70ac82c54640b1ce4c2e1b72720f1ca9c967e9e831de67ce273f34290bd4e97c9eebfef926070eba0607"
+    },
+    {
+      "receipt_id": "rcpt-15149873-d4a6-4a1c-865b-6b30c2a69e5a",
+      "receipt_version": "1.0",
+      "algorithm": "Ed25519-SHA256-JCS",
+      "timestamp": "2026-06-06T17:22:11.843Z",
+      "request_id": "1",
+      "method": "tools/call",
+      "tool_name": "CONFIG_MANIFEST",
+      "decision": "PERMITTED",
+      "reason": "clean measurement (no drift)",
+      "policy_reference": "",
+      "arguments_hash": "8a419689c1ec2cce8a816971dca8e3387bb8294d45120b671943feaedc9e65d9||394502aaeb217da5a1693745ddaa4635d5579d43ddb9eec6d4180b57aab9ab0e",
+      "previous_receipt_hash": "53cda81a9b25591f1b0c72fe97b7d18d705121a41c7b4eaa1f16ffdd9b0b12e0",
+      "gateway_id": "vehicle-scenario",
+      "public_key": "83d4b99e554a6971f045b9013d5a6eb0bde51461988e05156c5cafdcd60a3aae",
+      "signature": "5af0f33ac241f46b110f63a330f77183136179005519dc4df7b94102771017e99a8c9c121a12f35a2c3441a7b1915e81dcbae97459d904eaba17ad61abf09706"
+    },
+    {
+      "receipt_id": "rcpt-eb41f4c8-a51f-4750-90ad-3355f4ef9ef4",
+      "receipt_version": "1.0",
+      "algorithm": "Ed25519-SHA256-JCS",
+      "timestamp": "2026-06-06T17:22:11.844Z",
+      "request_id": "2",
+      "method": "tools/call",
+      "tool_name": "EXECUTABLE_IMAGE",
+      "decision": "PERMITTED",
+      "reason": "clean measurement (no drift)",
+      "policy_reference": "",
+      "arguments_hash": "8a419689c1ec2cce8a816971dca8e3387bb8294d45120b671943feaedc9e65d9||394502aaeb217da5a1693745ddaa4635d5579d43ddb9eec6d4180b57aab9ab0e",
+      "previous_receipt_hash": "c464e605f611f9296bbd3ae159a647bdee64b9647d122125dbfeda0d0eb17e27",
+      "gateway_id": "vehicle-scenario",
+      "public_key": "83d4b99e554a6971f045b9013d5a6eb0bde51461988e05156c5cafdcd60a3aae",
+      "signature": "e32a36f249dfb3c09de5e28a152b1a04c8edca261b0896c092a227fda73a01f837b06e84193f845d8ae41267fa1b5aac87d3daba208507fcb0829bd7f8b09d08"
+    },
+    {
+      "receipt_id": "rcpt-7bc5e131-91d0-4ae9-83c6-e6e10363b045",
+      "receipt_version": "1.0",
+      "algorithm": "Ed25519-SHA256-JCS",
+      "timestamp": "2026-06-06T17:22:11.844Z",
+      "request_id": "3",
+      "method": "tools/call",
+      "tool_name": "EXECUTABLE_IMAGE",
+      "decision": "DENIED",
+      "reason": "Flight controller binary modified - navigation compromise",
+      "policy_reference": "",
+      "arguments_hash": "cd29f86c6136abe2db0f3a016fac4978235246cb8b90a92cd3deef2995f14c5b||394502aaeb217da5a1693745ddaa4635d5579d43ddb9eec6d4180b57aab9ab0e",
+      "previous_receipt_hash": "e1ec1f6444e0130205181d1c2533f6ae0b1a66b2cf49da0797bdd04bc57e5d60",
+      "gateway_id": "vehicle-scenario",
+      "public_key": "83d4b99e554a6971f045b9013d5a6eb0bde51461988e05156c5cafdcd60a3aae",
+      "signature": "8c367e1d8935098f8d2c9cd387cae15fc87cf574e858e693d7747a5ebea9cac1b6a994797a9392e705a76108f88f2cdc0a44c83fe0079b6783dcb26f46d3ce07"
+    },
+    {
+      "receipt_id": "rcpt-adf051d8-3039-4c84-9451-9e88c575ac5f",
+      "receipt_version": "1.0",
+      "algorithm": "Ed25519-SHA256-JCS",
+      "timestamp": "2026-06-06T17:22:11.844Z",
+      "request_id": "4",
+      "method": "tools/call",
+      "tool_name": "EXECUTABLE_IMAGE",
+      "decision": "DENIED",
+      "reason": "SAFE_STATE: return-to-home protocol initiated",
+      "policy_reference": "",
+      "arguments_hash": "c7d95416fe210ef9389221a65a67d464077b73893d34d077fc77b0d1da659dec",
+      "previous_receipt_hash": "64d919bbb43279f33f120488a7de13f619a4bd3192bbb26b6f02b83d26c6b0d5",
+      "gateway_id": "vehicle-scenario",
+      "public_key": "83d4b99e554a6971f045b9013d5a6eb0bde51461988e05156c5cafdcd60a3aae",
+      "signature": "56ffacb0ec79df4ac2e1c4e35500a2c2bd926133c3d58f17c5833654d8da4cd4915a77808590ced4172393e2b4b9bb65efd09a344aa4f09a74214e94b2fa3e0e"
+    }
+  ],
+  "merkle_root": "2ba66f3e878ae16bb27c56fa794d34b2c4e1387640fafc3fce7665797d050d39",
+  "merkle_proofs": [
+    {
+      "leaf_hash": "53cda81a9b25591f1b0c72fe97b7d18d705121a41c7b4eaa1f16ffdd9b0b12e0",
+      "leaf_index": 0,
+      "siblings": [
+        "c464e605f611f9296bbd3ae159a647bdee64b9647d122125dbfeda0d0eb17e27",
+        "2f6b9121bcf78631c1b6eb746e1362ec6fd22f1e678057279d239934d552180f",
+        "d7dfae0958b7c2c882fc1327b27cc2f961fb44fd91cd55e2a8fadb20f31b6e8a"
+      ],
+      "directions": [
+        "right",
+        "right",
+        "right"
+      ],
+      "merkle_root": "2ba66f3e878ae16bb27c56fa794d34b2c4e1387640fafc3fce7665797d050d39"
+    },
+    {
+      "leaf_hash": "c464e605f611f9296bbd3ae159a647bdee64b9647d122125dbfeda0d0eb17e27",
+      "leaf_index": 1,
+      "siblings": [
+        "53cda81a9b25591f1b0c72fe97b7d18d705121a41c7b4eaa1f16ffdd9b0b12e0",
+        "2f6b9121bcf78631c1b6eb746e1362ec6fd22f1e678057279d239934d552180f",
+        "d7dfae0958b7c2c882fc1327b27cc2f961fb44fd91cd55e2a8fadb20f31b6e8a"
+      ],
+      "directions": [
+        "left",
+        "right",
+        "right"
+      ],
+      "merkle_root": "2ba66f3e878ae16bb27c56fa794d34b2c4e1387640fafc3fce7665797d050d39"
+    },
+    {
+      "leaf_hash": "e1ec1f6444e0130205181d1c2533f6ae0b1a66b2cf49da0797bdd04bc57e5d60",
+      "leaf_index": 2,
+      "siblings": [
+        "64d919bbb43279f33f120488a7de13f619a4bd3192bbb26b6f02b83d26c6b0d5",
+        "ea5ee90766a3d45bc321e839600eb9e2b6d471249087600807eb7b857c0a47be",
+        "d7dfae0958b7c2c882fc1327b27cc2f961fb44fd91cd55e2a8fadb20f31b6e8a"
+      ],
+      "directions": [
+        "right",
+        "left",
+        "right"
+      ],
+      "merkle_root": "2ba66f3e878ae16bb27c56fa794d34b2c4e1387640fafc3fce7665797d050d39"
+    },
+    {
+      "leaf_hash": "64d919bbb43279f33f120488a7de13f619a4bd3192bbb26b6f02b83d26c6b0d5",
+      "leaf_index": 3,
+      "siblings": [
+        "e1ec1f6444e0130205181d1c2533f6ae0b1a66b2cf49da0797bdd04bc57e5d60",
+        "ea5ee90766a3d45bc321e839600eb9e2b6d471249087600807eb7b857c0a47be",
+        "d7dfae0958b7c2c882fc1327b27cc2f961fb44fd91cd55e2a8fadb20f31b6e8a"
+      ],
+      "directions": [
+        "left",
+        "left",
+        "right"
+      ],
+      "merkle_root": "2ba66f3e878ae16bb27c56fa794d34b2c4e1387640fafc3fce7665797d050d39"
+    },
+    {
+      "leaf_hash": "d7dfae0958b7c2c882fc1327b27cc2f961fb44fd91cd55e2a8fadb20f31b6e8a",
+      "leaf_index": 4,
+      "siblings": [
+        "d5c498f9652edfb130382cb0cc8dc2250bc82c8a7b25075c7381234ccbb0ebe7"
+      ],
+      "directions": [
+        "left"
+      ],
+      "merkle_root": "2ba66f3e878ae16bb27c56fa794d34b2c4e1387640fafc3fce7665797d050d39"
+    }
+  ],
+  "checkpoint": {
+    "algorithm": "Ed25519-SHA256-JCS",
+    "gateway_id": "vehicle-scenario",
+    "generated_at": "2026-06-06T17:22:11.845Z",
+    "head_leaf_hash": "d7dfae0958b7c2c882fc1327b27cc2f961fb44fd91cd55e2a8fadb20f31b6e8a",
+    "leaf_count": 5,
+    "merkle_root": "2ba66f3e878ae16bb27c56fa794d34b2c4e1387640fafc3fce7665797d050d39",
+    "signature": "d631277ca9d9fb06389ce1af7da78e525f9716a6dd229552d51ea9d12ca367e6c73eb2e4b7f35b6ca386d7e033ed9aa004437e675abb6f556032e96cb5501801"
+  },
+  "offline_capable": true
+}

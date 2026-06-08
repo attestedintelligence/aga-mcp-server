@@ -1,0 +1,103 @@
+{
+  "schema_version": "1.0",
+  "bundle_id": "0dfbf7dc-ec27-4088-907b-7292d271ff17",
+  "algorithm": "Ed25519-SHA256-JCS",
+  "generated_at": "2026-03-20T21:35:18.558811Z",
+  "gateway_id": "python-sdk-demo",
+  "public_key": "8602c29271097bf8c1cbfa26ba3124a5d8fda889af0a20c981e2dc170c1cdc6d",
+  "policy_reference": "a0c6c8ee702dfa939ef917123d448b93208c3609bfd78ba16bf2a2b1fe1da0fe",
+  "receipts": [
+    {
+      "algorithm": "Ed25519-SHA256-JCS",
+      "arguments_hash": "32dbb74c5960541dfc053509d44ed8b8e0471ad33d4bd7c6ab5ef8c568f45bd6",
+      "decision": "PERMITTED",
+      "gateway_id": "python-sdk-demo",
+      "method": "tools/call",
+      "policy_reference": "a0c6c8ee702dfa939ef917123d448b93208c3609bfd78ba16bf2a2b1fe1da0fe",
+      "previous_receipt_hash": "",
+      "public_key": "8602c29271097bf8c1cbfa26ba3124a5d8fda889af0a20c981e2dc170c1cdc6d",
+      "receipt_id": "b345f7e1-cb80-499f-9d51-58026428f220",
+      "receipt_version": "1.0",
+      "reason": "allowed",
+      "request_id": "req-1",
+      "signature": "01b9fd4f840e0ba1009a3f7c610819ed4262b4c939ce8e81790b5b0cfd5642c9d38da820740d598be10bf7ff671f4c992efb7004f789d6cddf93dec7b0a3230d",
+      "timestamp": "2026-03-20T21:35:18.556626Z",
+      "tool_name": "search_web"
+    },
+    {
+      "algorithm": "Ed25519-SHA256-JCS",
+      "arguments_hash": "fe2097877000a7aebb5f669cf43ae4f5966ad8af557c3add77ee18be85e9d87b",
+      "decision": "PERMITTED",
+      "gateway_id": "python-sdk-demo",
+      "method": "tools/call",
+      "policy_reference": "a0c6c8ee702dfa939ef917123d448b93208c3609bfd78ba16bf2a2b1fe1da0fe",
+      "previous_receipt_hash": "c97b531bc4596410eab13ddad8268194c6a69d3c6ac29bfe3c769c6f1b21508d",
+      "public_key": "8602c29271097bf8c1cbfa26ba3124a5d8fda889af0a20c981e2dc170c1cdc6d",
+      "receipt_id": "0ec2d260-564d-4753-8b97-5cb417d4824b",
+      "receipt_version": "1.0",
+      "reason": "path ok",
+      "request_id": "req-2",
+      "signature": "93299c4a221ffdef959fa870a85f4b2ec2d820a12d9d1cf9f04ab3742a4aead8010d7170e3b791c8192174cab6952d3bc2d1c5a9fee7c791e878c4f9e015f209",
+      "timestamp": "2026-03-20T21:35:18.557208Z",
+      "tool_name": "read_file"
+    },
+    {
+      "algorithm": "Ed25519-SHA256-JCS",
+      "arguments_hash": "11006ae39f09b1605487799d91b28fc328f01be8954034aaea1569b87a66a087",
+      "decision": "DENIED",
+      "gateway_id": "python-sdk-demo",
+      "method": "tools/call",
+      "policy_reference": "a0c6c8ee702dfa939ef917123d448b93208c3609bfd78ba16bf2a2b1fe1da0fe",
+      "previous_receipt_hash": "c3611f01772c8c0080f41d7321dae7698b9e8fae16d08a33ceb7ee23dd6a7f3f",
+      "public_key": "8602c29271097bf8c1cbfa26ba3124a5d8fda889af0a20c981e2dc170c1cdc6d",
+      "receipt_id": "997d1892-2406-4508-9172-d9a17d5f458e",
+      "receipt_version": "1.0",
+      "reason": "blocked path",
+      "request_id": "req-3",
+      "signature": "bd24761d4cc6d5c4960ecc2db1efbc375c29a9695d42ce6cd14f39fa20f16bcde2f1934f737f9d6e646cd2e1ed678f8d59ddc00dc70ae0233470bec978dfb504",
+      "timestamp": "2026-03-20T21:35:18.557742Z",
+      "tool_name": "write_file"
+    }
+  ],
+  "merkle_root": "04d7b67165bfe5bc384ca0e0e55f906a79c3d9e93ae957afc6e71ba5834362c8",
+  "merkle_proofs": [
+    {
+      "leaf_hash": "c97b531bc4596410eab13ddad8268194c6a69d3c6ac29bfe3c769c6f1b21508d",
+      "leaf_index": 0,
+      "siblings": [
+        "c3611f01772c8c0080f41d7321dae7698b9e8fae16d08a33ceb7ee23dd6a7f3f",
+        "2090cae11209b995a0bb6eacf073ceea1b3c5b2d1794e3d3aa2be44b84390c40"
+      ],
+      "directions": [
+        "right",
+        "right"
+      ],
+      "merkle_root": "04d7b67165bfe5bc384ca0e0e55f906a79c3d9e93ae957afc6e71ba5834362c8"
+    },
+    {
+      "leaf_hash": "c3611f01772c8c0080f41d7321dae7698b9e8fae16d08a33ceb7ee23dd6a7f3f",
+      "leaf_index": 1,
+      "siblings": [
+        "c97b531bc4596410eab13ddad8268194c6a69d3c6ac29bfe3c769c6f1b21508d",
+        "2090cae11209b995a0bb6eacf073ceea1b3c5b2d1794e3d3aa2be44b84390c40"
+      ],
+      "directions": [
+        "left",
+        "right"
+      ],
+      "merkle_root": "04d7b67165bfe5bc384ca0e0e55f906a79c3d9e93ae957afc6e71ba5834362c8"
+    },
+    {
+      "leaf_hash": "2090cae11209b995a0bb6eacf073ceea1b3c5b2d1794e3d3aa2be44b84390c40",
+      "leaf_index": 2,
+      "siblings": [
+        "a2e0831b83e5179ecedc4a2d51cf459e79ed21994adee51287e63fbfcb17d353"
+      ],
+      "directions": [
+        "left"
+      ],
+      "merkle_root": "04d7b67165bfe5bc384ca0e0e55f906a79c3d9e93ae957afc6e71ba5834362c8"
+    }
+  ],
+  "offline_capable": true
+}

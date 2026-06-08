@@ -1,0 +1,48 @@
+{
+  "schema_version": "2.0",
+  "bundle_id": "fixture-min",
+  "algorithm": "Ed25519-SHA256-JCS",
+  "generated_at": "2026-06-06T12:00:00Z",
+  "gateway_id": "aga-fixtures",
+  "public_key": "0100000000000000000000000000000000000000000000000000000000000000",
+  "policy_reference": "9d02195d18d69d91640a1041f0757af1154959a4b05cbaddbaec0672bb7bdc8c",
+  "receipts": [
+    {
+      "receipt_id": "r-1",
+      "receipt_version": "1.0",
+      "algorithm": "Ed25519-SHA256-JCS",
+      "timestamp": "2026-06-06T10:00:00Z",
+      "request_id": "req-1",
+      "method": "tools/call",
+      "tool_name": "read_file",
+      "decision": "PERMITTED",
+      "reason": "tool in allowlist",
+      "policy_reference": "9d02195d18d69d91640a1041f0757af1154959a4b05cbaddbaec0672bb7bdc8c",
+      "arguments_hash": "f98288cc74431a4877cfd20f05afbf20113cad6f95a217cf956f7e4600ec488f",
+      "previous_receipt_hash": "",
+      "gateway_id": "aga-fixtures",
+      "public_key": "8a88e3dd7409f195fd52db2d3cba5d72ca6709bf1d94121bf3748801b40f6f5c",
+      "signature": "55887f5860b6bc89d03ded93f7dfcf3afec33a71f367cc41ed9ddccd257a396e085025f9c7a835571003e81db8c1b270e521dd73b6e528b8fa20954036c92008"
+    }
+  ],
+  "merkle_root": "55f3353fcdf4ead43ce08ec004dc6f0c0152b5fa4ca0c0c86bfe27f4b32a1163",
+  "merkle_proofs": [
+    {
+      "leaf_hash": "55f3353fcdf4ead43ce08ec004dc6f0c0152b5fa4ca0c0c86bfe27f4b32a1163",
+      "leaf_index": 0,
+      "siblings": [],
+      "directions": [],
+      "merkle_root": "55f3353fcdf4ead43ce08ec004dc6f0c0152b5fa4ca0c0c86bfe27f4b32a1163"
+    }
+  ],
+  "checkpoint": {
+    "algorithm": "Ed25519-SHA256-JCS",
+    "gateway_id": "aga-fixtures",
+    "generated_at": "2026-06-06T12:00:00Z",
+    "head_leaf_hash": "55f3353fcdf4ead43ce08ec004dc6f0c0152b5fa4ca0c0c86bfe27f4b32a1163",
+    "leaf_count": 1,
+    "merkle_root": "55f3353fcdf4ead43ce08ec004dc6f0c0152b5fa4ca0c0c86bfe27f4b32a1163",
+    "signature": "50e864d89e0a45976bc7024c4d2463eecbf5bfc99c72299efdc9bdf1504fda8d20656efddd83f9c34e0e1b00450b59bb228aa6bc5f9189b2c3d8ced6f7be690d"
+  },
+  "offline_capable": true
+}

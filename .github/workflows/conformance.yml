@@ -1,0 +1,21 @@
+name: ci
+# Full release gate: clean build + type-check + tests + SEP conformance (driven by the
+# normative reference verifier) + the pack-manifest guard (no forgeable/stale artifacts
+# can be published). `npm run check` = build && lint && test && test:conformance && check:pack.
+on:
+  push:
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive   # aga-receipt-spec hosts the normative verify-sep.mjs
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm ci
+      - name: build + lint + tests + SEP conformance + pack guard
+        run: npm run check

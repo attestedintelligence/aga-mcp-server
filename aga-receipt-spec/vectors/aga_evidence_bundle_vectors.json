@@ -1,0 +1,360 @@
+{
+  "spec": "AGA Evidence Bundle SEP profile, CANONICAL_CONSTRUCTION_v2.md",
+  "algorithm": "Ed25519-SHA256-JCS",
+  "public_key": "ea4a6c63e29c520abef5507b132ec5f9954776aebebe7b92421eea691446d22c",
+  "note": "Deterministic. Each merkle_root independently corroborated by a hand-coded per-arity formula. Negative mutations (tamper any field, drop a trailing receipt, re-point a proof, wrong pinned key) MUST flip a conformant verifier to FAIL.",
+  "bundles": {
+    "len-1": {
+      "bundle": {
+        "schema_version": "2.0",
+        "bundle_id": "bundle-1",
+        "algorithm": "Ed25519-SHA256-JCS",
+        "generated_at": "2026-06-03T00:00:00.000Z",
+        "gateway_id": "aga-demo-001",
+        "public_key": "ea4a6c63e29c520abef5507b132ec5f9954776aebebe7b92421eea691446d22c",
+        "policy_reference": "0e705e25519d3a1bf3aa09fa39498cd6d15bf6dca45d290514f9f6b2a6d321bf",
+        "receipts": [
+          {
+            "receipt_id": "00000000-0000-4000-8000-000000000000",
+            "receipt_version": "1.0",
+            "algorithm": "Ed25519-SHA256-JCS",
+            "timestamp": "2026-06-03T00:00:00.000Z",
+            "request_id": "1",
+            "method": "tools/call",
+            "tool_name": "search_web",
+            "decision": "PERMITTED",
+            "reason": "tool permitted by allowlist",
+            "policy_reference": "0e705e25519d3a1bf3aa09fa39498cd6d15bf6dca45d290514f9f6b2a6d321bf",
+            "arguments_hash": "58ca0b73a694d65862346563961f7fcb8ec85cb3e2f5ddc9a26f744de8df1cb4",
+            "previous_receipt_hash": "",
+            "gateway_id": "aga-demo-001",
+            "public_key": "ea4a6c63e29c520abef5507b132ec5f9954776aebebe7b92421eea691446d22c",
+            "signature": "273e86ed174ec648d879d26752e93269366acd432657556b81632a9d1829665db49f7b01c8e6ddabbcbdca417ff67703428cac73d08c8ad4fdf732167a5c1805"
+          }
+        ],
+        "merkle_root": "3fffdf530d3c702b177f883c14061a4820bfc43ce65728f5ade6c547b1cb3c29",
+        "merkle_proofs": [
+          {
+            "leaf_hash": "3fffdf530d3c702b177f883c14061a4820bfc43ce65728f5ade6c547b1cb3c29",
+            "leaf_index": 0,
+            "siblings": [],
+            "directions": [],
+            "merkle_root": "3fffdf530d3c702b177f883c14061a4820bfc43ce65728f5ade6c547b1cb3c29"
+          }
+        ],
+        "checkpoint": {
+          "algorithm": "Ed25519-SHA256-JCS",
+          "gateway_id": "aga-demo-001",
+          "generated_at": "2026-06-03T00:00:00.000Z",
+          "head_leaf_hash": "3fffdf530d3c702b177f883c14061a4820bfc43ce65728f5ade6c547b1cb3c29",
+          "leaf_count": 1,
+          "merkle_root": "3fffdf530d3c702b177f883c14061a4820bfc43ce65728f5ade6c547b1cb3c29",
+          "signature": "db1165f16f4f5d49523e351597bff6c08fe54ef731c8c2ffc12a78e2ba12949aa0c996608665223b9abc7d38343d283dbc2a135f6b986b440ec5331f6162b90e"
+        },
+        "offline_capable": true
+      },
+      "expected_merkle_root": "3fffdf530d3c702b177f883c14061a4820bfc43ce65728f5ade6c547b1cb3c29",
+      "independently_corroborated": true
+    },
+    "len-3-odd-with-deny": {
+      "bundle": {
+        "schema_version": "2.0",
+        "bundle_id": "bundle-3",
+        "algorithm": "Ed25519-SHA256-JCS",
+        "generated_at": "2026-06-03T00:00:00.000Z",
+        "gateway_id": "aga-demo-001",
+        "public_key": "ea4a6c63e29c520abef5507b132ec5f9954776aebebe7b92421eea691446d22c",
+        "policy_reference": "0e705e25519d3a1bf3aa09fa39498cd6d15bf6dca45d290514f9f6b2a6d321bf",
+        "receipts": [
+          {
+            "receipt_id": "00000000-0000-4000-8000-000000000000",
+            "receipt_version": "1.0",
+            "algorithm": "Ed25519-SHA256-JCS",
+            "timestamp": "2026-06-03T00:00:00.000Z",
+            "request_id": "1",
+            "method": "tools/call",
+            "tool_name": "search_web",
+            "decision": "PERMITTED",
+            "reason": "tool permitted by allowlist",
+            "policy_reference": "0e705e25519d3a1bf3aa09fa39498cd6d15bf6dca45d290514f9f6b2a6d321bf",
+            "arguments_hash": "58ca0b73a694d65862346563961f7fcb8ec85cb3e2f5ddc9a26f744de8df1cb4",
+            "previous_receipt_hash": "",
+            "gateway_id": "aga-demo-001",
+            "public_key": "ea4a6c63e29c520abef5507b132ec5f9954776aebebe7b92421eea691446d22c",
+            "signature": "273e86ed174ec648d879d26752e93269366acd432657556b81632a9d1829665db49f7b01c8e6ddabbcbdca417ff67703428cac73d08c8ad4fdf732167a5c1805"
+          },
+          {
+            "receipt_id": "00000000-0000-4000-8000-000000000001",
+            "receipt_version": "1.0",
+            "algorithm": "Ed25519-SHA256-JCS",
+            "timestamp": "2026-06-03T00:00:01.000Z",
+            "request_id": "2",
+            "method": "tools/call",
+            "tool_name": "read_file",
+            "decision": "PERMITTED",
+            "reason": "tool permitted by allowlist",
+            "policy_reference": "0e705e25519d3a1bf3aa09fa39498cd6d15bf6dca45d290514f9f6b2a6d321bf",
+            "arguments_hash": "4c1b0a036eba1702197bd43e33f54e63c515654a47e0ecc343ef7be90532cc8b",
+            "previous_receipt_hash": "3fffdf530d3c702b177f883c14061a4820bfc43ce65728f5ade6c547b1cb3c29",
+            "gateway_id": "aga-demo-001",
+            "public_key": "ea4a6c63e29c520abef5507b132ec5f9954776aebebe7b92421eea691446d22c",
+            "signature": "bd06955845f5fc4ffb509c8e4050b52df25c18ed20108cc87ea6160b2e807e9394930537c62ec892c270208efd67da689f91198f57758ad86ab2e0a3d7db9802"
+          },
+          {
+            "receipt_id": "00000000-0000-4000-8000-000000000002",
+            "receipt_version": "1.0",
+            "algorithm": "Ed25519-SHA256-JCS",
+            "timestamp": "2026-06-03T00:00:02.000Z",
+            "request_id": "3",
+            "method": "tools/call",
+            "tool_name": "execute_command",
+            "decision": "DENIED",
+            "reason": "tool explicitly disallowed by policy",
+            "policy_reference": "0e705e25519d3a1bf3aa09fa39498cd6d15bf6dca45d290514f9f6b2a6d321bf",
+            "arguments_hash": "c11ec0d6ae74adee183197ff8c6905ec89d4c306a04044cfcc8a9e763a1d4a91",
+            "previous_receipt_hash": "a5fdaf85e232c7b598a9725913765145be18279a110676278030d0c080896e38",
+            "gateway_id": "aga-demo-001",
+            "public_key": "ea4a6c63e29c520abef5507b132ec5f9954776aebebe7b92421eea691446d22c",
+            "signature": "dbb3070095e3d1428183b6a3a083b58f85274c16e8654834bbff0c20c6e096d6fae4782382a07265a585b0a1f71c45e6877816314df0a2999ef645ae31d60502"
+          }
+        ],
+        "merkle_root": "223f04ffb656eb972d66f5c6843005b4d61d3a67aa06fa78ff9d8586df2c8639",
+        "merkle_proofs": [
+          {
+            "leaf_hash": "3fffdf530d3c702b177f883c14061a4820bfc43ce65728f5ade6c547b1cb3c29",
+            "leaf_index": 0,
+            "siblings": [
+              "a5fdaf85e232c7b598a9725913765145be18279a110676278030d0c080896e38",
+              "64e41466ac4f38c588ef8e4f1848681863a42472453ac2c4cdb950c11430d606"
+            ],
+            "directions": [
+              "right",
+              "right"
+            ],
+            "merkle_root": "223f04ffb656eb972d66f5c6843005b4d61d3a67aa06fa78ff9d8586df2c8639"
+          },
+          {
+            "leaf_hash": "a5fdaf85e232c7b598a9725913765145be18279a110676278030d0c080896e38",
+            "leaf_index": 1,
+            "siblings": [
+              "3fffdf530d3c702b177f883c14061a4820bfc43ce65728f5ade6c547b1cb3c29",
+              "64e41466ac4f38c588ef8e4f1848681863a42472453ac2c4cdb950c11430d606"
+            ],
+            "directions": [
+              "left",
+              "right"
+            ],
+            "merkle_root": "223f04ffb656eb972d66f5c6843005b4d61d3a67aa06fa78ff9d8586df2c8639"
+          },
+          {
+            "leaf_hash": "64e41466ac4f38c588ef8e4f1848681863a42472453ac2c4cdb950c11430d606",
+            "leaf_index": 2,
+            "siblings": [
+              "d7cb3da29b56ae335f8609bb9cb09a69442265ee1ff33840f151b709ad5f5ad5"
+            ],
+            "directions": [
+              "left"
+            ],
+            "merkle_root": "223f04ffb656eb972d66f5c6843005b4d61d3a67aa06fa78ff9d8586df2c8639"
+          }
+        ],
+        "checkpoint": {
+          "algorithm": "Ed25519-SHA256-JCS",
+          "gateway_id": "aga-demo-001",
+          "generated_at": "2026-06-03T00:00:00.000Z",
+          "head_leaf_hash": "64e41466ac4f38c588ef8e4f1848681863a42472453ac2c4cdb950c11430d606",
+          "leaf_count": 3,
+          "merkle_root": "223f04ffb656eb972d66f5c6843005b4d61d3a67aa06fa78ff9d8586df2c8639",
+          "signature": "01aa24ce48683393bbf517826773494c03f2e3ea96230e5f628de49f94319587e9a0dfe6be34b8693c0f45db23e34de0d8ef8be13f8b42e12fb6883337233907"
+        },
+        "offline_capable": true
+      },
+      "expected_merkle_root": "223f04ffb656eb972d66f5c6843005b4d61d3a67aa06fa78ff9d8586df2c8639",
+      "independently_corroborated": true
+    },
+    "len-5-odd-multilevel-with-deny": {
+      "bundle": {
+        "schema_version": "2.0",
+        "bundle_id": "bundle-5",
+        "algorithm": "Ed25519-SHA256-JCS",
+        "generated_at": "2026-06-03T00:00:00.000Z",
+        "gateway_id": "aga-demo-001",
+        "public_key": "ea4a6c63e29c520abef5507b132ec5f9954776aebebe7b92421eea691446d22c",
+        "policy_reference": "0e705e25519d3a1bf3aa09fa39498cd6d15bf6dca45d290514f9f6b2a6d321bf",
+        "receipts": [
+          {
+            "receipt_id": "00000000-0000-4000-8000-000000000000",
+            "receipt_version": "1.0",
+            "algorithm": "Ed25519-SHA256-JCS",
+            "timestamp": "2026-06-03T00:00:00.000Z",
+            "request_id": "1",
+            "method": "tools/call",
+            "tool_name": "search_web",
+            "decision": "PERMITTED",
+            "reason": "tool permitted by allowlist",
+            "policy_reference": "0e705e25519d3a1bf3aa09fa39498cd6d15bf6dca45d290514f9f6b2a6d321bf",
+            "arguments_hash": "58ca0b73a694d65862346563961f7fcb8ec85cb3e2f5ddc9a26f744de8df1cb4",
+            "previous_receipt_hash": "",
+            "gateway_id": "aga-demo-001",
+            "public_key": "ea4a6c63e29c520abef5507b132ec5f9954776aebebe7b92421eea691446d22c",
+            "signature": "273e86ed174ec648d879d26752e93269366acd432657556b81632a9d1829665db49f7b01c8e6ddabbcbdca417ff67703428cac73d08c8ad4fdf732167a5c1805"
+          },
+          {
+            "receipt_id": "00000000-0000-4000-8000-000000000001",
+            "receipt_version": "1.0",
+            "algorithm": "Ed25519-SHA256-JCS",
+            "timestamp": "2026-06-03T00:00:01.000Z",
+            "request_id": "2",
+            "method": "tools/call",
+            "tool_name": "read_file",
+            "decision": "PERMITTED",
+            "reason": "tool permitted by allowlist",
+            "policy_reference": "0e705e25519d3a1bf3aa09fa39498cd6d15bf6dca45d290514f9f6b2a6d321bf",
+            "arguments_hash": "4c1b0a036eba1702197bd43e33f54e63c515654a47e0ecc343ef7be90532cc8b",
+            "previous_receipt_hash": "3fffdf530d3c702b177f883c14061a4820bfc43ce65728f5ade6c547b1cb3c29",
+            "gateway_id": "aga-demo-001",
+            "public_key": "ea4a6c63e29c520abef5507b132ec5f9954776aebebe7b92421eea691446d22c",
+            "signature": "bd06955845f5fc4ffb509c8e4050b52df25c18ed20108cc87ea6160b2e807e9394930537c62ec892c270208efd67da689f91198f57758ad86ab2e0a3d7db9802"
+          },
+          {
+            "receipt_id": "00000000-0000-4000-8000-000000000002",
+            "receipt_version": "1.0",
+            "algorithm": "Ed25519-SHA256-JCS",
+            "timestamp": "2026-06-03T00:00:02.000Z",
+            "request_id": "3",
+            "method": "tools/call",
+            "tool_name": "execute_command",
+            "decision": "DENIED",
+            "reason": "tool explicitly disallowed by policy",
+            "policy_reference": "0e705e25519d3a1bf3aa09fa39498cd6d15bf6dca45d290514f9f6b2a6d321bf",
+            "arguments_hash": "c11ec0d6ae74adee183197ff8c6905ec89d4c306a04044cfcc8a9e763a1d4a91",
+            "previous_receipt_hash": "a5fdaf85e232c7b598a9725913765145be18279a110676278030d0c080896e38",
+            "gateway_id": "aga-demo-001",
+            "public_key": "ea4a6c63e29c520abef5507b132ec5f9954776aebebe7b92421eea691446d22c",
+            "signature": "dbb3070095e3d1428183b6a3a083b58f85274c16e8654834bbff0c20c6e096d6fae4782382a07265a585b0a1f71c45e6877816314df0a2999ef645ae31d60502"
+          },
+          {
+            "receipt_id": "00000000-0000-4000-8000-000000000003",
+            "receipt_version": "1.0",
+            "algorithm": "Ed25519-SHA256-JCS",
+            "timestamp": "2026-06-03T00:00:03.000Z",
+            "request_id": "4",
+            "method": "tools/call",
+            "tool_name": "read_file",
+            "decision": "PERMITTED",
+            "reason": "tool permitted by allowlist",
+            "policy_reference": "0e705e25519d3a1bf3aa09fa39498cd6d15bf6dca45d290514f9f6b2a6d321bf",
+            "arguments_hash": "3ac865ee6954c35178b89d1258853ea5ed10b73926abd1cbaf15de61829430b4",
+            "previous_receipt_hash": "64e41466ac4f38c588ef8e4f1848681863a42472453ac2c4cdb950c11430d606",
+            "gateway_id": "aga-demo-001",
+            "public_key": "ea4a6c63e29c520abef5507b132ec5f9954776aebebe7b92421eea691446d22c",
+            "signature": "8143ff7622457f5277cd4645e0a235ffd6f39c5e16ea25f88241c98d0b4a0e5b7a7b4fe168fd433e25e31b07936d44f666a20779e0b3c2ebed0c0bc90450e001"
+          },
+          {
+            "receipt_id": "00000000-0000-4000-8000-000000000004",
+            "receipt_version": "1.0",
+            "algorithm": "Ed25519-SHA256-JCS",
+            "timestamp": "2026-06-03T00:00:04.000Z",
+            "request_id": "5",
+            "method": "tools/call",
+            "tool_name": "write_file",
+            "decision": "DENIED",
+            "reason": "path \"/etc/x\" is outside the allowed prefix \"/data/\"",
+            "policy_reference": "0e705e25519d3a1bf3aa09fa39498cd6d15bf6dca45d290514f9f6b2a6d321bf",
+            "arguments_hash": "40ff6391ab2f843b346141d48a2563c910810b617d23a0277230128167c271cb",
+            "previous_receipt_hash": "0ab4e9efadae4f43246ed4058a04704767593907022b2b6b23f2677986cbbec0",
+            "gateway_id": "aga-demo-001",
+            "public_key": "ea4a6c63e29c520abef5507b132ec5f9954776aebebe7b92421eea691446d22c",
+            "signature": "6c6c1418d78588bd0a4dd176b6c1a4a0636cf17e561f487d4c561280eac0ef3def27d21e6ea88b3bacb0ffded6cee563e61ec01bece8196267c147a386f8bc08"
+          }
+        ],
+        "merkle_root": "cfcf85b58c179253eafaad7049a9fdf83bac82826910494667745e7e3b21f5f9",
+        "merkle_proofs": [
+          {
+            "leaf_hash": "3fffdf530d3c702b177f883c14061a4820bfc43ce65728f5ade6c547b1cb3c29",
+            "leaf_index": 0,
+            "siblings": [
+              "a5fdaf85e232c7b598a9725913765145be18279a110676278030d0c080896e38",
+              "1f38fe6b62be2323a40484f1031eb8b8256d6e1f5c7afa7691f1328d307412c8",
+              "7ad62eb95bd209b50179cee30dc9a22e10a1562117067df50e69f8bc39bed825"
+            ],
+            "directions": [
+              "right",
+              "right",
+              "right"
+            ],
+            "merkle_root": "cfcf85b58c179253eafaad7049a9fdf83bac82826910494667745e7e3b21f5f9"
+          },
+          {
+            "leaf_hash": "a5fdaf85e232c7b598a9725913765145be18279a110676278030d0c080896e38",
+            "leaf_index": 1,
+            "siblings": [
+              "3fffdf530d3c702b177f883c14061a4820bfc43ce65728f5ade6c547b1cb3c29",
+              "1f38fe6b62be2323a40484f1031eb8b8256d6e1f5c7afa7691f1328d307412c8",
+              "7ad62eb95bd209b50179cee30dc9a22e10a1562117067df50e69f8bc39bed825"
+            ],
+            "directions": [
+              "left",
+              "right",
+              "right"
+            ],
+            "merkle_root": "cfcf85b58c179253eafaad7049a9fdf83bac82826910494667745e7e3b21f5f9"
+          },
+          {
+            "leaf_hash": "64e41466ac4f38c588ef8e4f1848681863a42472453ac2c4cdb950c11430d606",
+            "leaf_index": 2,
+            "siblings": [
+              "0ab4e9efadae4f43246ed4058a04704767593907022b2b6b23f2677986cbbec0",
+              "d7cb3da29b56ae335f8609bb9cb09a69442265ee1ff33840f151b709ad5f5ad5",
+              "7ad62eb95bd209b50179cee30dc9a22e10a1562117067df50e69f8bc39bed825"
+            ],
+            "directions": [
+              "right",
+              "left",
+              "right"
+            ],
+            "merkle_root": "cfcf85b58c179253eafaad7049a9fdf83bac82826910494667745e7e3b21f5f9"
+          },
+          {
+            "leaf_hash": "0ab4e9efadae4f43246ed4058a04704767593907022b2b6b23f2677986cbbec0",
+            "leaf_index": 3,
+            "siblings": [
+              "64e41466ac4f38c588ef8e4f1848681863a42472453ac2c4cdb950c11430d606",
+              "d7cb3da29b56ae335f8609bb9cb09a69442265ee1ff33840f151b709ad5f5ad5",
+              "7ad62eb95bd209b50179cee30dc9a22e10a1562117067df50e69f8bc39bed825"
+            ],
+            "directions": [
+              "left",
+              "left",
+              "right"
+            ],
+            "merkle_root": "cfcf85b58c179253eafaad7049a9fdf83bac82826910494667745e7e3b21f5f9"
+          },
+          {
+            "leaf_hash": "7ad62eb95bd209b50179cee30dc9a22e10a1562117067df50e69f8bc39bed825",
+            "leaf_index": 4,
+            "siblings": [
+              "af54c36a3f905b808ef04122dd135ebc7b9a2d2e54a786b43af6b83d63f93c90"
+            ],
+            "directions": [
+              "left"
+            ],
+            "merkle_root": "cfcf85b58c179253eafaad7049a9fdf83bac82826910494667745e7e3b21f5f9"
+          }
+        ],
+        "checkpoint": {
+          "algorithm": "Ed25519-SHA256-JCS",
+          "gateway_id": "aga-demo-001",
+          "generated_at": "2026-06-03T00:00:00.000Z",
+          "head_leaf_hash": "7ad62eb95bd209b50179cee30dc9a22e10a1562117067df50e69f8bc39bed825",
+          "leaf_count": 5,
+          "merkle_root": "cfcf85b58c179253eafaad7049a9fdf83bac82826910494667745e7e3b21f5f9",
+          "signature": "b9a646a1c361b2f06a48a90b21efe5d6e44ccde8d26ea98b7bdd95b7e9613bdb59f9443690a3f413e55917c90d423c1abf4bfece406ebe37d1d3d8161b0bc203"
+        },
+        "offline_capable": true
+      },
+      "expected_merkle_root": "cfcf85b58c179253eafaad7049a9fdf83bac82826910494667745e7e3b21f5f9",
+      "independently_corroborated": true
+    }
+  }
+}

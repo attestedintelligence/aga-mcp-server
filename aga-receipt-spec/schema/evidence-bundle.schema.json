@@ -1,0 +1,451 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://attestedagents.com/schema/evidence-bundle.schema.json",
+  "title": "AGA Evidence Bundle",
+  "description": "Schema for AGA (Attested Governance Architecture) evidence bundles. Evidence bundles package sealed artifacts, enforcement receipts, and Merkle inclusion proofs into a single offline-verifiable JSON document.",
+  "type": "object",
+  "properties": {
+    "_comment": {
+      "type": "string",
+      "description": "Optional human-readable comment, ignored by validators."
+    },
+    "schema_version": {
+      "type": "string",
+      "enum": ["1.0"],
+      "description": "Schema version. Currently only 1.0 is defined."
+    },
+    "bundle_id": {
+      "type": "string",
+      "description": "Unique identifier for this evidence bundle."
+    },
+    "generated_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp when the bundle was generated."
+    },
+    "artifact": {
+      "description": "Sealed policy artifact. Required for internal format bundles, null or absent for SEP/gateway format.",
+      "oneOf": [
+        { "$ref": "#/$defs/PolicyArtifact" },
+        { "type": "null" }
+      ]
+    },
+    "receipts": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Array of governance receipts. Format depends on bundle type (internal vs SEP)."
+    },
+    "merkle_proofs": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/MerkleProof" },
+      "description": "Merkle inclusion proofs for receipt verification."
+    },
+    "merkle_root": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "Root hash of the Merkle tree over all receipt leaf hashes."
+    },
+    "checkpoint": {
+      "oneOf": [
+        { "type": "object" },
+        { "type": "null" }
+      ],
+      "description": "Optional external anchor checkpoint."
+    },
+    "public_key": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64,}$",
+      "description": "Hex-encoded public key (Ed25519 = 64 hex chars, ML-DSA-65 or hybrid may be longer)."
+    },
+    "public_key_id": {
+      "type": "string",
+      "description": "Identifier of the public key."
+    },
+    "chain_id": {
+      "type": "string",
+      "description": "Identifier for the continuity chain."
+    },
+    "offline_capable": {
+      "type": "boolean",
+      "description": "Whether this bundle can be verified without network access."
+    },
+    "algorithm": {
+      "type": "string",
+      "enum": [
+        "Ed25519-SHA256-JCS",
+        "ML-DSA-65-SHA256-JCS",
+        "ML-DSA-65+Ed25519-SHA256-JCS"
+      ],
+      "description": "Signing algorithm identifier. Present in SEP/gateway format bundles."
+    },
+    "gateway_id": {
+      "type": "string",
+      "description": "Identifier of the MCP gateway that produced this bundle."
+    },
+    "policy_reference": {
+      "type": "string",
+      "description": "Hash or URI of the governing policy document."
+    },
+    "identity_metadata": {
+      "$ref": "#/$defs/IdentityMetadata"
+    },
+    "roughtime_attestations": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/RoughtimeAttestation" },
+      "description": "External timestamp corroboration via Roughtime servers."
+    },
+    "batch_metadata": {
+      "type": "object",
+      "properties": {
+        "batch_id": { "type": "string" },
+        "merkle_root": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "batch_size": { "type": "integer", "minimum": 1 }
+      },
+      "description": "Merkle batch metadata when receipt batching is enabled."
+    }
+  },
+  "required": [
+    "schema_version",
+    "bundle_id",
+    "generated_at",
+    "receipts",
+    "merkle_proofs",
+    "public_key"
+  ],
+  "additionalProperties": true,
+  "if": {
+    "properties": {
+      "algorithm": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "required": ["algorithm"]
+  },
+  "then": {
+    "description": "SEP/gateway format: receipts are SEPReceipt objects, artifact is not required.",
+    "properties": {
+      "receipts": {
+        "items": { "$ref": "#/$defs/SEPReceipt" }
+      }
+    }
+  },
+  "else": {
+    "description": "Internal format: receipts are Receipt objects, artifact is required.",
+    "required": ["artifact"],
+    "properties": {
+      "artifact": {
+        "$ref": "#/$defs/PolicyArtifact"
+      },
+      "receipts": {
+        "items": { "$ref": "#/$defs/Receipt" }
+      }
+    }
+  },
+  "$defs": {
+    "PolicyArtifact": {
+      "type": "object",
+      "title": "PolicyArtifact",
+      "description": "A sealed policy artifact containing content hashes and cryptographic signature.",
+      "properties": {
+        "artifact_id": {
+          "type": "string",
+          "description": "Unique identifier for this artifact."
+        },
+        "sealed_hash": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "SHA-256 hash binding the artifact to its content via length-prefixed hashing."
+        },
+        "bytes_hash": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "SHA-256 hash of the artifact bytes."
+        },
+        "metadata_hash": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "SHA-256 hash of the artifact metadata."
+        },
+        "policy_reference": {
+          "type": "string",
+          "description": "Reference to the governing policy."
+        },
+        "salt": {
+          "type": "string",
+          "description": "Hex-encoded random salt used in sealed hash computation."
+        },
+        "signature": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{128,}$",
+          "description": "Hex-encoded Ed25519 (or PQC) signature over canonical JSON of all artifact fields except signature."
+        },
+        "signer_key_id": {
+          "type": "string",
+          "description": "Identifier of the signing key."
+        }
+      },
+      "required": [
+        "artifact_id",
+        "sealed_hash",
+        "bytes_hash",
+        "metadata_hash",
+        "salt",
+        "signature",
+        "signer_key_id"
+      ],
+      "additionalProperties": true
+    },
+    "Receipt": {
+      "type": "object",
+      "title": "Receipt (Internal Format)",
+      "description": "A governance receipt in AGA internal continuity chain format.",
+      "properties": {
+        "receipt_id": {
+          "type": "string",
+          "description": "Unique identifier for this receipt."
+        },
+        "event_type": {
+          "type": "string",
+          "enum": [
+            "POLICY_ISSUANCE",
+            "INTERACTION_RECEIPT",
+            "REVOCATION",
+            "ATTESTATION",
+            "ANCHOR_BATCH",
+            "KEY_ROTATION",
+            "GENESIS",
+            "TOOL_CALL_PERMITTED",
+            "TOOL_CALL_DENIED",
+            "SYSTEM_PROMPT_DRIFT",
+            "MODEL_IDENTITY_CHANGE",
+            "POLICY_ROTATION"
+          ],
+          "description": "Type of governance event."
+        },
+        "leaf_hash": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "SHA-256 leaf hash for chain linking."
+        },
+        "payload_hash": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "SHA-256 hash of the receipt payload."
+        },
+        "signature": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{128,}$",
+          "description": "Hex-encoded signature over the payload hash."
+        },
+        "signer_key_id": {
+          "type": "string",
+          "description": "Identifier of the signing key."
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO 8601 UTC timestamp of the event."
+        }
+      },
+      "required": [
+        "receipt_id",
+        "event_type",
+        "leaf_hash",
+        "payload_hash",
+        "signature",
+        "signer_key_id",
+        "timestamp"
+      ],
+      "additionalProperties": true
+    },
+    "SEPReceipt": {
+      "type": "object",
+      "title": "SEPReceipt (MCP Gateway Format)",
+      "description": "A governance receipt in Structured Enforcement Protocol format, produced by MCP gateways.",
+      "properties": {
+        "receipt_id": {
+          "type": "string",
+          "description": "Unique identifier for this receipt."
+        },
+        "receipt_version": {
+          "type": "string",
+          "description": "Version of the receipt format."
+        },
+        "algorithm": {
+          "type": "string",
+          "description": "Signing algorithm used (e.g. Ed25519-SHA256-JCS)."
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO 8601 UTC timestamp of the decision."
+        },
+        "request_id": {
+          "type": "string",
+          "description": "Upstream request identifier."
+        },
+        "method": {
+          "type": "string",
+          "description": "JSON-RPC method (e.g. tools/call)."
+        },
+        "tool_name": {
+          "type": "string",
+          "description": "Name of the tool being governed."
+        },
+        "decision": {
+          "type": "string",
+          "enum": ["PERMITTED", "DENIED"],
+          "description": "Governance decision."
+        },
+        "reason": {
+          "type": "string",
+          "description": "Human-readable reason for the decision."
+        },
+        "policy_reference": {
+          "type": "string",
+          "description": "Hash or URI of the governing policy."
+        },
+        "arguments_hash": {
+          "type": "string",
+          "pattern": "^([0-9a-f]{64})?$",
+          "description": "SHA-256 hash of the canonicalized tool arguments, or empty string."
+        },
+        "previous_receipt_hash": {
+          "type": "string",
+          "pattern": "^([0-9a-f]{64})?$",
+          "description": "Chain hash of the previous receipt (empty string for first receipt)."
+        },
+        "gateway_id": {
+          "type": "string",
+          "description": "Identifier of the MCP gateway."
+        },
+        "signature": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{128,}$",
+          "description": "Hex-encoded cryptographic signature."
+        },
+        "public_key": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64,}$",
+          "description": "Hex-encoded public key of the signer."
+        }
+      },
+      "required": [
+        "receipt_id",
+        "receipt_version",
+        "algorithm",
+        "timestamp",
+        "request_id",
+        "method",
+        "tool_name",
+        "decision",
+        "signature"
+      ],
+      "additionalProperties": true
+    },
+    "MerkleProof": {
+      "type": "object",
+      "title": "MerkleProof",
+      "description": "A Merkle inclusion proof demonstrating that a leaf hash is part of the receipt tree.",
+      "properties": {
+        "leaf_hash": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "The leaf hash being proved."
+        },
+        "leaf_index": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Zero-based index of the leaf in the tree."
+        },
+        "siblings": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "description": "Sibling hashes along the path from leaf to root."
+        },
+        "directions": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["left", "right"]
+          },
+          "description": "Direction of each sibling (left or right)."
+        },
+        "merkle_root": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "Expected Merkle root."
+        }
+      },
+      "required": [
+        "leaf_hash",
+        "leaf_index",
+        "siblings",
+        "directions",
+        "merkle_root"
+      ],
+      "additionalProperties": true
+    },
+    "IdentityMetadata": {
+      "type": "object",
+      "title": "IdentityMetadata",
+      "description": "Cryptographic identity binding for the bundle signer.",
+      "properties": {
+        "identity_method": {
+          "type": "string",
+          "enum": ["none", "self-signed", "spiffe"],
+          "description": "Identity binding type."
+        },
+        "workload_id": {
+          "type": "string",
+          "description": "Workload identity URI."
+        },
+        "trust_domain": {
+          "type": "string",
+          "description": "Trust domain for SPIFFE identities."
+        },
+        "certificate_chain": {
+          "type": "array",
+          "items": { "type": "string" },
+          "minItems": 1,
+          "description": "PEM-encoded certificate chain, leaf first, root last."
+        },
+        "cert_chain_hash": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "SHA-256 hex hash of concatenated PEM certificates."
+        },
+        "issued_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the identity credential was issued."
+        },
+        "expires_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the identity credential expires."
+        }
+      },
+      "required": ["identity_method"],
+      "additionalProperties": true
+    },
+    "RoughtimeAttestation": {
+      "type": "object",
+      "title": "RoughtimeAttestation",
+      "description": "External timestamp corroboration from a Roughtime server.",
+      "properties": {
+        "server_addr": { "type": "string", "description": "Roughtime server address." },
+        "timestamp": { "type": "string", "format": "date-time", "description": "Attested timestamp." },
+        "signature": { "type": "string", "description": "Server Ed25519 signature (hex)." },
+        "public_key": { "type": "string", "description": "Server Ed25519 public key (hex)." },
+        "radius": { "type": "string", "description": "Uncertainty radius." }
+      },
+      "required": ["server_addr", "timestamp"],
+      "additionalProperties": false
+    }
+  }
+}

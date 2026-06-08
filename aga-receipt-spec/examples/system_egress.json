@@ -1,0 +1,24 @@
+{
+  "_comment": "Example SYSTEM_EGRESS continuity event. Signatures are placeholder values.",
+  "schema_version": "2.4.0",
+  "protocol_version": "1.0",
+  "event_type": "SYSTEM_EGRESS",
+  "event_id": "evt-system-egress-001",
+  "sequence_number": 101,
+  "timestamp": "2026-04-15T12:05:00Z",
+  "previous_leaf_hash": "e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6",
+  "forensic_only": false,
+  "payload": {
+    "component": "portal.anchor-submitter",
+    "destination": "https://anchor.example.net/checkpoints",
+    "purpose": "anchor.submit",
+    "bytes_sent": 2048,
+    "response_code": 202,
+    "initiated_at": "2026-04-15T12:05:00Z"
+  },
+  "payload_hash": "f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1",
+  "leaf_hash": "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2",
+  "signatures": [
+    "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff"
+  ]
+}

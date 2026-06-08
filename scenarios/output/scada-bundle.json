@@ -1,0 +1,180 @@
+{
+  "schema_version": "2.0",
+  "bundle_id": "rcpt-6c0a4947-d4f6-4243-b0b0-c12978e4fc54",
+  "algorithm": "Ed25519-SHA256-JCS",
+  "generated_at": "2026-06-06T17:22:09.737Z",
+  "gateway_id": "scada-scenario",
+  "public_key": "dbbdb1f9b9869bdf0749cef1c501e5e84cdb1848331bcd90cc5224089f9e881e",
+  "policy_reference": "",
+  "receipts": [
+    {
+      "receipt_id": "rcpt-a054b73c-2862-43f5-89b2-f57eca4634a9",
+      "receipt_version": "1.0",
+      "algorithm": "Ed25519-SHA256-JCS",
+      "timestamp": "2026-06-06T17:22:09.735Z",
+      "request_id": "0",
+      "method": "tools/call",
+      "tool_name": "EXECUTABLE_IMAGE",
+      "decision": "PERMITTED",
+      "reason": "clean measurement (no drift)",
+      "policy_reference": "",
+      "arguments_hash": "b97048140d19e21e694ba1c889f22785af92a21591a09f9a2dcedce85c5a4125||e257af3fe837665994a615cae4e3c060383726868dc2b93efcad016797c9cc96",
+      "previous_receipt_hash": "",
+      "gateway_id": "scada-scenario",
+      "public_key": "dbbdb1f9b9869bdf0749cef1c501e5e84cdb1848331bcd90cc5224089f9e881e",
+      "signature": "16968ef59e349dec8545ac89f5cfdf6e76968cdc532fbe566281c2df8c382713cec8099f894c31883fba22ea26a80164c430ba4e8c38cef740080b121fa7f302"
+    },
+    {
+      "receipt_id": "rcpt-28361543-3107-43eb-8847-861c20f23035",
+      "receipt_version": "1.0",
+      "algorithm": "Ed25519-SHA256-JCS",
+      "timestamp": "2026-06-06T17:22:09.736Z",
+      "request_id": "1",
+      "method": "tools/call",
+      "tool_name": "EXECUTABLE_IMAGE",
+      "decision": "PERMITTED",
+      "reason": "clean measurement (no drift)",
+      "policy_reference": "",
+      "arguments_hash": "b97048140d19e21e694ba1c889f22785af92a21591a09f9a2dcedce85c5a4125||e257af3fe837665994a615cae4e3c060383726868dc2b93efcad016797c9cc96",
+      "previous_receipt_hash": "5eb38f39decdb37f5460d601de661e1add33dbe8d3c93d9f0af670e2a3f0846b",
+      "gateway_id": "scada-scenario",
+      "public_key": "dbbdb1f9b9869bdf0749cef1c501e5e84cdb1848331bcd90cc5224089f9e881e",
+      "signature": "b83d1c4b6166125339af2c246e0a4ce1cdb939b66364c70c6206ad785e73ecfe6680332054098576e6144a8688b499bc0f3ea0e43fed281fab0de9a7e67f5209"
+    },
+    {
+      "receipt_id": "rcpt-02b917f1-a114-4109-a16f-b8ccb2f31844",
+      "receipt_version": "1.0",
+      "algorithm": "Ed25519-SHA256-JCS",
+      "timestamp": "2026-06-06T17:22:09.736Z",
+      "request_id": "2",
+      "method": "tools/call",
+      "tool_name": "EXECUTABLE_IMAGE",
+      "decision": "PERMITTED",
+      "reason": "clean measurement (no drift)",
+      "policy_reference": "",
+      "arguments_hash": "b97048140d19e21e694ba1c889f22785af92a21591a09f9a2dcedce85c5a4125||e257af3fe837665994a615cae4e3c060383726868dc2b93efcad016797c9cc96",
+      "previous_receipt_hash": "36848358814c4c84fe5c77c1dc6d8d1317ae019b5ae93e2402283b077ed414ae",
+      "gateway_id": "scada-scenario",
+      "public_key": "dbbdb1f9b9869bdf0749cef1c501e5e84cdb1848331bcd90cc5224089f9e881e",
+      "signature": "65c4e956a86b12c7d4983ffb46143979b08292af6103acda9542b8a3ca2315584a34cc0afe4403a4e628a1a11e1f9601bfd5af5de983d2a641ca4b806872940f"
+    },
+    {
+      "receipt_id": "rcpt-67b7dfb9-ea4d-4b0e-9f97-3db8c96a003e",
+      "receipt_version": "1.0",
+      "algorithm": "Ed25519-SHA256-JCS",
+      "timestamp": "2026-06-06T17:22:09.736Z",
+      "request_id": "3",
+      "method": "tools/call",
+      "tool_name": "EXECUTABLE_IMAGE",
+      "decision": "DENIED",
+      "reason": "Binary modified - SCADA control compromise detected",
+      "policy_reference": "",
+      "arguments_hash": "daf39fc149599a4c0ad3a3b0bf6c68a56246bb65a91735e6752fdf16d34090bb||e257af3fe837665994a615cae4e3c060383726868dc2b93efcad016797c9cc96",
+      "previous_receipt_hash": "acf96088fe4cfdfa3c311c4d0cc0620d792de45f7c525147b9600120a6e1e87c",
+      "gateway_id": "scada-scenario",
+      "public_key": "dbbdb1f9b9869bdf0749cef1c501e5e84cdb1848331bcd90cc5224089f9e881e",
+      "signature": "6c85eaad427a121bf15d3acdde6682e24d134fd9aa270aeec2010e4166a3e24ca667e9fb07f1afba199d4733bc4344b0840a7dee180640b8517e99da2d2e3a0c"
+    },
+    {
+      "receipt_id": "rcpt-54797317-7ba0-4b16-8f4c-d050ddeb7a3d",
+      "receipt_version": "1.0",
+      "algorithm": "Ed25519-SHA256-JCS",
+      "timestamp": "2026-06-06T17:22:09.736Z",
+      "request_id": "4",
+      "method": "tools/call",
+      "tool_name": "EXECUTABLE_IMAGE",
+      "decision": "DENIED",
+      "reason": "Forensic capture - quarantine active",
+      "policy_reference": "",
+      "arguments_hash": "81cd901214d39df03b3c7d3a541855c3539136cd9590e106d0028c71b57e202d",
+      "previous_receipt_hash": "ee4350accf92108d9f83beda7f62ec11a9713cd05ea4aa0ccc1ee2720c42c704",
+      "gateway_id": "scada-scenario",
+      "public_key": "dbbdb1f9b9869bdf0749cef1c501e5e84cdb1848331bcd90cc5224089f9e881e",
+      "signature": "62d0756cfd89878e48f3a2e42550deb7f2d709d1c90d89a5737259e2334413372bc4d434c76ea53dc538170b1d11d321059481e277eb796d46ad7e4ec6294c0c"
+    }
+  ],
+  "merkle_root": "63e9236d970f1c5e395bc731ec347c3070fa105ee9cdfb7e6533c5f0c597bb7b",
+  "merkle_proofs": [
+    {
+      "leaf_hash": "5eb38f39decdb37f5460d601de661e1add33dbe8d3c93d9f0af670e2a3f0846b",
+      "leaf_index": 0,
+      "siblings": [
+        "36848358814c4c84fe5c77c1dc6d8d1317ae019b5ae93e2402283b077ed414ae",
+        "03c65ffd3d7b62e8818764642bf462a7de5d739a48f9c4c4cbf348dc303ffcd0",
+        "7fa9507dfb763331ff6c7dcefbba6e643e5d8a92d5d5ae6a5d3cf251ed58ae0f"
+      ],
+      "directions": [
+        "right",
+        "right",
+        "right"
+      ],
+      "merkle_root": "63e9236d970f1c5e395bc731ec347c3070fa105ee9cdfb7e6533c5f0c597bb7b"
+    },
+    {
+      "leaf_hash": "36848358814c4c84fe5c77c1dc6d8d1317ae019b5ae93e2402283b077ed414ae",
+      "leaf_index": 1,
+      "siblings": [
+        "5eb38f39decdb37f5460d601de661e1add33dbe8d3c93d9f0af670e2a3f0846b",
+        "03c65ffd3d7b62e8818764642bf462a7de5d739a48f9c4c4cbf348dc303ffcd0",
+        "7fa9507dfb763331ff6c7dcefbba6e643e5d8a92d5d5ae6a5d3cf251ed58ae0f"
+      ],
+      "directions": [
+        "left",
+        "right",
+        "right"
+      ],
+      "merkle_root": "63e9236d970f1c5e395bc731ec347c3070fa105ee9cdfb7e6533c5f0c597bb7b"
+    },
+    {
+      "leaf_hash": "acf96088fe4cfdfa3c311c4d0cc0620d792de45f7c525147b9600120a6e1e87c",
+      "leaf_index": 2,
+      "siblings": [
+        "ee4350accf92108d9f83beda7f62ec11a9713cd05ea4aa0ccc1ee2720c42c704",
+        "5def456e88092b7569858c1d305dde939c258422d365e5a9162aee4d379c15ec",
+        "7fa9507dfb763331ff6c7dcefbba6e643e5d8a92d5d5ae6a5d3cf251ed58ae0f"
+      ],
+      "directions": [
+        "right",
+        "left",
+        "right"
+      ],
+      "merkle_root": "63e9236d970f1c5e395bc731ec347c3070fa105ee9cdfb7e6533c5f0c597bb7b"
+    },
+    {
+      "leaf_hash": "ee4350accf92108d9f83beda7f62ec11a9713cd05ea4aa0ccc1ee2720c42c704",
+      "leaf_index": 3,
+      "siblings": [
+        "acf96088fe4cfdfa3c311c4d0cc0620d792de45f7c525147b9600120a6e1e87c",
+        "5def456e88092b7569858c1d305dde939c258422d365e5a9162aee4d379c15ec",
+        "7fa9507dfb763331ff6c7dcefbba6e643e5d8a92d5d5ae6a5d3cf251ed58ae0f"
+      ],
+      "directions": [
+        "left",
+        "left",
+        "right"
+      ],
+      "merkle_root": "63e9236d970f1c5e395bc731ec347c3070fa105ee9cdfb7e6533c5f0c597bb7b"
+    },
+    {
+      "leaf_hash": "7fa9507dfb763331ff6c7dcefbba6e643e5d8a92d5d5ae6a5d3cf251ed58ae0f",
+      "leaf_index": 4,
+      "siblings": [
+        "859ad0451211449a6e1c5e2195f51542e15d0e8325a44d706f5972f6552c053c"
+      ],
+      "directions": [
+        "left"
+      ],
+      "merkle_root": "63e9236d970f1c5e395bc731ec347c3070fa105ee9cdfb7e6533c5f0c597bb7b"
+    }
+  ],
+  "checkpoint": {
+    "algorithm": "Ed25519-SHA256-JCS",
+    "gateway_id": "scada-scenario",
+    "generated_at": "2026-06-06T17:22:09.737Z",
+    "head_leaf_hash": "7fa9507dfb763331ff6c7dcefbba6e643e5d8a92d5d5ae6a5d3cf251ed58ae0f",
+    "leaf_count": 5,
+    "merkle_root": "63e9236d970f1c5e395bc731ec347c3070fa105ee9cdfb7e6533c5f0c597bb7b",
+    "signature": "a5048eb7ead9e34addb253309a62408cee51d324771a611c65445870acbf62fbeb5915e45ec45f127ee252de30ed496f056efcf142ecebbba4ba83c35a9f160f"
+  },
+  "offline_capable": true
+}

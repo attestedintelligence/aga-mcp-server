@@ -1,0 +1,70 @@
+{
+  "_comment": "Example AGA evidence bundle. All hashes and signatures are placeholder values for structural illustration.",
+  "schema_version": "1.0",
+  "bundle_id": "bundle-example-001",
+  "generated_at": "2026-03-19T15:00:00Z",
+  "artifact": {
+    "artifact_id": "artifact-001",
+    "sealed_hash": "adeeb5f58a35374a71f3efed3ec08fbfe4462209c3a0725b4ef292f5d810463d",
+    "bytes_hash": "fc6ee62a49c42ee5274d3ba7ba8aff98053fc0b1385390ea84c142d3e8d54665",
+    "metadata_hash": "45447b7afbd5e544f7d0f1df0fccd26014d9850130abd3f020b89ff96b82079f",
+    "policy_reference": "policy-ref-001",
+    "salt": "12e2aa1b6048d6be8adcb752812a2875",
+    "signature": "aabbccdd00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899aabb",
+    "signer_key_id": "node-key-001"
+  },
+  "receipts": [
+    {
+      "receipt_id": "rcpt-001",
+      "event_type": "POLICY_ISSUANCE",
+      "leaf_hash": "eed2a912020afadd7f9c6dd00307a189f8a565a2b65acaa5cf9410e4a3ce4d26",
+      "payload_hash": "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+      "signature": "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff",
+      "signer_key_id": "node-key-001",
+      "timestamp": "2026-03-19T14:01:00Z"
+    },
+    {
+      "receipt_id": "rcpt-002",
+      "event_type": "TOOL_CALL_PERMITTED",
+      "leaf_hash": "7679d87e74dba62db423c4c5f3ffa59e77fe14a7efcb671ca713f7f2567d4f59",
+      "payload_hash": "d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4",
+      "signature": "11223344556677889900aabbccddeeff11223344556677889900aabbccddeeff11223344556677889900aabbccddeeff11223344556677889900aabbccddeeff",
+      "signer_key_id": "node-key-001",
+      "timestamp": "2026-03-19T14:02:00Z"
+    },
+    {
+      "receipt_id": "rcpt-003",
+      "event_type": "INTERACTION_RECEIPT",
+      "leaf_hash": "905204eca6238a2aa8dddf6efe309d28f88c48a1e57548276ce20313fc464928",
+      "payload_hash": "f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6",
+      "signature": "22334455667788990011aabbccddeeff22334455667788990011aabbccddeeff22334455667788990011aabbccddeeff22334455667788990011aabbccddeeff",
+      "signer_key_id": "node-key-001",
+      "timestamp": "2026-03-19T14:03:00Z"
+    },
+    {
+      "receipt_id": "rcpt-004",
+      "event_type": "ATTESTATION",
+      "leaf_hash": "adeeb5f58a35374a71f3efed3ec08fbfe4462209c3a0725b4ef292f5d810463d",
+      "payload_hash": "1818181818181818181818181818181818181818181818181818181818181818",
+      "signature": "33445566778899001122aabbccddeeff33445566778899001122aabbccddeeff33445566778899001122aabbccddeeff33445566778899001122aabbccddeeff",
+      "signer_key_id": "node-key-001",
+      "timestamp": "2026-03-19T14:04:00Z"
+    }
+  ],
+  "merkle_proofs": [
+    {
+      "leaf_hash": "eed2a912020afadd7f9c6dd00307a189f8a565a2b65acaa5cf9410e4a3ce4d26",
+      "leaf_index": 0,
+      "siblings": [
+        "7679d87e74dba62db423c4c5f3ffa59e77fe14a7efcb671ca713f7f2567d4f59",
+        "0367d2e619b9256e66f18328d03b25c7ee65306a3d440bc43bb4137dcd4b5e92"
+      ],
+      "directions": ["right", "right"],
+      "merkle_root": "66c0ec681fac9d8715f33056b0e4424e7e7c2b3c04f912dd47ef7f66ecaf710d"
+    }
+  ],
+  "public_key": "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2",
+  "public_key_id": "node-key-001",
+  "chain_id": "chain-example-001",
+  "offline_capable": true
+}

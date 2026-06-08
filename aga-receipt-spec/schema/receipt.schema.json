@@ -1,0 +1,196 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://attestedagents.com/schema/receipt.schema.json",
+  "title": "AGA Receipt",
+  "description": "Schema for standalone AGA governance receipts. Supports both internal continuity chain format and SEP (Structured Enforcement Protocol) gateway format.",
+  "type": "object",
+  "oneOf": [
+    { "$ref": "#/$defs/InternalReceipt" },
+    { "$ref": "#/$defs/SEPReceipt" },
+    { "$ref": "#/$defs/StandaloneReceipt" }
+  ],
+  "$defs": {
+    "InternalReceipt": {
+      "type": "object",
+      "title": "Internal Format Receipt",
+      "description": "Receipt from AGA continuity chain with leaf_hash and payload_hash.",
+      "properties": {
+        "receipt_id": {
+          "type": "string"
+        },
+        "event_type": {
+          "type": "string",
+          "enum": [
+            "POLICY_ISSUANCE",
+            "INTERACTION_RECEIPT",
+            "REVOCATION",
+            "ATTESTATION",
+            "ANCHOR_BATCH",
+            "KEY_ROTATION",
+            "GENESIS",
+            "TOOL_CALL_PERMITTED",
+            "TOOL_CALL_DENIED",
+            "SYSTEM_PROMPT_DRIFT",
+            "MODEL_IDENTITY_CHANGE",
+            "POLICY_ROTATION"
+          ]
+        },
+        "leaf_hash": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "payload_hash": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "signature": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{128,}$"
+        },
+        "signer_key_id": {
+          "type": "string"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "receipt_id",
+        "event_type",
+        "leaf_hash",
+        "payload_hash",
+        "signature",
+        "timestamp"
+      ],
+      "additionalProperties": true
+    },
+    "SEPReceipt": {
+      "type": "object",
+      "title": "SEP Format Receipt",
+      "description": "Receipt from MCP gateway in Structured Enforcement Protocol format.",
+      "properties": {
+        "receipt_id": {
+          "type": "string"
+        },
+        "receipt_version": {
+          "type": "string"
+        },
+        "algorithm": {
+          "type": "string"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "request_id": {
+          "type": "string"
+        },
+        "method": {
+          "type": "string"
+        },
+        "tool_name": {
+          "type": "string"
+        },
+        "decision": {
+          "type": "string",
+          "enum": ["PERMITTED", "DENIED"]
+        },
+        "reason": {
+          "type": "string"
+        },
+        "policy_reference": {
+          "type": "string"
+        },
+        "arguments_hash": {
+          "type": "string"
+        },
+        "previous_receipt_hash": {
+          "type": "string"
+        },
+        "gateway_id": {
+          "type": "string"
+        },
+        "signature": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{128,}$"
+        },
+        "public_key": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64,}$"
+        }
+      },
+      "required": [
+        "receipt_id",
+        "receipt_version",
+        "algorithm",
+        "timestamp",
+        "request_id",
+        "method",
+        "tool_name",
+        "decision",
+        "signature"
+      ],
+      "additionalProperties": true
+    },
+    "StandaloneReceipt": {
+      "type": "object",
+      "title": "Standalone Receipt",
+      "description": "Standalone receipt format as defined in the AGA Receipt Specification Section 2.",
+      "properties": {
+        "receipt_id": {
+          "type": "string"
+        },
+        "event_type": {
+          "type": "string",
+          "enum": [
+            "POLICY_ISSUANCE",
+            "INTERACTION_RECEIPT",
+            "REVOCATION",
+            "ATTESTATION",
+            "ANCHOR_BATCH",
+            "KEY_ROTATION",
+            "GENESIS",
+            "TOOL_CALL_PERMITTED",
+            "TOOL_CALL_DENIED",
+            "SYSTEM_PROMPT_DRIFT",
+            "MODEL_IDENTITY_CHANGE",
+            "POLICY_ROTATION"
+          ]
+        },
+        "tool_name": {
+          "type": "string"
+        },
+        "decision": {
+          "type": "string"
+        },
+        "request_id": {},
+        "arguments_hash": {
+          "type": "string"
+        },
+        "result_hash": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "signer_key_id": {
+          "type": "string"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "signature": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{128,}$"
+        }
+      },
+      "required": [
+        "receipt_id",
+        "event_type",
+        "timestamp",
+        "signature"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "_comment": "Example AGA receipt. Signatures are placeholder values.",
+  "receipt_id": "rcpt-example-001",
+  "event_type": "TOOL_CALL_PERMITTED",
+  "tool_name": "read_file",
+  "decision": "ALLOW",
+  "request_id": "req-7a3b",
+  "arguments_hash": "46a577e32cb0adfb2730304d9dd5d43cea44a28ee651d3952fc194dbb43c0a0f",
+  "result_hash": "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2",
+  "signer_key_id": "node-key-001",
+  "timestamp": "2026-03-19T14:30:00Z",
+  "signature": "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff"
+}

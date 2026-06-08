@@ -1,0 +1,80 @@
+{
+  "schema_version": "2.0",
+  "bundle_id": "fixture-den",
+  "algorithm": "Ed25519-SHA256-JCS",
+  "generated_at": "2026-06-06T12:00:00.000Z",
+  "gateway_id": "aga-fixtures",
+  "public_key": "8a88e3dd7409f195fd52db2d3cba5d72ca6709bf1d94121bf3748801b40f6f5c",
+  "policy_reference": "9d02195d18d69d91640a1041f0757af1154959a4b05cbaddbaec0672bb7bdc8c",
+  "receipts": [
+    {
+      "receipt_id": "r-1",
+      "receipt_version": "1.0",
+      "algorithm": "Ed25519-SHA256-JCS",
+      "timestamp": "2026-06-06T10:00:00.000Z",
+      "request_id": "req-1",
+      "method": "tools/call",
+      "tool_name": "read_file",
+      "decision": "PERMITTED",
+      "reason": "tool in allowlist",
+      "policy_reference": "9d02195d18d69d91640a1041f0757af1154959a4b05cbaddbaec0672bb7bdc8c",
+      "arguments_hash": "f98288cc74431a4877cfd20f05afbf20113cad6f95a217cf956f7e4600ec488f",
+      "previous_receipt_hash": "",
+      "gateway_id": "aga-fixtures",
+      "public_key": "8a88e3dd7409f195fd52db2d3cba5d72ca6709bf1d94121bf3748801b40f6f5c",
+      "signature": "28849cf247d9c8e9443ae5f774f5d489915cbf3c2a82dc5cbb1f401547338e10adec5e684e71aeac521c983a0d77df774db692541b719f68dd22c5c6b5040807"
+    },
+    {
+      "receipt_id": "r-2",
+      "receipt_version": "1.0",
+      "algorithm": "Ed25519-SHA256-JCS",
+      "timestamp": "2026-06-06T10:00:01.000Z",
+      "request_id": "req-2",
+      "method": "tools/call",
+      "tool_name": "delete_all",
+      "decision": "DENIED",
+      "reason": "destructive op blocked by policy",
+      "policy_reference": "9d02195d18d69d91640a1041f0757af1154959a4b05cbaddbaec0672bb7bdc8c",
+      "arguments_hash": "e4754605a83b5855d450891c6734e30fca0cef82d14d3b90222a0c4591b3b2f5",
+      "previous_receipt_hash": "077a3683ee05e6a45cf844d5de77473b9e32b5f1ed637d1e9686cb24e40751a7",
+      "gateway_id": "aga-fixtures",
+      "public_key": "8a88e3dd7409f195fd52db2d3cba5d72ca6709bf1d94121bf3748801b40f6f5c",
+      "signature": "af9baf082b4764642bf5413a858dd4fab897ea6bc7ae8a4bbd1b68571f58c13968e0ff635558a0fd12d78086102fa57aa69d514f42750a64991544a8e48b6207"
+    }
+  ],
+  "merkle_root": "355d89f76046597e28c6f016b90e9c28014f43ae2d7929bbaafa7b8350fcba6e",
+  "merkle_proofs": [
+    {
+      "leaf_hash": "077a3683ee05e6a45cf844d5de77473b9e32b5f1ed637d1e9686cb24e40751a7",
+      "leaf_index": 0,
+      "siblings": [
+        "7dfe7dc5c8708902871f9aef26c41ad77ad495ecea7f9718eecb242105f2421f"
+      ],
+      "directions": [
+        "right"
+      ],
+      "merkle_root": "355d89f76046597e28c6f016b90e9c28014f43ae2d7929bbaafa7b8350fcba6e"
+    },
+    {
+      "leaf_hash": "7dfe7dc5c8708902871f9aef26c41ad77ad495ecea7f9718eecb242105f2421f",
+      "leaf_index": 1,
+      "siblings": [
+        "077a3683ee05e6a45cf844d5de77473b9e32b5f1ed637d1e9686cb24e40751a7"
+      ],
+      "directions": [
+        "left"
+      ],
+      "merkle_root": "355d89f76046597e28c6f016b90e9c28014f43ae2d7929bbaafa7b8350fcba6e"
+    }
+  ],
+  "checkpoint": {
+    "algorithm": "Ed25519-SHA256-JCS",
+    "gateway_id": "aga-fixtures",
+    "generated_at": "2026-06-06T12:00:00.000Z",
+    "head_leaf_hash": "7dfe7dc5c8708902871f9aef26c41ad77ad495ecea7f9718eecb242105f2421f",
+    "leaf_count": 2,
+    "merkle_root": "355d89f76046597e28c6f016b90e9c28014f43ae2d7929bbaafa7b8350fcba6e",
+    "signature": "4346985eaab54bec27636eb6fa52eeffd3d2bf9da148d8313938eb75200aa07204c04e3c98fadaef479f3a230067010de6de90d615caf7022db277d02869920e"
+  },
+  "offline_capable": true
+}

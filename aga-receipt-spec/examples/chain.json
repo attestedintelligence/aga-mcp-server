@@ -1,0 +1,51 @@
+{
+  "_comment": "Example 4-receipt continuity chain. Leaf hashes and signatures are placeholder values. Each event's previous_leaf_hash references the preceding event's leaf_hash.",
+  "chain_id": "chain-example-001",
+  "protocol_version": "1.0",
+  "events": [
+    {
+      "schema_version": "1.0",
+      "protocol_version": "1.0",
+      "event_type": "GENESIS",
+      "event_id": "evt-genesis",
+      "sequence_number": 0,
+      "timestamp": "2026-03-19T14:00:00Z",
+      "previous_leaf_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+      "leaf_hash": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+      "payload_hash": "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2"
+    },
+    {
+      "schema_version": "1.0",
+      "protocol_version": "1.0",
+      "event_type": "POLICY_ISSUANCE",
+      "event_id": "evt-policy-001",
+      "sequence_number": 1,
+      "timestamp": "2026-03-19T14:01:00Z",
+      "previous_leaf_hash": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+      "leaf_hash": "c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3",
+      "payload_hash": "d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4"
+    },
+    {
+      "schema_version": "1.0",
+      "protocol_version": "1.0",
+      "event_type": "TOOL_CALL_PERMITTED",
+      "event_id": "evt-tool-001",
+      "sequence_number": 2,
+      "timestamp": "2026-03-19T14:02:00Z",
+      "previous_leaf_hash": "c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3",
+      "leaf_hash": "e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5",
+      "payload_hash": "f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6"
+    },
+    {
+      "schema_version": "1.0",
+      "protocol_version": "1.0",
+      "event_type": "INTERACTION_RECEIPT",
+      "event_id": "evt-interaction-001",
+      "sequence_number": 3,
+      "timestamp": "2026-03-19T14:03:00Z",
+      "previous_leaf_hash": "e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5",
+      "leaf_hash": "0707070707070707070707070707070707070707070707070707070707070707",
+      "payload_hash": "1818181818181818181818181818181818181818181818181818181818181818"
+    }
+  ]
+}
