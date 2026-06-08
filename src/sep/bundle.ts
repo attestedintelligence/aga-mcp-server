@@ -5,7 +5,7 @@
 import type { SepSigner } from './crypto.js';
 import { newId } from './crypto.js';
 import {
-  SEP_ALGORITHM, buildReceipt, leafHash,
+  buildReceipt, leafHash,
   type SepReceipt, type Decision,
 } from './receipt.js';
 import { merkleRoot, merkleProof, type MerkleProof } from './merkle.js';
@@ -105,7 +105,7 @@ export class SepGateway {
     return {
       schema_version: '2.0',
       bundle_id: this.idGen(),
-      algorithm: SEP_ALGORITHM,
+      algorithm: this.signer.algorithm,
       generated_at,
       gateway_id: this.gatewayId,
       public_key: this.signer.publicKeyHex,

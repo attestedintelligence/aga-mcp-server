@@ -6,7 +6,7 @@
  */
 import { canonicalize } from './canonical.js';
 import type { SepSigner } from './crypto.js';
-import { SEP_ALGORITHM, leafHash, type SepReceipt } from './receipt.js';
+import { leafHash, type SepReceipt } from './receipt.js';
 import { merkleRoot } from './merkle.js';
 
 export interface SignedCheckpoint {
@@ -33,7 +33,7 @@ export function buildCheckpoint(
   if (receipts.length === 0) throw new Error('Cannot checkpoint an empty receipt set');
   const leaves = receipts.map(leafHash);
   const body = {
-    algorithm: SEP_ALGORITHM,
+    algorithm: signer.algorithm,
     gateway_id: gatewayId,
     generated_at: generatedAt,
     head_leaf_hash: leaves[leaves.length - 1],

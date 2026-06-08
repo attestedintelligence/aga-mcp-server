@@ -10,4 +10,13 @@ export { nodeHash, merkleRoot, merkleProof, type MerkleProof } from './merkle.js
 export { SEP_ALGORITHM, SEP_RECEIPT_VERSION, SEP_RECEIPT_FIELDS, buildReceipt, leafHash, argumentsHash, safeArgumentsHash, UNCANONICALIZABLE_ARGS_HASH, type SepReceipt, type ReceiptInput, type Decision } from './receipt.js';
 export { buildCheckpoint, type SignedCheckpoint } from './checkpoint.js';
 export { SepGateway, type SepBundle, type SepGatewayOptions, type RecordInput } from './bundle.js';
-export { verifySepBundle, type SepVerificationResult, type VerifyStep } from './verify.js';
+export { verifySepBundle, type SepVerificationResult, type VerifyStep, type VerifyOptions } from './verify.js';
+export {
+  verifyHybrid, verifyHybridBytes, signHybrid, signHybridBytes,
+  hybridSignerFromSeeds, generateHybridSigner, generateHybridKeypair, hybridKeypairFromSeeds,
+  encodeComposite, decodeComposite, type HybridSecretKey,
+} from './hybrid.js';
+export {
+  ALG_ED25519, ALG_HYBRID, REGISTERED_PROFILES, ALL_PROFILES,
+  isRegisteredProfile, validPublicKeyForProfile, verifyForProfile,
+} from './profiles.js';

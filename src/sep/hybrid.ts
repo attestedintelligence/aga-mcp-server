@@ -21,6 +21,7 @@ import { ml_dsa65 } from '@noble/post-quantum/ml-dsa.js';
 import * as ed from '@noble/ed25519';
 import { sha512 } from '@noble/hashes/sha512';
 import { bytesToHex, hexToBytes, utf8ToBytes } from '@noble/hashes/utils';
+import type { SepSigner } from './crypto.js';
 
 // @noble/ed25519 v2 needs a synchronous SHA-512 hook for synchronous sign/verify. Wiring it from
 // @noble/hashes keeps the stack dependency-pure (no node:crypto in the composite path).
@@ -177,4 +178,16 @@ export function verifyHybrid(pubHex: unknown, message: string, sigHex: unknown):
   } catch {
     return false;
   }
+}
+
+/** A v2 composite SepSigner from two 32-byte seeds (deterministic; for the producer + cross-verify tests). */
+export function hybridSignerFromSeeds(mldsaSeed: Uint8Array, edSeed: Uint8Array): SepSigner {
+  const { secretKey, publicKeyHex } = hybridKeypairFromSeeds(mldsaSeed, edSeed);
+  return { algorithm: ALG_HYBRID, publicKeyHex, sign: (m) => signHybrid(m, secretKey) };
+}
+
+/** A v2 composite SepSigner from a fresh ephemeral keypair (the secret key is returned for persistence). */
+export function generateHybridSigner(): { signer: SepSigner; secretKey: HybridSecretKey } {
+  const { secretKey, publicKeyHex } = generateHybridKeypair();
+  return { signer: { algorithm: ALG_HYBRID, publicKeyHex, sign: (m) => signHybrid(m, secretKey) }, secretKey };
 }

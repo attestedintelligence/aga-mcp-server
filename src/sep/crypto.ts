@@ -22,8 +22,10 @@ export function isHex(h: unknown, n: number): boolean {
 }
 
 export interface SepSigner {
+  /** Profile algorithm id this signer emits — v1 'Ed25519-SHA256-JCS' or v2 'ML-DSA-65+Ed25519-SHA256-JCS'. */
+  readonly algorithm: string;
   readonly publicKeyHex: string;
-  sign(message: string): string; // returns 128-char lower-hex Ed25519 signature
+  sign(message: string): string; // returns the lower-hex signature for this signer's algorithm
 }
 
 /** Build a deterministic signer from a 32-byte Ed25519 seed (e.g. a @noble secretKey). */
@@ -31,7 +33,7 @@ export function signerFromSeed(seed: Uint8Array): SepSigner {
   if (seed.length !== 32) throw new Error(`Ed25519 seed must be 32 bytes, got ${seed.length}`);
   const sk = createPrivateKey({ key: Buffer.concat([PKCS8, Buffer.from(seed)]), format: 'der', type: 'pkcs8' });
   const publicKeyHex = createPublicKey(sk).export({ format: 'der', type: 'spki' }).subarray(-32).toString('hex');
-  return { publicKeyHex, sign: (m) => nodeSign(null, Buffer.from(m, 'utf8'), sk).toString('hex') };
+  return { algorithm: 'Ed25519-SHA256-JCS', publicKeyHex, sign: (m) => nodeSign(null, Buffer.from(m, 'utf8'), sk).toString('hex') };
 }
 
 /** Generate a fresh signer; returns the seed so callers can persist it. */
