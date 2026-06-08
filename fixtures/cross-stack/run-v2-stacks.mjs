@@ -53,7 +53,9 @@ const jsV1OnlyVerdict = (b) => engineMod.verifySepBundle(b, undefined, { support
 
 // ── 3. build the Go oracles ───────────────────────────────────────────────────
 const work = mkdtempSync(join(tmpdir(), 'aga-xstack-v2-'));
-const goEnv = { ...process.env, GOPROXY: 'off', GOSUMDB: 'off', GOFLAGS: '-mod=mod' };
+// Inherit the ambient Go env so this runs both locally (module cache) and in CI (default proxy fetches
+// CIRCL + GOSUMDB verifies it against the committed go.sum). -mod=mod lets a fresh checkout resolve.
+const goEnv = { ...process.env, GOFLAGS: '-mod=mod' };
 const goV2Exe = join(work, process.platform === 'win32' ? 'verify-v2.exe' : 'verify-v2');
 execFileSync('go', ['build', '-o', goV2Exe, '.'], { cwd: resolve(ROOT, 'aga-receipt-spec/verify/v2'), env: goEnv, stdio: 'pipe' });
 const goV1Exe = join(work, process.platform === 'win32' ? 'verifygo.exe' : 'verifygo');
