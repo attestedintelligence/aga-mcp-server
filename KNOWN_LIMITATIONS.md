@@ -1,0 +1,42 @@
+# Known Limitations
+
+Plain-language companion to [`THREAT_BOUNDARY.md`](THREAT_BOUNDARY.md). It restates, in public terms, exactly what `@attested-intelligence/aga-mcp-server` (3.0.0) does **not** do and the residual surface that remains by design or is deferred. Nothing here is hidden in the threat boundary, and nothing in the threat boundary is softened here: public honesty == internal honesty. If the two ever disagree, the threat boundary is authoritative.
+
+## What a verified bundle proves — and does not
+
+A verified bundle proves the **integrity of the receipts present**: each receipt is authentic (Ed25519), correctly ordered (hash chain), Merkle-included, checkpoint-bound, and — when you pin the gateway key — provenance-bound to that key. It does **not** prove **non-omission**: that *every* action the agent took was logged. Completeness is bounded by the tamper-evidence of the interception point, which sits outside the bundle. AGA proves *what was governed*; it does not by itself prove *that everything was governed* — that is the deployment's job (next section).
+
+## Mandatory mediation is a deployment property
+
+The governance guarantee holds for the path *through* AGA. If an agent can reach the underlying tool server **directly** (over the network), it bypasses governance entirely. The hardened default closes this by construction: the proxy runs the upstream as a **stdio child process** that is not network-reachable, so the proxy is the only route to tools. HTTP-upstream mode is reachable directly and warns on stderr; if you use it, you must network-isolate the agent yourself. See `DEPLOYMENT.md` §1. (`THREAT_BOUNDARY.md` §3.1.)
+
+## Only `tools/call` is policy-evaluated
+
+The proxy evaluates policy on `tools/call`. Other JSON-RPC methods are forwarded without policy evaluation, but a side-effecting non-`tools/call` method is **recorded as a signed passthrough receipt** in the bundle (so it is no longer invisible), and an optional `denyMethods` denylist can reject known dangerous methods. This is **visibility, not governance**: a forwarded method still executes unless explicitly denylisted. Full per-method policy evaluation is future work. (`THREAT_BOUNDARY.md` §3.2.)
+
+## Key lifecycle
+
+- **Persist:** the gateway signing key can be persisted via `AGA_GATEWAY_KEY` (a 64-hex, 32-byte Ed25519 seed) or `AGA_GATEWAY_KEY_FILE`, so `gateway_public_key` is stable and pinnable across restarts. The **default is an ephemeral key** that rotates on restart (warned on stderr) — fine for a first look, not for durable provenance. (`DEPLOYMENT.md` §2, `THREAT_BOUNDARY.md` §3.4.)
+- **Rotate / revoke / recover:** these are operational responsibilities, not yet automated. Rotating the seed changes the gateway identity; bundles signed under the old key remain verifiable when pinned to that old key. There is no built-in key-rotation or key-revocation ceremony, and no HSM/KMS backing yet — all roadmap. (`revoke_artifact` revokes a governed *artifact*, not the signing *key*.)
+- **Key custody is the trust root:** anyone who holds the gateway signing key can author receipts. Protect it. (`THREAT_BOUNDARY.md` §3.6.)
+
+## Storage durability and scale
+
+- **Durability:** default storage is **in-memory**, so the live chain is lost on process restart. The cryptographic record survives via the **exported signed bundle**; durable cross-restart retention needs the persistent (SQLite) backend, which is roadmap. The raw quarantine forensic buffer is in-memory by design — only the signed `arguments_hash` commitment is retained, which is privacy-preserving and sufficient to *prove* a capture. (`THREAT_BOUNDARY.md` §3.5.)
+- **Scale:** bundle size grows linearly with the number of receipts; Merkle inclusion proofs are `O(log n)` per receipt. Very large or long-lived chains, and high-throughput retention, are bounded by process memory in the default in-memory mode and want the persistent backend. AGA has not been benchmarked as a high-volume datastore; it is an evidence format + governance interception point, not a log warehouse.
+
+## What `policy_reference` binds — and does not
+
+The governing policy **is** captured and cryptographically verified inside **every signed receipt** (`policy_reference` is one of the signed fields). The bundle *envelope* also carries an **unsigned** `policy_reference` (plus `bundle_id`, `schema_version`, `offline_capable`) as a convenience mirror — these four envelope fields have no signed counterpart and must not be trusted as security-identity values. The security-identity fields `gateway_id` / `merkle_root` / `generated_at` **are** bound (envelope-consistency check). Binding the envelope `policy_reference` is a recommended near-term (3.1) format revision. A relying party must trust only signed/verified values and pin the gateway key. (`THREAT_BOUNDARY.md` §3.8.)
+
+## Verify with a pinned key, or it is integrity-only
+
+Verifying a bundle **without** pinning the gateway key yields an integrity-only result (`issuerVerified=false`) — even for a forged, attacker-signed, denial-free bundle. That is correct (integrity ≠ provenance), and the result object and CLIs say so explicitly via a prominent `summary`. Do not present an unpinned "VERIFIED" as proof of *who* issued the bundle. Pin the key. (`THREAT_BOUNDARY.md` §3.7.)
+
+## Out of scope entirely
+
+AGA does **not** prevent model jailbreaks, model-weight theft, credential compromise, or infrastructure compromise. It provides **accountability and provenance for governed decisions**, not prevention of those attack classes. The behavioral monitor (`measure_behavior`) is **detective-only by default** — it records a signed drift finding but does not block unless `enforce=true`. (`THREAT_BOUNDARY.md` §3.6, §1.)
+
+---
+
+For the tested adversarial results behind these statements (7 red-team attacks, 6 held + 1 documented residual) and the per-field cryptographic detail, see [`THREAT_BOUNDARY.md`](THREAT_BOUNDARY.md).

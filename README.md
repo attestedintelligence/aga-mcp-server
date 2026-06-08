@@ -37,7 +37,7 @@ Every tool call an AI agent makes passes through the AGA gateway. Each call is e
 
 **Record. Prove. Verify.**
 
-**Scope:** a verified bundle proves the *integrity of the receipts present* — each is authentic, correctly ordered, Merkle-included, and (when a key is pinned) provenance-bound. It does **not** prove non-omission (that every action the agent took was logged); completeness is bounded by the tamper-evidence of the interception point, which is outside the bundle.
+**Scope:** a verified bundle proves the *integrity of the receipts present* — each is authentic, correctly ordered, Merkle-included, and (when a key is pinned) provenance-bound. It does **not** prove non-omission (that every action the agent took was logged); completeness is bounded by the tamper-evidence of the interception point, which is outside the bundle. See **[KNOWN_LIMITATIONS.md](https://github.com/attestedintelligence/aga-mcp-server/blob/main/KNOWN_LIMITATIONS.md)** for the full honest boundary, and `THREAT_BOUNDARY.md` for the per-field detail.
 
 ## Use with Claude Desktop
 
