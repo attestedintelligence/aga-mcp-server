@@ -152,6 +152,11 @@ const tamperCheckpointSig = (() => {
 const composite_sig_trailing_byte = (() => { const b = wire(bundle); b.receipts[0].signature = b.receipts[0].signature + 'ab'; return b; })();
 // truncate a receipt composite signature by one byte -> component length mismatch / decode fail.
 const composite_sig_truncated = (() => { const b = wire(bundle); const s = b.receipts[0].signature; b.receipts[0].signature = s.slice(0, -2); return b; })();
+// UPPERCASE a receipt composite signature (UNSIGNED edit; same bytes). A case-insensitive verify would
+// VERIFY this while the lowercase-strict Go/CIRCL oracle FAILS — the v2 hex-case cross-stack split.
+const composite_sig_uppercase = (() => { const b = wire(bundle); b.receipts[0].signature = b.receipts[0].signature.toUpperCase(); return b; })();
+// UPPERCASE the checkpoint composite signature (UNSIGNED edit; same bytes).
+const checkpoint_sig_uppercase = (() => { const b = wire(bundle); b.checkpoint.signature = b.checkpoint.signature.toUpperCase(); return b; })();
 // all-zero composite public key (right length) -> validPublicKeyForProfile rejects all-zero.
 const composite_key_all_zero = (() => { const b = wire(bundle); b.public_key = '0'.repeat(pub.length); b.receipts.forEach((r) => { r.public_key = b.public_key; }); return b; })();
 // wrong-length composite public key -> structural floor fails.
@@ -191,6 +196,8 @@ const adversarial = [
   { desc: 'v2 tamper_checkpoint_signature — flip one nibble of the checkpoint composite signature', expect: 'FAILED', failing_step: 'signed_checkpoint', bundle: tamperCheckpointSig },
   { desc: 'v2 composite_sig_trailing_byte — extra byte appended to a receipt composite signature; decodeComposite rejects trailing bytes', expect: 'FAILED', failing_step: 'receipt_signatures', bundle: composite_sig_trailing_byte },
   { desc: 'v2 composite_sig_truncated — a receipt composite signature truncated by one byte; component-length / decode fail', expect: 'FAILED', failing_step: 'receipt_signatures', bundle: composite_sig_truncated },
+  { desc: 'v2 composite_sig_uppercase — a receipt composite signature UPPERCASED (UNSIGNED, same bytes); lowercase-strict hex guard rejects (the v2 hex-case cross-stack split)', expect: 'FAILED', failing_step: 'receipt_signatures', bundle: composite_sig_uppercase },
+  { desc: 'v2 checkpoint_sig_uppercase — the checkpoint composite signature UPPERCASED (UNSIGNED, same bytes); lowercase-strict hex guard rejects', expect: 'FAILED', failing_step: 'signed_checkpoint', bundle: checkpoint_sig_uppercase },
   { desc: 'v2 composite_key_all_zero — all-zero composite public key (right length); rejected by composite key well-formedness', expect: 'FAILED', failing_step: 'structural', bundle: composite_key_all_zero },
   { desc: 'v2 composite_key_wrong_length — composite public key one byte short; structural floor fails', expect: 'FAILED', failing_step: 'structural', bundle: composite_key_wrong_length },
   { desc: 'v2 identifier_mismatch_checkpoint — bundle.algorithm=v2 but checkpoint.algorithm=v1; checkpoint binding requires cp.algorithm === bundle.algorithm', expect: 'FAILED', failing_step: 'signed_checkpoint', bundle: identifier_mismatch_checkpoint },

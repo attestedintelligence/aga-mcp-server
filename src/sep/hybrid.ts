@@ -171,10 +171,14 @@ export function verifyHybridBytes(
  */
 export function verifyHybrid(pubHex: unknown, message: string, sigHex: unknown): boolean {
   if (typeof pubHex !== 'string' || typeof sigHex !== 'string') return false;
-  if (!/^[0-9a-fA-F]+$/.test(pubHex) || pubHex.length % 2 !== 0) return false;
-  if (!/^[0-9a-fA-F]+$/.test(sigHex) || sigHex.length % 2 !== 0) return false;
+  // LOWERCASE-strict hex (no upper, no mixed). An uppercased hex decodes to the SAME bytes, so a
+  // case-insensitive accept would VERIFY a bundle a lowercase-strict stack (the Go/CIRCL oracle's
+  // isLowerHexEven, the v1 isHex guard) FAILS — a cross-stack verdict split. Mirrors the H5 lowercase
+  // discipline for Merkle siblings.
+  if (!/^[0-9a-f]+$/.test(pubHex) || pubHex.length % 2 !== 0) return false;
+  if (!/^[0-9a-f]+$/.test(sigHex) || sigHex.length % 2 !== 0) return false;
   try {
-    return verifyHybridBytes(hexToBytes(pubHex.toLowerCase()), utf8ToBytes(message), hexToBytes(sigHex.toLowerCase()));
+    return verifyHybridBytes(hexToBytes(pubHex), utf8ToBytes(message), hexToBytes(sigHex));
   } catch {
     return false;
   }

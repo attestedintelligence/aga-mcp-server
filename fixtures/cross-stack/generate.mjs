@@ -110,6 +110,10 @@ const tamperedCheckpointAlg = wire(bundle); tamperedCheckpointAlg.checkpoint.alg
 const truncated = wire(bundle); truncated.receipts.pop(); truncated.merkle_proofs.pop(); // checkpoint still claims leaf_count=3
 const reordered = wire(bundle); [reordered.receipts[0], reordered.receipts[1]] = [reordered.receipts[1], reordered.receipts[0]];
 const wrongRoot = wire(bundle); wrongRoot.checkpoint.merkle_root = 'f'.repeat(64);
+// UPPERCASE a receipt signature (UNSIGNED edit; same bytes). A case-insensitive verify would VERIFY
+// this while the lowercase-strict stacks (Go/Python isHex, the engine) FAIL — a hex-case cross-stack
+// split. The v1 path was already lowercase-strict; this vector locks it against regression.
+const sigUppercase = wire(bundle); sigUppercase.receipts[0].signature = sigUppercase.receipts[0].signature.toUpperCase();
 
 // ── VALIDLY-SIGNED but NON-CONFORMANT bundles ──────────────────────────────
 // The "tamper after signing" fixtures above all fail on the SIGNATURE first, so they never
@@ -324,6 +328,7 @@ const adversarial = [
   { desc: 'truncated bundle (dropped a receipt; checkpoint leaf_count/head no longer match)', expect: 'FAILED', failing_step: 'signed_checkpoint', bundle: truncated },
   { desc: 'reordered receipts (chain linkage broken)', expect: 'FAILED', failing_step: 'chain_and_ordering', bundle: reordered },
   { desc: 'tampered checkpoint merkle_root', expect: 'FAILED', failing_step: 'signed_checkpoint', bundle: wrongRoot },
+  { desc: 'sig_uppercase — a receipt signature UPPERCASED (UNSIGNED, same bytes); lowercase-strict hex guard rejects (locks the v1 hex-case discipline)', expect: 'FAILED', failing_step: 'receipt_signatures', bundle: sigUppercase },
   { desc: 'non-canonical public key (y >= p)', expect: 'FAILED', failing_step: 'structural', bundle: keySwap('ed' + 'ff'.repeat(30) + '7f') },
   ...SMALL_ORDER.map((k, i) => ({ desc: `small-order public key #${i} (${k.slice(0, 8)}…) — identity/from-nothing-forgery class`, expect: 'FAILED', failing_step: 'structural', bundle: keySwap(k) })),
   // VALIDLY-SIGNED but NON-CONFORMANT: every signature/leaf/proof/checkpoint is re-derived so the

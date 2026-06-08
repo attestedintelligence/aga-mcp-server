@@ -1574,6 +1574,123 @@
       }
     },
     {
+      "desc": "sig_uppercase — a receipt signature UPPERCASED (UNSIGNED, same bytes); lowercase-strict hex guard rejects (locks the v1 hex-case discipline)",
+      "expect": "FAILED",
+      "failing_step": "receipt_signatures",
+      "bundle": {
+        "schema_version": "2.0",
+        "bundle_id": "rcpt-0003",
+        "algorithm": "Ed25519-SHA256-JCS",
+        "generated_at": "2026-01-01T00:00:03.000Z",
+        "gateway_id": "cross-stack-gw",
+        "public_key": "ea4a6c63e29c520abef5507b132ec5f9954776aebebe7b92421eea691446d22c",
+        "policy_reference": "",
+        "receipts": [
+          {
+            "receipt_id": "rcpt-0000",
+            "receipt_version": "1.0",
+            "algorithm": "Ed25519-SHA256-JCS",
+            "timestamp": "2026-01-01T00:00:00.000Z",
+            "request_id": "r1",
+            "method": "tools/call",
+            "tool_name": "measure_integrity",
+            "decision": "PERMITTED",
+            "reason": "ok",
+            "policy_reference": "",
+            "arguments_hash": "5041bf1f713df204784353e82f6a4a535931cb64f1f4b4a5aeaffcb720918b22",
+            "previous_receipt_hash": "",
+            "gateway_id": "cross-stack-gw",
+            "public_key": "ea4a6c63e29c520abef5507b132ec5f9954776aebebe7b92421eea691446d22c",
+            "signature": "8D4577F978BDAC6A3E281697A80CC74CB29C7DA7FCF2EA7A57F341B57871624FA475A8034AEC0D352146CEEB74E03DC871FEA981A0BDEBDDC9FF62BDA8FF620B"
+          },
+          {
+            "receipt_id": "rcpt-0001",
+            "receipt_version": "1.0",
+            "algorithm": "Ed25519-SHA256-JCS",
+            "timestamp": "2026-01-01T00:00:01.000Z",
+            "request_id": "r2",
+            "method": "tools/call",
+            "tool_name": "revoke_artifact",
+            "decision": "DENIED",
+            "reason": "blocked",
+            "policy_reference": "",
+            "arguments_hash": "9a51a7767c3d6fbab05a874b052aa49174a280702a278208810f9cd1a9ef3afa",
+            "previous_receipt_hash": "9a075f8893cc23d965a07e6976d603d07657fe95da9b670bc497067fda1eac8f",
+            "gateway_id": "cross-stack-gw",
+            "public_key": "ea4a6c63e29c520abef5507b132ec5f9954776aebebe7b92421eea691446d22c",
+            "signature": "2936fb82956ec59dc4f745febed003924af5ee17e62f7bb07198b603e2c6766bcea2222ead330930b996df1c0b18f69a8a6f160d55b67492b5a4f1da80fec00c"
+          },
+          {
+            "receipt_id": "rcpt-0002",
+            "receipt_version": "1.0",
+            "algorithm": "Ed25519-SHA256-JCS",
+            "timestamp": "2026-01-01T00:00:02.000Z",
+            "request_id": "r3",
+            "method": "tools/call",
+            "tool_name": "measure_integrity",
+            "decision": "PERMITTED",
+            "reason": "ok2",
+            "policy_reference": "",
+            "arguments_hash": "59068e3769f66a9341b13678cc54dd69d9bbc848608d0228a1e506d729e5f7a0",
+            "previous_receipt_hash": "48616bc249d88af46694fe14c306a92cd4c9f2a96b916b02ce1f069f76607c87",
+            "gateway_id": "cross-stack-gw",
+            "public_key": "ea4a6c63e29c520abef5507b132ec5f9954776aebebe7b92421eea691446d22c",
+            "signature": "f8eff41e45be9ad9d615fc94d4fca56ceace9422b94bc4a60b260dc64c6a56023cc9d34198e2425daaf9fcb5f7f59c42b21e021dfab5658c2928fb13ed52310d"
+          }
+        ],
+        "merkle_root": "3b99ce7670c3e800c4719bd1565e94771ddfa8d6cdd43e6e25542caaaa36c8e3",
+        "merkle_proofs": [
+          {
+            "leaf_hash": "9a075f8893cc23d965a07e6976d603d07657fe95da9b670bc497067fda1eac8f",
+            "leaf_index": 0,
+            "siblings": [
+              "48616bc249d88af46694fe14c306a92cd4c9f2a96b916b02ce1f069f76607c87",
+              "1ae07b9a53952d28176adb750fe3baee9df6e1694a2696e92081039e4c82e628"
+            ],
+            "directions": [
+              "right",
+              "right"
+            ],
+            "merkle_root": "3b99ce7670c3e800c4719bd1565e94771ddfa8d6cdd43e6e25542caaaa36c8e3"
+          },
+          {
+            "leaf_hash": "48616bc249d88af46694fe14c306a92cd4c9f2a96b916b02ce1f069f76607c87",
+            "leaf_index": 1,
+            "siblings": [
+              "9a075f8893cc23d965a07e6976d603d07657fe95da9b670bc497067fda1eac8f",
+              "1ae07b9a53952d28176adb750fe3baee9df6e1694a2696e92081039e4c82e628"
+            ],
+            "directions": [
+              "left",
+              "right"
+            ],
+            "merkle_root": "3b99ce7670c3e800c4719bd1565e94771ddfa8d6cdd43e6e25542caaaa36c8e3"
+          },
+          {
+            "leaf_hash": "1ae07b9a53952d28176adb750fe3baee9df6e1694a2696e92081039e4c82e628",
+            "leaf_index": 2,
+            "siblings": [
+              "2eb47c408a27b0e7f0b394b9466f64326d8364c3cd2beb0ed5eb509ecb9985a3"
+            ],
+            "directions": [
+              "left"
+            ],
+            "merkle_root": "3b99ce7670c3e800c4719bd1565e94771ddfa8d6cdd43e6e25542caaaa36c8e3"
+          }
+        ],
+        "checkpoint": {
+          "algorithm": "Ed25519-SHA256-JCS",
+          "gateway_id": "cross-stack-gw",
+          "generated_at": "2026-01-01T00:00:03.000Z",
+          "head_leaf_hash": "1ae07b9a53952d28176adb750fe3baee9df6e1694a2696e92081039e4c82e628",
+          "leaf_count": 3,
+          "merkle_root": "3b99ce7670c3e800c4719bd1565e94771ddfa8d6cdd43e6e25542caaaa36c8e3",
+          "signature": "24d580a4221912e0c71d001df79abc13ee7d8844140dbf831bdadb9502d726cbedb6ed859669acdee7e16be88d5a1fccc634c3724e0483e05c0dd98574c8fb05"
+        },
+        "offline_capable": true
+      }
+    },
+    {
       "desc": "non-canonical public key (y >= p)",
       "expect": "FAILED",
       "failing_step": "structural",
