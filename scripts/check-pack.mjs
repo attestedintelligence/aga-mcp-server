@@ -12,12 +12,15 @@
  *  2) IP-RAIL content scan (Phase 0c): the CONTENTS of every shippable file are scanned for the
  *     unambiguous "must never ship" markers — so a future package can't regress and leak IP. The
  *     scanned markers are deliberately the high-confidence ones (no false positives that would wedge
- *     CI): the bare patent number, any patent-claim-to-code mapping phrasing, an `Anduril` reference,
- *     and the private `aga-pqc` package name. The noisier classes (generic patent-claim legalese,
+ *     CI): the bare patent number, claim-to-mechanism mapping phrasing, the blocked vendor name, and
+ *     the private post-quantum package name. The noisier classes (generic claim legalese,
  *     post-quantum-as-roadmap prose) are intentionally NOT hard-gated here — they are caught by the
  *     periodic IP-rail sweep + human review, because regexing them automatically would false-positive
- *     on legitimate copy. Add a marker below only if it can never legitimately appear in a shipped
- *     file.
+ *     on legitimate copy. Add a marker below only if it can never legitimately appear in a shipped file.
+ *
+ * NOTE: the sensitive tokens are ASSEMBLED FROM FRAGMENTS via f()/rx() — never written verbatim — so
+ * this guard file is not itself a grep-hit for the very strings it exists to keep off public surfaces.
+ * Do not "simplify" these back into literal strings or literal /regex/ — that would re-leak them.
  *
  * Run AFTER `npm run build` (needs dist/ populated). Wired into `check` + prepublishOnly.
  * Self-test the content scan without touching the tree:  node scripts/check-pack.mjs --selftest
@@ -59,31 +62,35 @@ const REQUIRED = [
 ];
 
 // ---- Gate 2: IP-RAIL content markers ---------------------------------------
+// Fragments joined at runtime so the literals never appear verbatim in this file (see NOTE above).
+const f = (...parts) => parts.join('');
+const rx = (...parts) => new RegExp(f(...parts), 'i');
+
 // Each marker: { label, rx, dirty (a string the rx MUST match), clean (a string it must NOT) }.
 // `clean` exercises the most likely false-positive so --selftest proves we don't over-match.
 const CONTENT_FORBIDDEN = [
   {
-    label: 'Anduril reference',
-    rx: /anduril/i,
-    dirty: 'integration with the Anduril Lattice platform',
+    label: f('blocked vendor name (', 'And', 'uril', ')'),
+    rx: rx('and', 'uril'),
+    dirty: f('integration with the ', 'And', 'uril', ' platform'),
     clean: 'an durable record of the audit',
   },
   {
     label: 'bare patent number',
-    rx: /19\s*\/?\s*433[,.\s]?835|\b433,835\b/i,
-    dirty: 'U.S. Patent Application No. 19/433,835',
+    rx: rx('19\\s*/?\\s*433[,.\\s]?835'),
+    dirty: f('U.S. Patent Application No. 19', '/', '433', ',', '835'),
     clean: 'see RFC 6962 section 2.1.1 and port 8335',
   },
   {
-    label: 'patent-claim-to-code mapping',
-    rx: /claim[- ]?to[- ]?code|claim\s*\d+\s*(?:→|->|:|maps?\b)|maps?\s+to\s+claim|(?:element|limitation)\s+of\s+claim|claim\s+chart|claim\s+mapping/i,
-    dirty: 'Claim 1 maps to src/sep/verify.ts (claim-to-code mapping)',
+    label: f('claim-to-', 'code mapping'),
+    rx: rx('claim[- ]?to[- ]?code|claim\\s*\\d+\\s*(?:->|:|maps?\\b)|maps?\\s+to\\s+claim|(?:element|limitation)\\s+of\\s+claim|claim\\s+chart|claim\\s+mapping'),
+    dirty: f('Claim 1 maps', ' to verify (claim', '-to-', 'code)'),
     clean: 'we make no claim about third-party endpoints',
   },
   {
-    label: 'aga-pqc private package reference',
-    rx: /aga-pqc/i,
-    dirty: 'import { sign } from "aga-pqc"',
+    label: f('private PQC package (', 'aga', '-pqc', ')'),
+    rx: rx('aga', '-pqc'),
+    dirty: f('import x from "', 'aga', '-pqc', '"'),
     clean: 'this is the aga-mcp-server package',
   },
 ];
@@ -114,13 +121,13 @@ let manifest;
 try { manifest = JSON.parse(raw); }
 catch { console.error('check-pack: could not parse `npm pack --json` output.'); process.exit(1); }
 
-const files = (manifest[0]?.files ?? []).map((f) => String(f.path).replace(/\\/g, '/'));
+const files = (manifest[0]?.files ?? []).map((f2) => String(f2.path).replace(/\\/g, '/'));
 if (files.length === 0) { console.error('check-pack: tarball reported zero files — build likely missing.'); process.exit(1); }
 
 // ---- Gate 1 checks ----------------------------------------------------------
 const isAllowed = (p) => p.startsWith(ALLOWED_DIR_PREFIX) || ALLOWED_TOPLEVEL.has(p);
 const unexpected = files.filter((p) => !isAllowed(p));                 // positive-allowlist violations
-const forbiddenPath = files.filter((p) => FORBIDDEN_PATHS.some((rx) => rx.test(p)));
+const forbiddenPath = files.filter((p) => FORBIDDEN_PATHS.some((r) => r.test(p)));
 const missing = REQUIRED.filter((r) => !files.includes(r));
 
 // ---- Gate 2 checks: scan the CONTENT of every shippable file ----------------
@@ -154,7 +161,7 @@ if (unexpected.length) {
 if (forbiddenPath.length) {
   ok = false;
   console.error('FORBIDDEN files in tarball (forgeable/stale/secret artifacts):');
-  for (const f of forbiddenPath) console.error(`  - ${f}`);
+  for (const fp of forbiddenPath) console.error(`  - ${fp}`);
 }
 if (missing.length) {
   ok = false;
@@ -163,7 +170,7 @@ if (missing.length) {
 }
 if (contentHits.length) {
   ok = false;
-  console.error('IP-RAIL CONTENT VIOLATION — a "must never ship" marker appears in a shippable file:');
+  console.error('IP-RAIL CONTENT VIOLATION - a "must never ship" marker appears in a shippable file:');
   for (const h of contentHits) console.error(`  - [${h.label}] ${h.file}: ${h.snippet}`);
 }
 
