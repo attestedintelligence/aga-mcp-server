@@ -236,7 +236,17 @@ if (import.meta.url === `file://${process.argv[1]}` || process.argv[1]?.endsWith
   }
   try {
     const { readFileSync } = await import('node:fs');
-    const r = verifySepBundle(JSON.parse(readFileSync(file, 'utf8')), pk);
+    const parsed = JSON.parse(readFileSync(file, 'utf8'));
+    // Trichotomy pre-gate (CLI only; the library verifySepBundle is byte-unchanged): this is the
+    // v1-only normative reference. A bundle declaring a REGISTERED profile it does not implement (the
+    // v2 ML-DSA-65+Ed25519 composite) returns UNSUPPORTED_PROFILE (exit 3) with NO soundness claim,
+    // never a misleading FAILED. STRICTLY ADDITIVE: runs before §6 and can ONLY convert a would-be
+    // FAILED(v2) into exit 3; an unknown/unregistered algorithm still falls through to §6.1 and FAILS.
+    if (parsed?.algorithm === 'ML-DSA-65+Ed25519-SHA256-JCS') {
+      console.log(`OVERALL: UNSUPPORTED_PROFILE (this v1-only reference does not implement profile '${parsed.algorithm}')`);
+      process.exit(3);
+    }
+    const r = verifySepBundle(parsed, pk);
     for (const s of r.steps) console.log(`  ${s.ok ? 'PASS' : 'FAIL'}  ${s.name}`);
     // Suffix reflects the VERDICT: only a VERIFIED bundle gets a provenance/integrity tag; a FAILED
     // bundle prints just "FAILED" (never "FAILED (provenance verified)").

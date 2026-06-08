@@ -865,6 +865,17 @@ func main() {
 		fmt.Println("OVERALL: FAILED (trailing content after bundle JSON)")
 		os.Exit(1)
 	}
+	// Trichotomy pre-gate (CLI only; the library VerifySepBundle is byte-unchanged): this
+	// zero-dependency reference implements ONLY the v1 profile. A bundle declaring a REGISTERED
+	// profile this verifier does not implement (the v2 ML-DSA-65+Ed25519 composite) returns
+	// UNSUPPORTED_PROFILE (exit 3) with NO soundness claim — never a misleading FAILED. STRICTLY
+	// ADDITIVE: it runs BEFORE §6 and can ONLY convert a would-be FAILED(v2) into exit 3; an unknown/
+	// unregistered algorithm still falls through to the §6.1 structural floor and FAILS. The §1–6
+	// construction, canon, and v1 verification are byte-unchanged.
+	if ba, _ := bundle["algorithm"].(string); ba == "ML-DSA-65+Ed25519-SHA256-JCS" {
+		fmt.Printf("OVERALL: UNSUPPORTED_PROFILE (this v1-only reference does not implement profile %q)\n", ba)
+		os.Exit(3)
+	}
 	res := VerifySepBundle(bundle, pubkey)
 	for _, s := range res.Steps {
 		status := "FAIL"

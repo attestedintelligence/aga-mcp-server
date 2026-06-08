@@ -39,6 +39,7 @@
     "test:proxy": "vitest run tests/proxy/",
     "test:conformance": "node fixtures/run-conformance.mjs",
     "conformance:cross-stack": "node fixtures/cross-stack/run-all-stacks.mjs",
+    "conformance:cross-stack-v2": "node fixtures/cross-stack/run-v2-stacks.mjs",
     "check:pack": "node scripts/check-pack.mjs",
     "check": "npm run build && npm run lint && npm run test && npm run test:conformance && npm run check:pack",
     "proxy": "tsx src/proxy/index.ts",

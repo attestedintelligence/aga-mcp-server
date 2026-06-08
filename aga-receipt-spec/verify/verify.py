@@ -617,6 +617,15 @@ def _main(argv):
     try:
         with open(files[0], "r", encoding="utf-8") as fh:
             bundle = json.load(fh)
+        # Trichotomy pre-gate (CLI only; verify_sep_bundle is byte-unchanged): this pure-stdlib
+        # reference implements ONLY the v1 profile. A bundle declaring a REGISTERED profile it does
+        # not implement (the v2 ML-DSA-65+Ed25519 composite) returns UNSUPPORTED_PROFILE (exit 3) with
+        # NO soundness claim, never a misleading FAILED. STRICTLY ADDITIVE: runs before the 6-step body
+        # and can ONLY convert a would-be FAILED(v2) into exit 3; an unknown/unregistered algorithm
+        # still falls through to the structural floor and FAILS.
+        if isinstance(bundle, dict) and bundle.get("algorithm") == "ML-DSA-65+Ed25519-SHA256-JCS":
+            print("OVERALL: UNSUPPORTED_PROFILE (this v1-only reference does not implement profile %r)" % bundle.get("algorithm"))
+            return 3
         r = verify_sep_bundle(bundle, pubkey)
     except Exception as e:  # noqa: BLE001 — fail closed on parse/read/verify error.
         sys.stderr.write("error reading/parsing bundle: %s\n" % (e,))
