@@ -11,6 +11,7 @@
  * Regenerate only intentionally; this self-checks against the engine before writing.
  */
 import { writeFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { SepGateway, signerFromSeed, verifySepBundle, leafHash, merkleRoot, merkleProof, SEP_ALGORITHM, SEP_RECEIPT_VERSION } from '../../src/sep/index.ts';
 import { canonicalize } from '../../src/sep/canonical.ts';
 
@@ -443,5 +444,10 @@ if ((out.match(/"leaf_count": 2\.0/g) || []).length !== 1) throw new Error('leaf
 if ((out.match(/"leaf_index": 0\.0/g) || []).length !== 1) throw new Error('leaf_index_float surgery: expected exactly one "0.0"');
 JSON.parse(out); // must remain parseable (2.0 / 0.0 are valid JSON numbers)
 
-writeFileSync(new URL('./vectors.json', import.meta.url), out + '\n');
+const finalText = out + '\n';
+writeFileSync(new URL('./vectors.json', import.meta.url), finalText);
+// Pin the corpus (tamper-evident; checked by run-all-stacks.mjs + the release gate).
+const digest = createHash('sha256').update(Buffer.from(finalText, 'utf8')).digest('hex');
+writeFileSync(new URL('./vectors.sha256', import.meta.url), `${digest}  vectors.json\n`);
 console.log(`wrote vectors.json: ${canonical.length} canonical + ${1 + valid_variants.length} valid + ${adversarial.length} adversarial (self-check passed)`);
+console.log(`sha256(vectors.json) = ${digest}`);

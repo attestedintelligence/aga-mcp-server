@@ -207,7 +207,10 @@ program
     for (const s of result.steps) console.log(`${s.ok ? 'PASS' : 'FAIL'}  ${s.name}`);
     console.log(`\n${result.summary}`);
     if (!opts.pin) console.log('(no --pin given: integrity only, NOT provenance — pass --pin <gateway_public_key> to prove who issued it)');
-    process.exit(result.verdict === 'VERIFIED' ? 0 : 1);
+    // Honor the verdict trichotomy (ALGORITHM_AGILITY_SPEC / UNIFIED_SEP_SPEC §3): VERIFIED=0,
+    // FAILED=1, UNSUPPORTED_PROFILE=3 (a registered profile this build does not implement — NOT a
+    // failure of the bundle's content; must not be collapsed with FAILED).
+    process.exit(result.verdict === 'VERIFIED' ? 0 : result.verdict === 'UNSUPPORTED_PROFILE' ? 3 : 1);
   });
 
 // ── policy ───────────────────────────────────────────────────

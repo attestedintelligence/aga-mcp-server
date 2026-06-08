@@ -14,6 +14,7 @@
  *   node fixtures/cross-stack/run-all-stacks.mjs
  */
 import { readFileSync, writeFileSync, mkdtempSync, rmSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join, resolve, dirname } from 'node:path';
@@ -21,7 +22,18 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(HERE, '..', '..');
-const vectors = JSON.parse(readFileSync(join(HERE, 'vectors.json'), 'utf8'));
+// Pin-check the corpus first (tamper-evident; mirrors the v2 harness). A byte change to vectors.json
+// MUST fail here, forcing a conscious regenerate (npx tsx generate.mjs rewrites vectors.sha256).
+const vectorsRaw = readFileSync(join(HERE, 'vectors.json'));
+const vectorsPin = readFileSync(join(HERE, 'vectors.sha256'), 'utf8').trim().split(/\s+/)[0];
+const vectorsDigest = createHash('sha256').update(vectorsRaw).digest('hex');
+if (vectorsDigest !== vectorsPin) {
+  console.error(`CORPUS PIN MISMATCH: sha256(vectors.json)=${vectorsDigest} but vectors.sha256=${vectorsPin}`);
+  console.error('Regenerate with: npx tsx fixtures/cross-stack/generate.mjs');
+  process.exit(1);
+}
+console.log(`corpus pin OK: sha256(vectors.json) = ${vectorsDigest}`);
+const vectors = JSON.parse(vectorsRaw.toString('utf8'));
 const imp = (rel) => import(pathToFileURL(resolve(ROOT, rel)).href);
 
 const refMod = await imp('aga-receipt-spec/verify/verify-sep.mjs');
