@@ -207,17 +207,17 @@ Automated tests across TypeScript and Python, plus a conformance corpus:
 
 - **TypeScript MCP server:** 297 tests (vitest), including provable-denial and behavioral-monitor regressions
 - **SEP conformance corpus:** `npm run test:conformance` (valid → VERIFIED, negatives → FAILED)
-- **Python companion SDK:** pytest suite (`aga-python`)
+- **Python companion SDK:** the separately-published `aga-governance` PyPI package (pytest)
 
 ```bash
 npm test                              # TypeScript tests (vitest)
 npm run test:conformance              # SEP conformance corpus
-cd aga-python && python -m pytest     # Python companion tests
+pip install aga-governance && python -m pytest --pyargs aga   # Python companion tests
 ```
 
 ## Benchmarks
 
-Performance baseline (signature primitives, storage overhead, the end-to-end measurement cycle, and post-quantum cadence feasibility) is documented in [BENCHMARKS.md](BENCHMARKS.md), matching Section 4.7 of the paper. Receipt-format determinism is reproducible here via the cross-language vectors (`npm test`).
+Receipt-format determinism is reproducible here: `npm test` runs the cross-language vectors, and `npm run conformance:cross-stack` shows all six independent verifiers agree on the canonical 55-case corpus.
 
 ## Project Structure
 
@@ -228,7 +228,6 @@ src/
   crypto/              # Internal continuity-chain crypto: Ed25519 (node:crypto), SHA-256/blake2b, salt
   proxy/               # MCP governance proxy (transparent interception + policy enforcement; emits SEP bundles)
   middleware/          # Governance PEP wrapper (records a signed PERMITTED/DENIED receipt per governed call)
-aga-python/            # Python companion SDK (PyPI: aga-governance)
 independent-verifier/  # @attested-intelligence/aga-verify — standalone SEP verifier, zero AGA imports
 scenarios/             # Demo scenarios (SCADA, autonomous vehicle, AI agent) — emit SEP bundles
 tests/                 # TypeScript test suite (297 tests)

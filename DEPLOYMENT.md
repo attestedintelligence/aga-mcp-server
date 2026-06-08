@@ -1,6 +1,6 @@
 # AGA MCP Server — Deployment & Hardening Guide
 
-Practical guidance for running `@attested-intelligence/aga-mcp-server` (3.0.0-rc) in a defensible configuration. Scope is the **MCP server boundary** — see `THREAT_BOUNDARY.md` for the full claim/limitation surface this guide operationalizes.
+Practical guidance for running `@attested-intelligence/aga-mcp-server` (3.0.1) in a defensible configuration. Scope is the **MCP server boundary** — see `THREAT_BOUNDARY.md` for the full claim/limitation surface this guide operationalizes.
 
 The hardened posture in one line: **stdio upstream + a persisted, well-protected gateway key + network isolation + verifiers that pin the gateway key.**
 
@@ -59,7 +59,7 @@ Call the `get_server_info` tool → **`gateway_public_key`**. That 64-hex value 
 ```bash
 # reference verifier (zero deps)
 node aga-receipt-spec/verify/verify-sep.mjs evidence-bundle.json --pubkey <gateway_public_key>
-# or the published CLI (2.0.0 — publish pending)
+# or the published CLI (@attested-intelligence/aga-verify 2.0.0)
 aga-verify evidence-bundle.json --pubkey <gateway_public_key>
 ```
 Or via the tool: `verify_bundle_offline(bundle, pinned_public_key=<gateway_public_key>)`. **Without a pin you get an integrity-only result** (`issuerVerified=false`, summary says "NOT provenance"). See §3.7 of the boundary doc.
