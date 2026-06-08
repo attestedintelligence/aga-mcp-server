@@ -1,6 +1,6 @@
 /**
  * AGA Governance Proxy - Tool Policy Evaluator
- * Ported from aga-mcp-gateway/src/governance/policy.ts with rate limiting.
+ * Ported from the internal AGA governance gateway's policy engine, with rate limiting.
  *
  * Copyright (c) 2026 Attested Intelligence Holdings LLC
  * SPDX-License-Identifier: MIT
@@ -39,7 +39,7 @@ export function resetRateLimits(): void {
   rateLimits.clear();
 }
 
-// ── Path Utilities (from aga-mcp-gateway) ───────────────────
+// ── Path Utilities ────────────────────────────────
 
 export function cleanPath(p: string): string {
   p = p.replace(/\\/g, '/');

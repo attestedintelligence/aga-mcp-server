@@ -71,11 +71,6 @@ Both Go and Python implementations must produce identical outputs for
 all test vectors. See the assertions array in the test vectors file
 for the complete list of invariants.
 
-## Related Repositories
-
-- **aga-k8s**: Reference Go implementation (private)
-- **attestedintelligence-web**: TypeScript SDK and web verifier (private)
-
 ## License
 
 Apache-2.0. See [LICENSE](LICENSE).

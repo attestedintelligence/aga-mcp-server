@@ -116,11 +116,3 @@ A verifier MUST treat ANY malformed or hostile input (depth bomb, type confusion
 ## 7. Conformance
 
 An implementation conforms iff, for every vector in `vectors/aga_evidence_bundle_vectors.json`, it (a) verifies a genuine vector to VERIFIED with a byte-identical `merkle_root`, and (b) flips to FAIL on each negative mutation (tampered field, dropped trailing receipt, re-pointed proof, wrong pinned key). Golden roots in the corpus MUST be corroborated by an independent second computation, never re-baselined from the implementation under change.
-
-## 8. Migration (per implementation)
-
-- **Website `lib/verifier.ts` + `lib/session-engine.ts` + `scripts/generate-demo-bundle.mjs`**: remove the `0x00`/`0x01` prefixes; keep the checkpoint/recompute/bijection model; regenerate `public/sample-bundle.json`.
-- **Published `@attested-intelligence/aga-verify`**: republish 2.0.0 implementing §6 over §1–5 (raw-byte nodes; recompute leaves); ship a real gateway-produced example.
-- **Gateway `aga-mcp-gateway`**: already no-prefix; ADD the signed checkpoint (§5) on the bundle path (requires a controlled signing key — see the keys phase).
-- **Go `aga-k8s` / Python `aga-python`**: already no-prefix raw-byte nodes for the SEP path; add checkpoint emission/verification to match §5; keep the continuity-chain profile as-is.
-- **`aga-offline-portal`**: BLAKE2b/tagged-hash — internal-only; out of scope for the public canonical bundle.

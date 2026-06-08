@@ -1,6 +1,6 @@
 /**
  * AGA Governance Proxy - Types
- * Adapted from aga-mcp-gateway/src/governance/types.ts
+ * Adapted from the internal AGA governance gateway's type definitions.
  *
  * Copyright (c) 2026 Attested Intelligence Holdings LLC
  * SPDX-License-Identifier: MIT

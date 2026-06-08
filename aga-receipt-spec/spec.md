@@ -469,7 +469,7 @@ that traverses the governance plane without producing a per-call
 governance decision of its own (for example, raw protocol frames routed
 through the gateway).
 
-**Emitter.** The AGA MCP gateway (`aga-mcp-gateway`) emits this event
+**Emitter.** The AGA MCP gateway emits this event
 when a passthrough rule matches a deny clause.
 
 **Payload schema.**
@@ -530,7 +530,7 @@ itself initiates an outbound call (for example, anchor submission,
 health reporting, or scheduled attestation). This event distinguishes
 governance-plane egress from agent-tool egress.
 
-**Emitter.** The AGA portal (`aga-k8s` portal component) and supporting
+**Emitter.** The AGA portal and supporting
 system daemons emit this event.
 
 **Payload schema.**
@@ -556,57 +556,24 @@ network call on its own behalf. This provides clear separation between
 governance-plane traffic and governed-agent traffic when auditing
 network behavior.
 
-### 12.4 FALCON_EGRESS
+### 12.4 Canonicalization
 
-**Purpose.** Records an egress event originating from the Falcon
-post-quantum signing subsystem (`aga-falcon-foundry`). Falcon egress is
-treated separately because the keying material and signing context are
-distinct from the default Ed25519 signing path and require their own
-audit trail.
-
-**Emitter.** The Falcon foundry / Falcon signing service.
-
-**Payload schema.**
-
-```json
-{
-  "falcon_key_id":   "string",
-  "destination":     "string",
-  "purpose":         "string",
-  "signature_id":    "string",
-  "signature_bytes": "integer",
-  "initiated_at":    "string (ISO 8601, UTC)"
-}
-```
-
-- `signature_bytes` is the byte length of the Falcon signature
-  produced in the course of the egress (0 if no signature was emitted).
-- `purpose` values include `pqc.anchor.submit` and
-  `pqc.attestation.sign`.
-
-**When and why.** Emitted on every Falcon-signed outbound call so that
-post-quantum-signed governance traffic can be audited independently of
-classical Ed25519 egress.
-
-### 12.5 Canonicalization
-
-All four event types follow the canonicalization rules of Section 3.1
+All three event types follow the canonicalization rules of Section 3.1
 and the timestamp normalization rules of Section 3.2. Their leaf hash
 is computed using the formula in Section 4.2; the payload is hashed
 separately and referenced via `payload_hash` as with all other event
 types.
 
-### 12.6 Updated Event Type List
+### 12.5 Updated Event Type List
 
 The normative event type set as of v2.4.0 is the union of the list in
-Section 2.1 and the four events defined above, giving a total of
-fifteen event types:
+Section 2.1 and the three events defined above, giving a total of
+fourteen event types:
 
 `POLICY_ISSUANCE`, `INTERACTION_RECEIPT`, `TOOL_CALL_PERMITTED`,
 `TOOL_CALL_DENIED`, `SYSTEM_PROMPT_DRIFT`, `MODEL_IDENTITY_CHANGE`,
 `REVOCATION`, `ATTESTATION`, `ANCHOR_BATCH`, `KEY_ROTATION`, `GENESIS`,
-`PASSTHROUGH_DENIED`, `PASSTHROUGH_RECEIPT`, `SYSTEM_EGRESS`,
-`FALCON_EGRESS`.
+`PASSTHROUGH_DENIED`, `PASSTHROUGH_RECEIPT`, `SYSTEM_EGRESS`.
 
 ## 13. ForensicOnly Field (v2.4.0+)
 

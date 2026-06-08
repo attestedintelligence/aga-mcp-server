@@ -30,9 +30,6 @@ POSITIVE_FIXTURES = [
     ("../examples/bundle.json", "Internal format example bundle"),
     ("../examples/ts-evidence-bundle.json", "SEP format TS example bundle"),
     ("../examples/python-evidence-bundle.json", "SEP format Python example bundle"),
-    ("../../aga-k8s/test/fixtures/ts-evidence-bundle.json", "SEP format TS fixture"),
-    ("../../aga-k8s/test/fixtures/python-evidence-bundle.json", "SEP format Python fixture"),
-    ("../../aga-k8s/test/fixtures/lattice-evidence-bundle.json", "SEP format Lattice fixture"),
 ]
 
 RECEIPT_FIXTURES = [

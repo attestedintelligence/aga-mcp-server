@@ -277,7 +277,7 @@ All hash and signature comparisons during verification MUST use constant-time co
 
 ## Reference Implementation
 
-A reference implementation is available in the `aga-mcp-gateway` repository:
+A reference implementation is vendored in this repository under `aga-receipt-spec/verify/` (and mirrored by the published `aga-verify` package):
 
 - **TypeScript (Cloudflare Workers):** Full gateway implementation with receipt generation, chain management, evidence bundle composition, and five-step verification.
 - **Independent verifier:** A standalone verification tool that validates evidence bundles without requiring gateway access, confirming offline verification capability.
@@ -286,7 +286,7 @@ The reference implementation includes shared test vectors to ensure cross-implem
 
 ## Test Vectors
 
-Test vectors are maintained in the `aga-mcp-gateway` repository under the `test/` directory. The vectors cover the following categories:
+Test vectors are maintained in this repository under `aga-receipt-spec/vectors/` and `fixtures/`. The vectors cover the following categories:
 
 - **Canonicalization:** Verifies RFC 8785 compliance for sorted keys, number serialization (including negative zero), Unicode escaping, and nested object handling.
 - **Canonicalization edge cases:** Covers empty objects, empty arrays, null values, boolean values, and deeply nested structures.

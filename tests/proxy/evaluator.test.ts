@@ -1,6 +1,6 @@
 /**
  * Tests for the tool policy evaluator.
- * Ported from aga-mcp-gateway test patterns, extended with rate limiting.
+ * Ported from the internal AGA governance gateway test patterns, extended with rate limiting.
  */
 import { describe, it, expect, beforeEach } from 'vitest';
 import { evaluate, resetRateLimits, cleanPath, matchesPrefix } from '../../src/proxy/evaluator.js';
