@@ -74,7 +74,6 @@
       "type": "string",
       "enum": [
         "Ed25519-SHA256-JCS",
-        "ML-DSA-65-SHA256-JCS",
         "ML-DSA-65+Ed25519-SHA256-JCS"
       ],
       "description": "Signing algorithm identifier. Present in SEP/gateway format bundles."
