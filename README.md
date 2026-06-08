@@ -5,9 +5,10 @@ Cryptographic runtime governance for AI agents and autonomous systems.
 [![npm](https://img.shields.io/npm/v/@attested-intelligence/aga-mcp-server)](https://www.npmjs.com/package/@attested-intelligence/aga-mcp-server)
 [![PyPI](https://img.shields.io/pypi/v/aga-governance)](https://pypi.org/project/aga-governance/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![status](https://img.shields.io/badge/status-3.0.0--rc-blue)](https://github.com/attestedintelligence/aga-mcp-server)
+[![release](https://img.shields.io/badge/release-3.0.0-brightgreen)](https://www.npmjs.com/package/@attested-intelligence/aga-mcp-server)
+[![npm provenance](https://img.shields.io/badge/npm-SLSA%20provenance-brightgreen)](https://www.npmjs.com/package/@attested-intelligence/aga-mcp-server)
 
-> **Status — 3.0.0-rc.** This release candidate emits the **canonical SEP evidence bundle** from both the server tools and the `aga-proxy`, verifiable offline by `@attested-intelligence/aga-verify` and the reference verifier `aga-receipt-spec/verify/verify-sep.mjs`. The **currently-published npm release (2.2.2) still emits a legacy continuity-chain bundle** that does *not* verify under the SEP verifier — upgrade to 3.0 once published. Claim scope and residual attack surface are documented honestly in `THREAT_BOUNDARY.md`.
+> **Status: 3.0.0 (latest, published to npm with SLSA build provenance).** The server tools and the `aga-proxy` emit the **canonical SEP evidence bundle**, verifiable offline by the published `@attested-intelligence/aga-verify` and the reference verifier `aga-receipt-spec/verify/verify-sep.mjs`. Pre-3.0 releases (a legacy continuity-chain bundle that does *not* verify under the SEP verifier) are deprecated; use `^3.0.0`. Claim scope and residual attack surface are documented honestly in `THREAT_BOUNDARY.md`.
 
 ```bash
 # This package IS the AGA MCP server (TypeScript, runs over stdio). Use it from any MCP client:
@@ -15,6 +16,20 @@ npx -y @attested-intelligence/aga-mcp-server
 ```
 
 A Python companion SDK (`aga-governance`) is documented in the Python SDK section below.
+
+## Verify this yourself (no trust required)
+
+You do not have to take any of this on faith. The repo ships the reference verifier, the canonical vectors, and sample bundles, so you can check one offline right now with no network and no dependency on us:
+
+```bash
+git clone https://github.com/attestedintelligence/aga-mcp-server
+cd aga-mcp-server
+# A canonical SEP bundle verifies; a one-byte-tampered copy is rejected.
+node aga-receipt-spec/verify/verify-sep.mjs fixtures/valid_minimal.json   # OVERALL: VERIFIED (integrity only; no key pinned)
+node aga-receipt-spec/verify/verify-sep.mjs fixtures/tampered.json        # OVERALL: FAILED
+```
+
+The published `@attested-intelligence/aga-verify@2.0.0` CLI renders the identical verdict, and `npm run conformance:cross-stack` proves six independent verifiers (the reference, the in-server engine, `aga-verify`, Go, and two Python implementations) agree on all 55 canonical cases. For a full trust-free reproduction (build the package yourself, reproduce the published tarball byte-for-byte, re-run every gate), see **[REPRODUCIBILITY.md](REPRODUCIBILITY.md)** and the step-by-step **[SKEPTICAL_AUDITOR.md](SKEPTICAL_AUDITOR.md)**. The 3.0.0 npm release carries SLSA build provenance, checkable with `npm audit signatures`.
 
 ## What This Does
 
@@ -41,6 +56,31 @@ Add to your Claude Desktop MCP config (`claude_desktop_config.json`):
 
 Claude can then seal artifacts, measure integrity, generate evidence bundles, and verify compliance through natural language.
 
+### Persist the signing key (do this first)
+
+By default the gateway signs with an **ephemeral** key that rotates on every restart. That is fine for a first look, but evidence-bundle provenance cannot be pinned across restarts (and the server warns about it on stderr). Set one stable 64-hex Ed25519 seed so provenance stays pinnable:
+
+```bash
+# generate a seed once (32 random bytes, hex)
+node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"
+```
+
+Provide it via `AGA_GATEWAY_KEY`, or `AGA_GATEWAY_KEY_FILE` (a path to the seed). In Claude Desktop, add an `env` block:
+
+```json
+{
+  "mcpServers": {
+    "aga": {
+      "command": "npx",
+      "args": ["-y", "@attested-intelligence/aga-mcp-server"],
+      "env": { "AGA_GATEWAY_KEY": "<your-64-hex-seed>" }
+    }
+  }
+}
+```
+
+Keep the seed secret and out of version control; see `DEPLOYMENT.md` for key handling.
+
 ## MCP Tools (15)
 
 | Category | Tools |
@@ -64,7 +104,7 @@ A bundle this package emits (via the `generate_evidence_bundle` tool, or `aga-pr
 node aga-receipt-spec/verify/verify-sep.mjs evidence-bundle.json --pubkey <gateway-public-key>
 ```
 
-The published `@attested-intelligence/aga-verify` CLI mirrors this reference (2.0.0 — publish pending; the npm registry currently has the older 1.0.0). Without `--pubkey` you get an **integrity-only** result (`issuerVerified=false`); pin the key to also prove *who* issued it — see `THREAT_BOUNDARY.md` §3.7. A hosted browser verifier is linked under [Links](#links).
+The published `@attested-intelligence/aga-verify` CLI mirrors this reference (**2.0.0**, published on npm; the older forgeable 1.0.0 is deprecated). Without `--pubkey` you get an **integrity-only** result (`issuerVerified=false`); pin the key to also prove *who* issued it — see `THREAT_BOUNDARY.md` §3.7. A hosted browser verifier is linked under [Links](#links).
 
 The reference §6 algorithm is implemented in **three languages** — JavaScript (`aga-receipt-spec/verify/verify-sep.mjs`), Go (`verify.go`, stdlib `crypto/ed25519`), and Python (`verify.py`, pure-stdlib RFC-8032 Ed25519) — and a cross-stack harness (`npm run conformance:cross-stack`) proves all three, plus the in-server engine and `aga-verify`, render **identical verdicts** on the canonical vectors (valid, adversarial, and every small-order forgery).
 
@@ -165,7 +205,7 @@ with AgentSession(gateway_id="my-gateway") as session:
 
 Automated tests across TypeScript and Python, plus a conformance corpus:
 
-- **TypeScript MCP server:** 248 tests (vitest) — including provable-denial and behavioral-monitor regressions
+- **TypeScript MCP server:** 297 tests (vitest), including provable-denial and behavioral-monitor regressions
 - **SEP conformance corpus:** `npm run test:conformance` (valid → VERIFIED, negatives → FAILED)
 - **Python companion SDK:** pytest suite (`aga-python`)
 
@@ -191,7 +231,7 @@ src/
 aga-python/            # Python companion SDK (PyPI: aga-governance)
 independent-verifier/  # @attested-intelligence/aga-verify — standalone SEP verifier, zero AGA imports
 scenarios/             # Demo scenarios (SCADA, autonomous vehicle, AI agent) — emit SEP bundles
-tests/                 # TypeScript test suite (248 tests)
+tests/                 # TypeScript test suite (297 tests)
 ```
 
 ## Links
@@ -210,7 +250,7 @@ See [SECURITY.md](SECURITY.md) for vulnerability reporting.
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup and guidelines.
+See [CONTRIBUTING.md](https://github.com/attestedintelligence/aga-mcp-server/blob/main/CONTRIBUTING.md) for development setup and guidelines.
 
 ## License
 
