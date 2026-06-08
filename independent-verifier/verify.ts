@@ -231,7 +231,7 @@ export function verifySepBundle(bundle: SepBundle, expectedPublicKey?: string): 
     // FAIL the merkle step, not fall through an else/ternary to "right" and still walk to the root.
     const sib: string[] = Array.isArray(p.siblings) ? p.siblings : [];
     const dir: string[] = Array.isArray(p.directions) ? p.directions : [];
-    if (dir.length !== sib.length || !dir.every((d) => d === 'left' || d === 'right')) merkle = false;
+    if (dir.length !== sib.length || !dir.every((d) => d === 'left' || d === 'right') || !sib.every((s) => isHex(s, 64))) merkle = false;
     for (let j = 0; j < sib.length; j++) cur = dir[j] === 'left' ? nodeHash(sib[j], cur) : nodeHash(cur, sib[j]);
     if (p.merkle_root !== cur) merkle = false;          // D4: the proof's own claimed root must equal what it walks to
     if (root === null) root = cur; else if (root !== cur) merkle = false;

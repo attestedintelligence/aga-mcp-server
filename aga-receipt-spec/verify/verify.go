@@ -659,7 +659,18 @@ func VerifySepBundle(bundle map[string]interface{}, expectedPublicKey *string) (
 				}
 			}
 		}
-		if !dirsWellFormed {
+		// SIBLING HEX STRICTNESS: siblings flow through hex.DecodeString (case-insensitive), so an
+		// uppercased sibling decodes to identical bytes and VERIFIES on Go/JS while Python's lowercase
+		// is_hex guard FAILs it -- a cross-stack split. Require lowercase 64-hex siblings everywhere.
+		sibsWellFormed := true
+		for _, s := range sibs {
+			ss, ok := asString(s)
+			if !ok || !isHex(ss, 64) {
+				sibsWellFormed = false
+				break
+			}
+		}
+		if !dirsWellFormed || !sibsWellFormed {
 			merkle = false
 		}
 		for j := 0; j < len(sibs); j++ {

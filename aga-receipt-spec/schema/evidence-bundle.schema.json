@@ -3,6 +3,7 @@
   "$id": "https://attestedagents.com/schema/evidence-bundle.schema.json",
   "title": "AGA Evidence Bundle",
   "description": "Schema for AGA (Attested Governance Architecture) evidence bundles. Evidence bundles package sealed artifacts, enforcement receipts, and Merkle inclusion proofs into a single offline-verifiable JSON document.",
+  "$comment": "NON-NORMATIVE / illustrative only. The authoritative structural floor is the strict six-step algorithm in aga-receipt-spec/CANONICAL_CONSTRUCTION_v2.md §6 (exactly the 15 receipt / 7 checkpoint fields, no additional properties, lowercase-hex, small-order-key rejection, etc.). This JSON Schema is deliberately looser and MUST NOT be used as the conformance oracle — the cross-stack vectors are.",
   "type": "object",
   "properties": {
     "_comment": {

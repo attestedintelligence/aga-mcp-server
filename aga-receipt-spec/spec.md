@@ -1,10 +1,21 @@
-# AGA Receipt Specification
+# AGA Receipt Specification (legacy continuity-chain profile)
 
 Version: 1.0
 Date: 2026-03-19
-Status: Normative
+Status: Normative for the **internal length-prefixed continuity-chain profile only**
 
 Copyright (c) 2026 Attested Intelligence Holdings LLC
+
+> **Scope / superseded notice — read before re-implementing.** This document specifies the **legacy
+> continuity-chain** receipt profile (length-prefixed leaf hash, `payload_hash`-signed receipts). It is
+> **NOT** the public / demo / gateway **SEP Evidence Bundle**. The SEP bundle — the format the shipped
+> verifiers, the cross-stack corpus, and the published `@attested-intelligence/aga-mcp-server` /
+> `aga-verify` packages produce and verify — is frozen normatively in
+> [`CANONICAL_CONSTRUCTION_v2.md`](CANONICAL_CONSTRUCTION_v2.md) (`Ed25519-SHA256-JCS`; no-prefix leaf
+> `sha256(canon(receipt))` *including* the signature; mandatory gateway-signed checkpoint) with the
+> plain-language procedure in [`../CORE_VERIFICATION.md`](../CORE_VERIFICATION.md). The two profiles
+> differ in leaf construction, timestamp rules, and field names — if you re-implement the bundle from
+> THIS document you will compute the wrong leaf. Use CANONICAL_CONSTRUCTION_v2.md.
 
 ## 1. Overview
 

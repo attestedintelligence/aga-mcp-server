@@ -29,7 +29,7 @@ node aga-receipt-spec/verify/verify-sep.mjs fixtures/valid_minimal.json   # OVER
 node aga-receipt-spec/verify/verify-sep.mjs fixtures/tampered.json        # OVERALL: FAILED
 ```
 
-The published `@attested-intelligence/aga-verify@2.0.0` CLI renders the identical verdict, and `npm run conformance:cross-stack` proves six independent verifiers (the reference, the in-server engine, `aga-verify`, Go, and two Python implementations) agree on all 55 canonical cases. For a full trust-free reproduction (build the package yourself, reproduce the published tarball byte-for-byte, re-run every gate), see **[REPRODUCIBILITY.md](REPRODUCIBILITY.md)** and the step-by-step **[SKEPTICAL_AUDITOR.md](SKEPTICAL_AUDITOR.md)**. The 3.0.0 npm release carries SLSA build provenance, checkable with `npm audit signatures`.
+The published `@attested-intelligence/aga-verify@2.0.0` CLI renders the identical verdict, and `npm run conformance:cross-stack` proves six independent verifiers (the reference, the in-server engine, `aga-verify`, Go, and two Python implementations) agree on all 56 cross-stack cases. For a full trust-free reproduction (build the package yourself, reproduce the published tarball byte-for-byte, re-run every gate), see **[REPRODUCIBILITY.md](REPRODUCIBILITY.md)** and the step-by-step **[SKEPTICAL_AUDITOR.md](SKEPTICAL_AUDITOR.md)**. The 3.0.0 npm release carries SLSA build provenance, checkable with `npm audit signatures`.
 
 ## What This Does
 

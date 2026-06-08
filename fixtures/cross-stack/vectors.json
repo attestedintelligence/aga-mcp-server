@@ -10731,6 +10731,91 @@
       }
     },
     {
+      "desc": "mt_sibling_uppercase - one merkle_proofs[0].siblings[0] hex UPPERCASED (UNSIGNED edit, NOT re-signed). Siblings flow through a case-insensitive hex decode, so the uppercase yields identical bytes; JS/Go/aga-verify previously VERIFIED while Python (lowercase is_hex guard) FAILED - a cross-stack verdict split. After adding the lowercase 64-hex sibling guard to every stack, all six FAIL the merkle step.",
+      "expect": "FAILED",
+      "failing_step": "merkle_and_bijection",
+      "bundle": {
+        "schema_version": "2.0",
+        "bundle_id": "sgn-bundle",
+        "algorithm": "Ed25519-SHA256-JCS",
+        "generated_at": "2026-05-01T00:00:09.000Z",
+        "gateway_id": "cross-stack-gw",
+        "public_key": "ea4a6c63e29c520abef5507b132ec5f9954776aebebe7b92421eea691446d22c",
+        "policy_reference": "",
+        "receipts": [
+          {
+            "receipt_id": "sgn-0000",
+            "receipt_version": "1.0",
+            "algorithm": "Ed25519-SHA256-JCS",
+            "timestamp": "2026-05-01T00:00:00.000Z",
+            "request_id": "g0",
+            "method": "tools/call",
+            "tool_name": "measure_integrity",
+            "decision": "PERMITTED",
+            "reason": "signed-0",
+            "policy_reference": "",
+            "arguments_hash": "",
+            "previous_receipt_hash": "",
+            "gateway_id": "cross-stack-gw",
+            "public_key": "ea4a6c63e29c520abef5507b132ec5f9954776aebebe7b92421eea691446d22c",
+            "signature": "887a0e0dd1681690fafad1d38029de73479469dcd0461d3e51ebd506bbacaf08ce717563731c9293647020a8f1ee5cdc6db3455f4be7c2cefdbc7fcbf40f080f"
+          },
+          {
+            "receipt_id": "sgn-0001",
+            "receipt_version": "1.0",
+            "algorithm": "Ed25519-SHA256-JCS",
+            "timestamp": "2026-05-01T00:00:01.000Z",
+            "request_id": "g1",
+            "method": "tools/call",
+            "tool_name": "revoke_artifact",
+            "decision": "DENIED",
+            "reason": "signed-1",
+            "policy_reference": "",
+            "arguments_hash": "",
+            "previous_receipt_hash": "0cf1dbbb1afe0d2b18078de48f80c0ed99be6cd33cdd3f1bbb8c961cd90e0be2",
+            "gateway_id": "cross-stack-gw",
+            "public_key": "ea4a6c63e29c520abef5507b132ec5f9954776aebebe7b92421eea691446d22c",
+            "signature": "0fb86c248530dc0f2693bf52f728b198287b2e2b4e3b9f26b057a6cd6a4888b75d7b4f0e4727517a81986aba586df8659f3d9a26a68e4865774a917027d37602"
+          }
+        ],
+        "merkle_root": "75e57ebc72570bb4079522b7430cb5b5ec3e4282346e009694e8ce6855c3e2f0",
+        "merkle_proofs": [
+          {
+            "leaf_hash": "0cf1dbbb1afe0d2b18078de48f80c0ed99be6cd33cdd3f1bbb8c961cd90e0be2",
+            "leaf_index": 0,
+            "siblings": [
+              "0A91A359D91093DF537164C21F3FB0AB26390A7451FB5718FCCDF22C67ACFDE6"
+            ],
+            "directions": [
+              "right"
+            ],
+            "merkle_root": "75e57ebc72570bb4079522b7430cb5b5ec3e4282346e009694e8ce6855c3e2f0"
+          },
+          {
+            "leaf_hash": "0a91a359d91093df537164c21f3fb0ab26390a7451fb5718fccdf22c67acfde6",
+            "leaf_index": 1,
+            "siblings": [
+              "0cf1dbbb1afe0d2b18078de48f80c0ed99be6cd33cdd3f1bbb8c961cd90e0be2"
+            ],
+            "directions": [
+              "left"
+            ],
+            "merkle_root": "75e57ebc72570bb4079522b7430cb5b5ec3e4282346e009694e8ce6855c3e2f0"
+          }
+        ],
+        "checkpoint": {
+          "algorithm": "Ed25519-SHA256-JCS",
+          "gateway_id": "cross-stack-gw",
+          "generated_at": "2026-05-01T00:00:09.000Z",
+          "head_leaf_hash": "0a91a359d91093df537164c21f3fb0ab26390a7451fb5718fccdf22c67acfde6",
+          "leaf_count": 2,
+          "merkle_root": "75e57ebc72570bb4079522b7430cb5b5ec3e4282346e009694e8ce6855c3e2f0",
+          "signature": "b34fe3f9edd0a2fde22dacb0cf4e3ba1c7c93941ed9299572c410586362a2e02f38456fbc4e49d83e618bdaedd22cecc4670d2daa8b617e5bcb79f1e00fa0203"
+        },
+        "offline_capable": true
+      }
+    },
+    {
       "desc": "signed_lone_surrogate — receipt reason contains an unpaired UTF-16 high surrogate (String.fromCharCode(0xD800)); injected POST-SIGN (canon throws over it so it cannot be re-signed); invalid Unicode that Go/Python cannot encode and the JS canon now rejects; verdict=FAILED on every stack",
       "expect": "FAILED",
       "failing_step": "verifier_exception",

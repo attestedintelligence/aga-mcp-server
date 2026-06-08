@@ -114,7 +114,7 @@ export function verifySepBundle(bundle: any, expectedPublicKey?: string): SepVer
     // root and VERIFY, while Python FAILS: a cross-stack disagreement. (Matches Python's strictness.)
     const sib: string[] = Array.isArray(p.siblings) ? p.siblings : [];
     const dir: string[] = Array.isArray(p.directions) ? p.directions : [];
-    if (dir.length !== sib.length || !dir.every((d) => d === 'left' || d === 'right')) merkle = false;
+    if (dir.length !== sib.length || !dir.every((d) => d === 'left' || d === 'right') || !sib.every((s) => isHex(s, 64))) merkle = false;
     for (let j = 0; j < sib.length; j++) cur = dir[j] === 'left' ? nodeHash(sib[j], cur) : nodeHash(cur, sib[j]);
     if (p.merkle_root !== cur) merkle = false;          // the proof's own claimed root must match what it walks to (L-7)
     if (root === null) root = cur; else if (root !== cur) merkle = false;

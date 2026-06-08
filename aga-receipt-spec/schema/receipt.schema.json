@@ -3,6 +3,7 @@
   "$id": "https://attestedagents.com/schema/receipt.schema.json",
   "title": "AGA Receipt",
   "description": "Schema for standalone AGA governance receipts. Supports both internal continuity chain format and SEP (Structured Enforcement Protocol) gateway format.",
+  "$comment": "NON-NORMATIVE / illustrative only. The authoritative structural floor is the strict six-step algorithm in aga-receipt-spec/CANONICAL_CONSTRUCTION_v2.md §6 (exactly the 15 receipt / 7 checkpoint fields, no additional properties, lowercase-hex, small-order-key rejection, etc.). This JSON Schema is deliberately looser and MUST NOT be used as the conformance oracle — the cross-stack vectors are.",
   "type": "object",
   "oneOf": [
     { "$ref": "#/$defs/InternalReceipt" },

@@ -144,10 +144,11 @@ oversold:
 - It does **not** prove non-omission. It proves present receipts are authentic and
   complete-as-a-set; it cannot prove the gateway logged everything it did
   (`THREAT_BOUNDARY.md §1`).
-- Step 2's "independent npm verifier" leg currently requires the locally-built
-  `aga-verify@2.0.0`; only the unsound `1.0.0` is on the registry today. Until
-  2.0.0 is published, the auditor uses the in-repo reference verifier. This is the
-  release's open condition (`RELEASE_READINESS.md §5`, `PUBLISH_PLAN.md`).
+- Step 2's "independent npm verifier" leg uses the **published** `@attested-intelligence/aga-verify@2.0.0`
+  (the unsound `1.0.0` is deprecated), runnable straight from the registry:
+  `npx @attested-intelligence/aga-verify@2.0.0 <bundle.json> --pubkey <key>`. The dependency-free
+  in-repo reference (`node aga-receipt-spec/verify/verify-sep.mjs <bundle.json>`) is the zero-install
+  path. No open condition remains on this leg.
 - It does **not** exercise the proxy mandatory-mediation property, which is a
   deployment concern, not a code guarantee (`THREAT_BOUNDARY.md §3.1`).
 

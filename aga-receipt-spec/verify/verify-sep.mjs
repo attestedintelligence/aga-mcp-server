@@ -175,7 +175,7 @@ export function verifySepBundle(bundle, expectedPublicKey) {
       // FAILS — a cross-stack split. After this guard a malformed directions array FAILS on all six. [C1]
       const sib = Array.isArray(p.siblings) ? p.siblings : [];
       const dir = Array.isArray(p.directions) ? p.directions : [];
-      if (dir.length !== sib.length || !dir.every((d) => d === 'left' || d === 'right')) merkle = false;
+      if (dir.length !== sib.length || !dir.every((d) => d === 'left' || d === 'right') || !sib.every((s) => isHex(s, 64))) merkle = false;
       for (let j = 0; j < sib.length; j++) cur = dir[j] === 'left' ? node(sib[j], cur) : node(cur, sib[j]);
       if (p.merkle_root !== cur) merkle = false;          // the proof's own claimed root must match what it walks to (L-7)
       if (root === null) root = cur; else if (root !== cur) merkle = false;
@@ -228,13 +228,23 @@ if (import.meta.url === `file://${process.argv[1]}` || process.argv[1]?.endsWith
   const file = args.find((a) => !a.startsWith('--'));
   const pk = args.includes('--pubkey') ? args[args.indexOf('--pubkey') + 1] : undefined;
   if (!file) { console.error('usage: node verify/verify-sep.mjs <bundle.json> [--pubkey <64-hex>]'); process.exit(2); }
+  // A PRESENT-but-malformed --pubkey is a usage error, NOT a silent downgrade to integrity-only:
+  // an operator who intended to pin (and fat-fingered/truncated the key) must not get a green exit 0.
+  if (pk !== undefined && !isHex(pk, 64)) {
+    console.error('error: --pubkey must be exactly 64 lowercase hex (a 32-byte Ed25519 key); refusing to silently downgrade to an integrity-only check.');
+    process.exit(2);
+  }
   try {
     const { readFileSync } = await import('node:fs');
     const r = verifySepBundle(JSON.parse(readFileSync(file, 'utf8')), pk);
     for (const s of r.steps) console.log(`  ${s.ok ? 'PASS' : 'FAIL'}  ${s.name}`);
     // Suffix reflects the VERDICT: only a VERIFIED bundle gets a provenance/integrity tag; a FAILED
     // bundle prints just "FAILED" (never "FAILED (provenance verified)").
-    const tail = r.verdict === 'VERIFIED' ? (r.pinned ? ' (provenance verified)' : ' (integrity only; no key pinned)') : '';
+    const tail = r.verdict === 'VERIFIED'
+      ? (r.pinned
+          ? ' (provenance verified; integrity of present receipts — NOT a proof of non-omission)'
+          : ' (integrity of present receipts only — NOT provenance and NOT non-omission; pass --pubkey to verify the issuer)')
+      : '';
     console.log(`OVERALL: ${r.verdict}${tail}`);
     process.exit(r.verdict === 'VERIFIED' ? 0 : 1);
   } catch (e) {

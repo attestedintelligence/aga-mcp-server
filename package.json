@@ -1,6 +1,6 @@
 {
   "name": "@attested-intelligence/aga-mcp-server",
-  "version": "3.0.2",
+  "version": "3.1.0",
   "description": "MCP server for cryptographic AI agent governance. Seal policy artifacts, enforce at runtime, prove with signed receipts and offline-verifiable evidence bundles.",
   "author": "Attested Intelligence Holdings LLC",
   "license": "MIT",
@@ -45,7 +45,7 @@
     "proxy:start": "tsx src/proxy/index.ts start",
     "demo": "tsx scripts/demo.ts",
     "benchmark": "tsx scripts/benchmark.ts",
-    "verify": "cd independent-verifier && npm test",
+    "verify": "cd independent-verifier && npm ci --no-audit --no-fund && npm test",
     "lint": "tsc --noEmit",
     "prepublishOnly": "npm run build && npm run test && npm run test:conformance && npm run check:pack"
   },
@@ -61,6 +61,7 @@
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.12",
     "@types/node": "^22.10.0",
+    "canonicalize": "^2.1.0",
     "tsx": "^4.19.0",
     "typescript": "^5.7.0",
     "vitest": "^2.1.0"

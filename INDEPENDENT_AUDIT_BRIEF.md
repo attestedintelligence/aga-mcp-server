@@ -37,7 +37,7 @@ of the present set, not who issued it.
 ## 3. Trust-free reproduction (run this)
 
 ```bash
-git clone --recurse-submodules <repo-url> aga && cd aga && npm ci
+git clone <repo-url> aga && cd aga && npm ci   # plain clone; aga-receipt-spec is vendored (no submodule)
 npm run build
 # Generate a real bundle via the server tools (or use a committed one), get its gateway key from
 # get_server_info, then verify it offline with each independent verifier — all must agree:
@@ -79,14 +79,14 @@ Before relying on a published version, confirm these line up:
 
 - [ ] **Server** `@attested-intelligence/aga-mcp-server` version and its `dist/sep` verifier.
 - [ ] **Published verifier** `@attested-intelligence/aga-verify` version — same canon + key checks.
-- [ ] **Reference verifier** commit in the `aga-receipt-spec` submodule (and the parent's recorded
-      submodule pointer) — `verify-sep.mjs` + `verify.go` + `verify.py` all current.
+- [ ] **Reference verifier** `aga-receipt-spec/verify/` is VENDORED in this repo (regular files, not a
+      submodule) — confirm `verify-sep.mjs` + `verify.go` + `verify.py` are present and match the spec.
 - [ ] **Spec** `aga-receipt-spec/CANONICAL_CONSTRUCTION_v2.md` matches the implemented algorithm.
-- [ ] All six verifiers (reference, engine, aga-verify, Go, Python-audited, Python-stdlib) return identical verdicts on `fixtures/cross-stack/vectors.json` (55 cases)
+- [ ] All six verifiers (reference, engine, aga-verify, Go, Python-audited, Python-stdlib) return identical verdicts on `fixtures/cross-stack/vectors.json` (56 cases)
       (`npm run conformance:cross-stack` → all agree).
 
-If any are out of step (e.g. an older published `aga-verify` than the server, or an unbumped
-submodule pointer), treat the offline-verification claim as unverified until reconciled.
+If any are out of step (e.g. an older published `aga-verify` than the server), treat the
+offline-verification claim as unverified until reconciled.
 
 ## 6. Out of scope
 

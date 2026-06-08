@@ -297,6 +297,7 @@ const SMALL_ORDER = [
 const mtBase = buildSigned([(p, i) => receiptBody(i, p), (p, i) => receiptBody(i, p)]); // proof[0].directions === ["right"]
 const mt_direction_token = (() => { const b = wire(mtBase); b.merkle_proofs[0].directions[0] = 'RIGHT'; return b; })();
 const mt_direction_length = (() => { const b = wire(mtBase); b.merkle_proofs[0].directions = []; return b; })(); // len 0 != siblings len 1
+const mt_sibling_uppercase = (() => { const b = wire(mtBase); b.merkle_proofs[0].siblings[0] = b.merkle_proofs[0].siblings[0].toUpperCase(); return b; })(); // siblings hex-decode is case-insensitive
 
 // C2 LONE-SURROGATE REJECTION (JS canon only; Go + Python already reject). A signed string carrying
 // an UNPAIRED UTF-16 surrogate is INVALID Unicode that Go/Python cannot UTF-8-encode → they reject
@@ -358,6 +359,7 @@ const adversarial = [
   // walk correctly and VERIFY. After the port every stack fails at the merkle step.
   { desc: 'mt_direction_token — one merkle_proofs[0].directions[0] rewritten "right"->"RIGHT" (UNSIGNED edit; directions is not signed; NOT re-signed); a non-literal direction token must fail the merkle step on every stack', expect: 'FAILED', failing_step: 'merkle_and_bijection', bundle: mt_direction_token },
   { desc: 'mt_direction_length — one proof\'s directions array length != its siblings length (directions[0] dropped; UNSIGNED edit; NOT re-signed); a length-mismatched directions array must fail the merkle step on every stack', expect: 'FAILED', failing_step: 'merkle_and_bijection', bundle: mt_direction_length },
+  { desc: 'mt_sibling_uppercase - one merkle_proofs[0].siblings[0] hex UPPERCASED (UNSIGNED edit, NOT re-signed). Siblings flow through a case-insensitive hex decode, so the uppercase yields identical bytes; JS/Go/aga-verify previously VERIFIED while Python (lowercase is_hex guard) FAILED - a cross-stack verdict split. After adding the lowercase 64-hex sibling guard to every stack, all six FAIL the merkle step.', expect: 'FAILED', failing_step: 'merkle_and_bijection', bundle: mt_sibling_uppercase },
   // ROUND-5 C2 lone-surrogate rejection — a receipt reason with an unpaired UTF-16 high surrogate.
   // Go/Python cannot UTF-8-encode it (reject); the JS canon now throws (caught -> FAILED). The engine
   // throws in canon during verification, surfacing as 'verifier_exception'; portable contract is FAILED.

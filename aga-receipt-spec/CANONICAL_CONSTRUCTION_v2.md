@@ -35,6 +35,36 @@ verify(pk,b,s)  = Ed25519 verify; pk MUST be rejected if small-order/all-zero; s
 
 **Cross-stack canon rules (normative — so every language stack produces byte-identical canonical bytes and verdicts):** object keys are sorted by Unicode code-unit (lexicographic) order, built by string concatenation (never a rebuilt object — V8 reorders integer-like keys numerically); a `"__proto__"` key is an ordinary data key. Integral numbers serialize in shortest integer form per RFC 8785 / IEEE-754 double (`2`, never `2.0` / `2e0`; verifiers parse numbers as float64, so a sub-ULP literal rounds identically everywhere). A string containing an **unpaired UTF-16 surrogate** is invalid Unicode that cannot be UTF-8-encoded — a verifier MUST reject such a bundle (valid surrogate *pairs* / astral characters are fine). Canonicalization is **depth-bounded** (reject input nested beyond 100 levels) and a verifier MUST **fail closed** (return FAILED) on any malformed input — never throw, crash, hang, or exit non-`0/1`.
 
+## 1.1 Public-key and signature acceptance (normative — load-bearing for soundness)
+
+A generic Ed25519 library does **not** reject low-order public keys, and accepting one enables a
+**from-nothing universal forgery** (the identity public key admits `R = A, S = 0` verifying any
+message). A conformant verifier MUST therefore reject a `public_key` if ANY of the following holds
+(this is the only barrier to that forgery — a re-implementation that omits it is unsound):
+
+1. It is not exactly **64 lowercase-hex** characters (`^[0-9a-f]{64}$`).
+2. Its decoded `y` (32 bytes little-endian, with the top bit of byte 31 — the sign bit — masked off)
+   is **≥ `p = 2^255 − 19`** (a non-canonical field element).
+3. It is one of the **10 small-order point encodings** (points of order dividing 8), as 64-hex:
+   ```
+   0000000000000000000000000000000000000000000000000000000000000000
+   0000000000000000000000000000000000000000000000000000000000000080
+   0100000000000000000000000000000000000000000000000000000000000000
+   0100000000000000000000000000000000000000000000000000000000000080
+   ecffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f
+   ecffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+   26e8958fc2b227b045c3f489f2ef98f0d5dfac05d3c63339b13802886d53fc05
+   c7176a703d4dd84fba3c0b760d10670f2a2053fa2c39ccc64ec7fd7792ac037a
+   26e8958fc2b227b045c3f489f2ef98f0d5dfac05d3c63339b13802886d53fc85
+   c7176a703d4dd84fba3c0b760d10670f2a2053fa2c39ccc64ec7fd7792ac03fa
+   ```
+
+A `signature` MUST be rejected unless it is exactly **128 lowercase-hex** and not all-zero. All hex
+hash/key/sibling fields are lowercase; a verifier MUST reject non-lowercase hex (a case-insensitive
+byte-decode otherwise admits a cross-stack verdict split on an otherwise-identical bundle). These
+checks are exercised by the `identity-key UNIVERSAL forgery`, the 10 small-order swaps, and the
+`mt_sibling_uppercase` cases in the cross-stack corpus.
+
 ## 2. Receipt object (canonical field set)
 
 A SEP receipt is exactly these fields (all strings):
@@ -47,7 +77,7 @@ previous_receipt_hash, gateway_id, public_key, signature
 
 - `decision` ∈ {`PERMITTED`, `DENIED`}.
 - `request_id` is the upstream request identifier (string | number | null), preserved verbatim in canonical JSON. It is **informational** — NOT a sequence counter and NOT an ordering field. (Numeric ids are permitted; emitters MAY use string ids to avoid any JCS number-canonicalization ambiguity.)
-- `timestamp` MUST be the canonical UTC form `YYYY-MM-DDTHH:MM:SS.sssZ` — exactly what `Date.prototype.toISOString()` emits (4-digit year; 2-digit month, day, hour, minute, second; exactly 3 fractional-second digits; literal `Z`). Verifiers validate it with an ASCII `[0-9]` regex (NOT `\d`, which matches Unicode digits in some runtimes) plus pure-integer-arithmetic calendar-range checks — **no native date library** (`Date.parse`/`time.Parse`/`fromisoformat` accept different grammars and diverge across stacks) — and order timestamps by **lexicographic string comparison** (sound because the form is fixed-width UTC). Any other form (timezone offset, missing/extra fractional digits, lowercase `z`, trailing bytes, non-calendar date) MUST be rejected identically by every verifier.
+- `timestamp` MUST be the canonical UTC form `YYYY-MM-DDTHH:MM:SS.sssZ` (a strict, fixed-width subset of RFC 3339 — "ISO 8601" is too broad to be the normative anchor) — exactly what `Date.prototype.toISOString()` emits (4-digit year; 2-digit month, day, hour, minute, second; exactly 3 fractional-second digits; literal `Z`). Verifiers validate it with an ASCII `[0-9]` regex (NOT `\d`, which matches Unicode digits in some runtimes) plus pure-integer-arithmetic calendar-range checks — **no native date library** (`Date.parse`/`time.Parse`/`fromisoformat` accept different grammars and diverge across stacks) — and order timestamps by **lexicographic string comparison** (sound because the form is fixed-width UTC). Any other form (timezone offset, missing/extra fractional digits, lowercase `z`, trailing bytes, non-calendar date) MUST be rejected identically by every verifier.
 - `arguments_hash` = `sha256(canon(arguments))` (or `sha256(canon({}))` for empty; `""` if absent), hex.
 - Field-name unification: this profile uses `previous_receipt_hash` (NOT `previous_leaf_hash`) and `signature` (NOT `portal_signature`). Implementations emitting the old names MUST migrate; a field rename changes the signed bytes and the leaf, so cross-verification is impossible until names match.
 
@@ -97,6 +127,8 @@ head_leaf_hash = leaf(receipts[N-1]);  leaf_count = N;  merkle_root = tree root
 
 The checkpoint is what makes no-prefix truncation-safe: it binds the receipt count and the chain head to a signature.
 
+**Domain separation (why no-prefix is second-preimage-safe — normative rationale):** RFC 6962 uses `0x00`/`0x01` leaf/node prefixes to prevent an internal-node value from being re-presented as a leaf (a second-preimage attack). This profile omits the prefixes but achieves the same property **structurally**: every leaf preimage is `canon()` of a strict 15-field receipt object (begins with `{`, is always > 64 bytes, and is schema- and signature-validated), while every internal-node preimage is exactly 64 raw bytes — the two preimage domains are disjoint, so no leaf hash can equal a node hash. A verifier additionally **recomputes** each leaf from the receipt content (it never trusts a supplied `leaf_hash`), and the mandatory signed checkpoint binds `leaf_count` + `merkle_root` + `head_leaf_hash`; together these defeat the classic CT second-preimage, truncation, and tree-reshaping attacks that the `0x00`/`0x01` prefixes defend against. (The `attack/01_merkle.mjs` red-team script mounts the internal-node-as-leaf attack and confirms every verifier rejects it.)
+
 ## 6. Verification algorithm (and what a PASS proves)
 
 A bundle is **VERIFIED** iff every step passes; **provenance** additionally requires a pinned key:
@@ -115,4 +147,6 @@ A verifier MUST treat ANY malformed or hostile input (depth bomb, type confusion
 
 ## 7. Conformance
 
-An implementation conforms iff, for every vector in `vectors/aga_evidence_bundle_vectors.json`, it (a) verifies a genuine vector to VERIFIED with a byte-identical `merkle_root`, and (b) flips to FAIL on each negative mutation (tampered field, dropped trailing receipt, re-pointed proof, wrong pinned key). Golden roots in the corpus MUST be corroborated by an independent second computation, never re-baselined from the implementation under change.
+An implementation conforms iff, for every vector in `vectors/aga_evidence_bundle_vectors.json` (the SEP oracle) and `fixtures/cross-stack/vectors.json` (the 56-case cross-stack corpus), it (a) verifies a genuine vector to VERIFIED with a byte-identical `merkle_root`, and (b) flips to FAIL on each negative mutation (tampered field, dropped trailing receipt, re-pointed proof, wrong pinned key, small-order key, non-canonical timestamp, uppercase Merkle-sibling hex). Golden roots in the corpus MUST be corroborated by an independent second computation, never re-baselined from the implementation under change.
+
+> **Vector-file disambiguation:** the file `vectors/aga_test_vectors.json` in this directory belongs to the **legacy length-prefixed continuity-chain profile** (`spec.md` §4–8), NOT the SEP profile. Do not re-implement the SEP bundle against it. The SEP oracle is `aga_evidence_bundle_vectors.json` + the cross-stack corpus above, and RFC 8785 canon conformance is pinned separately by `vectors/jcs-rfc8785-vectors.json` (consumed by `tests/sep/jcs-rfc8785-conformance.test.ts`).

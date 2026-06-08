@@ -224,11 +224,44 @@ JWS (RFC 7515) and JWT (RFC 7519) are designed for bearer tokens and claims tran
 
 The receipt format defined here achieves the same cryptographic properties (integrity, authenticity, non-repudiation) with less overhead and a simpler implementation surface.
 
-### Related Work
+### Relationship to prior and concurrent work
 
-- **Sigstore Rekor** provides a transparency log for software supply chain artifacts. Governance receipts solve a different problem (runtime policy decisions vs. build-time signing) but share the principle of append-only, cryptographically verifiable logs.
-- **Certificate Transparency (RFC 6962)** uses Merkle trees for append-only logs of TLS certificates. The Merkle proof structure in this specification follows similar principles.
-- **SCITT (Supply Chain Integrity, Transparency, and Trust)** defines transparent claims for supply chain artifacts. Governance receipts could be submitted to a SCITT ledger for additional transparency guarantees.
+Signed, hash-chained decision/audit records are not new, and AGA does not claim to have invented them.
+What this profile contributes is a **self-contained, offline-verifiable evidence *bundle* with a
+mandatory self-signed checkpoint, plus a six-stack byte-identical conformance suite** — a *format +
+conformance authority*, not a hosted service. Honest positioning against the adjacent work:
+
+- **Veritas Acta (`draft-farley-acta-signed-receipts`, IETF) and other concurrent AI-agent-receipt
+  efforts (InALign, AEOESS, vendor agent-governance toolkits).** This is the closest, *contemporaneous*
+  prior art: per-tool-call Ed25519 + RFC 8785 JCS decision receipts over an MCP stdio proxy, hash-chained
+  by `SHA-256(JCS(receipt))`, offline-verifiable. Signed per-call decision receipts are therefore an
+  *independently co-emerging* design, **not unique to AGA.** AGA's defensible differentiator is narrow
+  and concrete: a single **multi-receipt evidence bundle** bound by a **mandatory gateway-signed
+  checkpoint** over `merkle_root + leaf_count + head_leaf_hash` (which ACTA's Merkle Commitment Mode does
+  not define), and a cross-language conformance corpus that pins byte-identical verdicts across six
+  verifiers. Position by name, not as a novel concept.
+- **Certificate Transparency (RFC 6962):** public, append-only Merkle log with gossip and independent
+  monitors. SEP shares the Merkle/checkpoint mechanics but is the **inverse trust model** — a *local,
+  self-issued, offline* bundle with **no hosted log, no gossip, and no third-party witness**. SEP gets
+  no equivocation protection from a third party; CT's whole point is that it does.
+- **Sigstore/Rekor + in-toto/SLSA (DSSE) + SCITT:** build-time supply-chain provenance and transparent
+  claims. Different lifecycle phase (build vs. **runtime** policy decisions). Note the layering: AGA's
+  own npm artifact is itself published with **SLSA provenance**, so AGA *uses* this stack rather than
+  competing with it.
+- **RFC 3161 / Roughtime:** trusted-third-party timestamping. SEP timestamps are **self-asserted by the
+  issuer, not anchored** to an external time authority — a real limitation, stated plainly.
+- **C2PA:** signed content-provenance manifests for media. Shares the signed-manifest idea in a
+  different domain (media assets vs. agent tool-call decisions).
+- **syslog-sign (RFC 5848), AWS QLDB, Trillian:** signed / hash-chained audit logs and ledgers. SEP is a
+  **portable, self-contained bundle format** a third party verifies with zero infrastructure, not a
+  hosted ledger.
+
+**Honest limit (so the positioning is not an overclaim):** a *self-signed* checkpoint proves nothing
+against a **malicious or compromised issuer** that equivocates — e.g. suppresses a `DENIED` receipt
+before export. SEP proves integrity/authenticity/ordering of the receipts *present* and (when pinned)
+who signed them; it does **not** prove non-omission. Defending against issuer equivocation requires an
+external transparency log or witness (CT/SCITT-style), which SEP deliberately does not include. See
+`KNOWN_LIMITATIONS.md` / `THREAT_BOUNDARY.md`.
 
 ## Backwards Compatibility
 

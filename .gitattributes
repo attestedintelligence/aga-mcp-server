@@ -1,0 +1,17 @@
+# Force LF line endings for all text so the build is byte-deterministic across platforms.
+# Without this, a default Windows checkout (core.autocrlf=true) leaks CRLF from source into
+# compiled artifacts (e.g. a CRLF inside an SQL template literal in src/storage/sqlite.ts is
+# preserved verbatim by tsc into dist/storage/sqlite.js), breaking the byte-for-byte reproduction
+# documented in REPRODUCIBILITY.md. tsconfig also pins `"newLine": "lf"` for tsc output.
+* text=auto eol=lf
+*.ts   text eol=lf
+*.mjs  text eol=lf
+*.js   text eol=lf
+*.json text eol=lf
+*.md   text eol=lf
+*.go   text eol=lf
+*.py   text eol=lf
+*.yml  text eol=lf
+*.toml text eol=lf
+# Keep binary/example fixtures and the lockfile from being altered unexpectedly.
+*.tgz  binary
