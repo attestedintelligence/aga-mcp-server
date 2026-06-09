@@ -46,7 +46,7 @@ the exact manifest procedure). The repo → commit → source → build → publ
 
 ```bash
 npm run conformance:cross-stack    # JS reference + in-server engine + aga-verify + Go + 2× Python
-# => "6 verifiers agree on all 56 cases" — including the adversarial corpus (small-order keys,
+# => "6 verifiers agree on all 57 cases" — including the adversarial corpus (small-order keys,
 #    truncation, reorder, surrogate, non-canonical timestamp, uppercase-Merkle-sibling, …)
 ```
 

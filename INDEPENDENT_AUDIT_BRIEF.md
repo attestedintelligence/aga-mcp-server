@@ -82,7 +82,7 @@ Before relying on a published version, confirm these line up:
 - [ ] **Reference verifier** `aga-receipt-spec/verify/` is VENDORED in this repo (regular files, not a
       submodule) — confirm `verify-sep.mjs` + `verify.go` + `verify.py` are present and match the spec.
 - [ ] **Spec** `aga-receipt-spec/CANONICAL_CONSTRUCTION_v2.md` matches the implemented algorithm.
-- [ ] All six verifiers (reference, engine, aga-verify, Go, Python-audited, Python-stdlib) return identical verdicts on `fixtures/cross-stack/vectors.json` (56 cases)
+- [ ] All six verifiers (reference, engine, aga-verify, Go, Python-audited, Python-stdlib) return identical verdicts on `fixtures/cross-stack/vectors.json` (57 cases)
       (`npm run conformance:cross-stack` → all agree).
 
 If any are out of step (e.g. an older published `aga-verify` than the server), treat the
