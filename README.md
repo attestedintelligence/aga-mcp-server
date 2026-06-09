@@ -5,10 +5,10 @@ Cryptographic runtime governance for AI agents and autonomous systems.
 [![npm](https://img.shields.io/npm/v/@attested-intelligence/aga-mcp-server)](https://www.npmjs.com/package/@attested-intelligence/aga-mcp-server)
 [![PyPI](https://img.shields.io/pypi/v/aga-governance)](https://pypi.org/project/aga-governance/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![release](https://img.shields.io/badge/release-3.0.0-brightgreen)](https://www.npmjs.com/package/@attested-intelligence/aga-mcp-server)
+[![release](https://img.shields.io/badge/release-3.2.0-brightgreen)](https://www.npmjs.com/package/@attested-intelligence/aga-mcp-server)
 [![npm provenance](https://img.shields.io/badge/npm-SLSA%20provenance-brightgreen)](https://www.npmjs.com/package/@attested-intelligence/aga-mcp-server)
 
-> **Status: 3.0.0 (latest, published to npm with SLSA build provenance).** The server tools and the `aga-proxy` emit the **canonical SEP evidence bundle**, verifiable offline by the published `@attested-intelligence/aga-verify` and the reference verifier `aga-receipt-spec/verify/verify-sep.mjs`. Pre-3.0 releases (a legacy continuity-chain bundle that does *not* verify under the SEP verifier) are deprecated; use `^3.0.0`. Claim scope and residual attack surface are documented honestly in `THREAT_BOUNDARY.md`.
+> **Status: 3.2.0 (published to npm with SLSA build provenance).** The server tools and the `aga-proxy` emit the **canonical SEP evidence bundle**, verifiable offline by the published `@attested-intelligence/aga-verify` and the reference verifier `aga-receipt-spec/verify/verify-sep.mjs`. **As of 3.2.0 the verifier is algorithm-agile and ships a post-quantum profile:** v1 `Ed25519-SHA256-JCS` (the default the gateway emits) and v2 `ML-DSA-65+Ed25519-SHA256-JCS` (a NIST FIPS-204 ML-DSA-65 + RFC-8032 Ed25519 **composite**, both must verify), selected per-bundle by the `algorithm` field with a `VERIFIED / FAILED / UNSUPPORTED_PROFILE` trichotomy. Pre-3.0 releases (a legacy continuity-chain bundle that does *not* verify under the SEP verifier) are deprecated; use `^3.0.0`. Claim scope and residual attack surface are documented honestly in `THREAT_BOUNDARY.md`.
 
 ```bash
 # This package IS the AGA MCP server (TypeScript, runs over stdio). Use it from any MCP client:
@@ -29,7 +29,7 @@ node aga-receipt-spec/verify/verify-sep.mjs fixtures/valid_minimal.json   # OVER
 node aga-receipt-spec/verify/verify-sep.mjs fixtures/tampered.json        # OVERALL: FAILED
 ```
 
-The published `@attested-intelligence/aga-verify@2.0.0` CLI renders the identical verdict, and `npm run conformance:cross-stack` proves six independent verifiers (the reference, the in-server engine, `aga-verify`, Go, and two Python implementations) agree on all 56 cross-stack cases. For a full trust-free reproduction (build the package yourself, reproduce the published tarball byte-for-byte, re-run every gate), see the **[REVIEWER_GUIDE.md](REVIEWER_GUIDE.md)** (a command-by-command self-service path), **[REPRODUCIBILITY.md](REPRODUCIBILITY.md)**, and the step-by-step **[SKEPTICAL_AUDITOR.md](SKEPTICAL_AUDITOR.md)**. The 3.0.0 npm release carries SLSA build provenance, checkable with `npm audit signatures`.
+The published `@attested-intelligence/aga-verify@2.0.0` CLI renders the identical verdict, and `npm run conformance:cross-stack` proves six v1 verifier configurations — spanning **three independent toolchains (JavaScript, Go, and Python, including a pure-stdlib, no-third-party-crypto path)** — agree on all **57** cross-stack cases; `npm run conformance:cross-stack-v2` proves **two genuinely independent-language oracles (@noble/JS and CIRCL/Go)** agree on the v2 composite corpus. For a full trust-free reproduction (build the package yourself, reproduce the published tarball byte-for-byte, re-run every gate), see the **[REVIEWER_GUIDE.md](REVIEWER_GUIDE.md)** (a command-by-command self-service path), **[REPRODUCIBILITY.md](REPRODUCIBILITY.md)**, and the step-by-step **[SKEPTICAL_AUDITOR.md](SKEPTICAL_AUDITOR.md)**. The 3.2.0 npm release carries SLSA build provenance, checkable with `npm audit signatures`.
 
 ## What This Does
 
@@ -106,7 +106,7 @@ node aga-receipt-spec/verify/verify-sep.mjs evidence-bundle.json --pubkey <gatew
 
 The published `@attested-intelligence/aga-verify` CLI mirrors this reference (**2.0.0**, published on npm; the older forgeable 1.0.0 is deprecated). Without `--pubkey` you get an **integrity-only** result (`issuerVerified=false`); pin the key to also prove *who* issued it — see `THREAT_BOUNDARY.md` §3.7. A hosted browser verifier is linked under [Links](#links).
 
-The reference §6 algorithm is implemented in **three languages** — JavaScript (`aga-receipt-spec/verify/verify-sep.mjs`), Go (`verify.go`, stdlib `crypto/ed25519`), and Python (`verify.py`, pure-stdlib RFC-8032 Ed25519) — and a cross-stack harness (`npm run conformance:cross-stack`) proves all three, plus the in-server engine and `aga-verify`, render **identical verdicts** on the canonical vectors (valid, adversarial, and every small-order forgery).
+The reference §6 algorithm is implemented in **three languages** — JavaScript (`aga-receipt-spec/verify/verify-sep.mjs`), Go (`verify.go`, stdlib `crypto/ed25519`), and Python (`verify.py`, pure-stdlib RFC-8032 Ed25519) — and a cross-stack harness (`npm run conformance:cross-stack`) proves all three, plus the in-server engine and `aga-verify`, render **identical verdicts** on the canonical vectors (valid, adversarial, and every small-order forgery). The **v2 composite** profile (`ML-DSA-65+Ed25519-SHA256-JCS`) is held to the same bar by a second harness (`npm run conformance:cross-stack-v2`): a `@noble`/JavaScript engine and a CIRCL/Go oracle — two genuinely independent toolchains — render identical verdicts on the pinned v2 corpus, and a v1-only verifier returns `UNSUPPORTED_PROFILE` (exit 3) on a v2 bundle rather than a misleading FAILED.
 
 ## How It Works
 
@@ -217,7 +217,7 @@ pip install aga-governance && python -m pytest --pyargs aga   # Python companion
 
 ## Benchmarks
 
-Receipt-format determinism is reproducible here: `npm test` runs the cross-language vectors, and `npm run conformance:cross-stack` shows all six independent verifiers agree on the canonical 55-case corpus.
+Receipt-format determinism is reproducible here: `npm test` runs the cross-language vectors, and `npm run conformance:cross-stack` shows the six v1 verifier configurations (across three independent toolchains — JS, Go, Python) agree on the canonical 57-case corpus, while `npm run conformance:cross-stack-v2` shows the two independent-language v2 oracles agree on the composite corpus.
 
 ## Project Structure
 
