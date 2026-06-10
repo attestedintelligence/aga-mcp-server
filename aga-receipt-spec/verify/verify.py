@@ -20,6 +20,7 @@ CLI:      python verify_sep.py <bundle.json> [--pubkey <64-hex>] [--ed25519 stdl
 """
 import hashlib
 import json
+import math
 import re
 import sys
 
@@ -406,6 +407,27 @@ def _ts_valid(t):
     return True
 
 
+def _reject_nonfinite_json(token):
+    # json.load passes the bare tokens 'Infinity', '-Infinity', 'NaN' here. RFC-8259 defines
+    # no such literals; JS (JSON.parse) and Go (encoding/json) reject them at parse time. Without
+    # this, a bundle carrying a non-finite token VERIFIES here while the other reference verifiers
+    # FAIL it — a cross-stack verdict split. Raising makes the CLI parse fail closed, in agreement.
+    raise ValueError("non-finite JSON constant %r is not valid RFC-8259 JSON" % (token,))
+
+
+def _has_nonfinite(obj):
+    # Defense in depth for LIBRARY callers that parsed with a lenient loader (Python's default
+    # json.load ACCEPTS NaN/Infinity): a parsed value carrying a non-finite float is rejected so
+    # verify_sep_bundle stays verdict-identical to the JS/Go reference verifiers.
+    if isinstance(obj, float):
+        return not math.isfinite(obj)
+    if isinstance(obj, dict):
+        return any(_has_nonfinite(v) for v in obj.values())
+    if isinstance(obj, list):
+        return any(_has_nonfinite(v) for v in obj)
+    return False
+
+
 def verify_sep_bundle(bundle, expected_public_key=None):
     """Return dict: {verdict, issuerVerified, pinned, steps:[{name, ok}]}.
 
@@ -417,6 +439,8 @@ def verify_sep_bundle(bundle, expected_public_key=None):
     """
     pinned = is_hex(expected_public_key, 64)
     try:
+        if _has_nonfinite(bundle):
+            raise ValueError("bundle contains a non-finite JSON number (NaN/Infinity)")
         return _verify_sep_bundle_inner(bundle, expected_public_key, pinned)
     except Exception as e:  # noqa: BLE001 — fail closed on ANY error, including RecursionError.
         return {
@@ -616,7 +640,9 @@ def _main(argv):
     # print a FAILED line and exit 1 (NOT an uncaught traceback, NOT exit 2).
     try:
         with open(files[0], "r", encoding="utf-8") as fh:
-            bundle = json.load(fh)
+            # parse_constant rejects bare Infinity/-Infinity/NaN (not valid RFC-8259 JSON) so the
+            # CLI fails closed at parse, matching JS/Go and avoiding a cross-stack verdict split.
+            bundle = json.load(fh, parse_constant=_reject_nonfinite_json)
         # Trichotomy pre-gate (CLI only; verify_sep_bundle is byte-unchanged): this pure-stdlib
         # reference implements ONLY the v1 profile. A bundle declaring a REGISTERED profile it does
         # not implement (the v2 ML-DSA-65+Ed25519 composite) returns UNSUPPORTED_PROFILE (exit 3) with
