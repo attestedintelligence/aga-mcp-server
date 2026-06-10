@@ -1,6 +1,6 @@
 # AGA MCP Server — Deployment & Hardening Guide
 
-Practical guidance for running `@attested-intelligence/aga-mcp-server` (3.0.1) in a defensible configuration. Scope is the **MCP server boundary** — see `THREAT_BOUNDARY.md` for the full claim/limitation surface this guide operationalizes.
+Practical guidance for running `@attested-intelligence/aga-mcp-server` (3.x, the current release) in a defensible configuration. Scope is the **MCP server boundary** — see `THREAT_BOUNDARY.md` for the full claim/limitation surface this guide operationalizes.
 
 The hardened posture in one line: **stdio upstream + a persisted, well-protected gateway key + network isolation + verifiers that pin the gateway key.**
 

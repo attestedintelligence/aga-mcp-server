@@ -1,6 +1,6 @@
 # AGA MCP Server — Threat Boundary & Bypass Surface (honest audit)
 
-**Scope:** `@attested-intelligence/aga-mcp-server` 3.0.1 (npm `latest`). Written for Sprint 3 CP3.
+**Scope:** `@attested-intelligence/aga-mcp-server` 3.x (the current release; see the version badge / `package.json`). Originally written for Sprint 3 CP3.
 **Stance:** defensibility through honesty. This documents what the package **does** guarantee, what it **does not**, and the **residual attack surface** that remains by design or is deferred. Per the project discipline: better a precisely-stated boundary than an overclaim.
 
 ---

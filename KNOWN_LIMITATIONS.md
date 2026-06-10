@@ -1,6 +1,6 @@
 # Known Limitations
 
-Plain-language companion to [`THREAT_BOUNDARY.md`](THREAT_BOUNDARY.md). It restates, in public terms, exactly what `@attested-intelligence/aga-mcp-server` (3.0.0) does **not** do and the residual surface that remains by design or is deferred. Nothing here is hidden in the threat boundary, and nothing in the threat boundary is softened here: public honesty == internal honesty. If the two ever disagree, the threat boundary is authoritative.
+Plain-language companion to [`THREAT_BOUNDARY.md`](THREAT_BOUNDARY.md). It restates, in public terms, exactly what `@attested-intelligence/aga-mcp-server` (3.x, the current release) does **not** do and the residual surface that remains by design or is deferred. Nothing here is hidden in the threat boundary, and nothing in the threat boundary is softened here: public honesty == internal honesty. If the two ever disagree, the threat boundary is authoritative.
 
 ## What a verified bundle proves — and does not
 

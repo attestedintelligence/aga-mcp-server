@@ -93,7 +93,7 @@ function makeTestInfra() {
 // ═══════════════════════════════════════════════════════════════════
 
 describe('Group 1: Cryptographic Formula Correctness', () => {
-  it('1.1 [Reference Embodiment]: Sealed hash formula - no delimiters', () => {
+  it('1.1 [Spec reference vector]: Sealed hash formula - no delimiters', () => {
     const bytes_hash = sha256Str('test subject bytes');
     const metadata_hash = sha256Str('test subject metadata');
     const policy_ref = sha256Str('test policy');
@@ -227,7 +227,7 @@ describe('Group 1: Cryptographic Formula Correctness', () => {
     expect(computeLeafHash(meta)).toBe(event.leaf_hash);
   });
 
-  it('1.6 [Reference Embodiment]: Ed25519 signature over RFC 8785 canonical JSON', () => {
+  it('1.6 [Spec reference vector]: Ed25519 signature over RFC 8785 canonical JSON', () => {
     const kp = generateKeyPair();
     const obj = { z: 1, a: 'hello', m: [3, 1, 2] };
     const canonical = canonicalize(obj);

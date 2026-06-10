@@ -39,9 +39,9 @@ bundle differently, they can render different verdicts on it. A conformant verif
   (trailing content, sub-ULP numeric literals) that the object path would otherwise mask. Requires `node`,
   `go`, and `python` (with `cryptography`) on PATH + `npm run build`.
 
-## Status — all six verifiers conformant (last verified 2026-06-07)
+## Status — all six verifiers conformant (last verified 2026-06-09)
 
-`run-all-stacks.mjs` proves all six render **identical verdicts on all 55 cases** (7 canonical + valid +
+`run-all-stacks.mjs` proves all six render **identical verdicts on all 57 cases** (7 canonical + valid +
 valid-variants + adversarial + 4 raw-byte/file-parse). This was hardened across six rounds of independent
 **blind** differential re-audit, which found and closed these cross-stack divergence classes (none were
 forgery-accepts — all were verdict disagreements on malformed input):

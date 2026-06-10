@@ -44,8 +44,10 @@ while every internal-node preimage is exactly 64 raw bytes — the input domains
 can equal a node. A verifier also **recomputes** each leaf from the receipt content (it never trusts a
 supplied `leaf_hash`), and the mandatory signed checkpoint binds `leaf_count` + `merkle_root` +
 `head_leaf_hash`, so truncation, extension, and tree-reshaping are infeasible without the gateway key.
-(The `attack/01_merkle.mjs` red-team script mounts exactly this second-preimage attack and shows every
-verifier rejects it.)
+(The red-team script that mounts exactly this second-preimage attack lives in the private validation
+tree and is not shipped; the shipped `fixtures/cross-stack/vectors.json` corpus carries the labeled
+proof-manipulation family — tampered roots and checkpoints, truncation, malformed directions and
+siblings — and every verifier rejects each.)
 
 ## The six steps (all must pass)
 

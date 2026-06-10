@@ -6,10 +6,10 @@ runs **only** through GitHub Actions OIDC trusted publishing (no stored token, n
 
 ## Pre-publish gates (must be green)
 
-- `npm run check` → build + lint + **297 tests** + SEP conformance (6/6) + **`check:pack`**
+- `npm run check` → build + lint + **370 tests** + SEP conformance (6/6) + **`check:pack`**
   (positive-allowlist + IP-rail content scan: exactly `dist/` + the 5 docs + `package.json`, no
   forbidden artifacts, none of the four IP-rail markers in any shippable file).
-- `npm run conformance:cross-stack` → **6 verifiers agree on all 55 canonical cases**.
+- `npm run conformance:cross-stack` → **6 verifiers agree on all 57 canonical cases**.
 - The release workflow runs BOTH as required gates before it will publish.
 
 ## Cutting a release
@@ -49,5 +49,6 @@ Rollback is **yank + fixed patch version**, never deletion-reliance (mirrors the
 
 - No local `npm publish` (loses provenance + fails the trusted-publisher config).
 - No publish if `check:pack` or the cross-stack gate is red.
-- No shipping the bare patent number, claim-to-code mapping, an Anduril reference, or `aga-pqc` in any
-  package — the pack guards (`scripts/check-pack.mjs` / `aga-python/scripts/check_pack.py`) hard-fail on these.
+- No shipping any IP-rail-blocked marker in any package — the pack guards (`scripts/check-pack.mjs` /
+  `aga-python/scripts/check_pack.py`) hard-fail on these; run `node scripts/check-pack.mjs --selftest`
+  for the live marker list.

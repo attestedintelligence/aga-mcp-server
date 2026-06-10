@@ -64,10 +64,11 @@ npx vitest run tests/sep/jcs-rfc8785-conformance.test.ts
 ## 5. Try to break it yourself
 
 The full verifier is `aga-receipt-spec/verify/verify-sep.mjs` (~245 lines) and `CORE_VERIFICATION.md` is
-the plain-language, vendor-independent algorithm. The `attack/` scripts mount real forgeries (second-
-preimage Merkle, re-sign, truncation/splice, canon ambiguity, envelope lies); the negative vectors in
-`fixtures/cross-stack/vectors.json` are labeled with the exact attack each defends. Mint your own bundle
-with a key you choose (`signerFromSeed`) and attack it — the construction is designed to be attacked.
+the plain-language, vendor-independent algorithm. The negative vectors in
+`fixtures/cross-stack/vectors.json` are real mounted forgeries (tampered roots and checkpoints,
+truncation/splice, re-sign, canon ambiguity, envelope lies, malformed proofs), each labeled with the
+exact attack it defends — replay any against any of the six verifiers and watch it FAIL. Mint your own
+bundle with a key you choose (`signerFromSeed`) and attack it — the construction is designed to be attacked.
 
 ## 6. What a PASS does and does not prove (read this before relying on it)
 
