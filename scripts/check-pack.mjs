@@ -84,7 +84,7 @@ const CONTENT_FORBIDDEN = [
   {
     label: f('claim-to-', 'code mapping'),
     rx: rx('claim[- ]?to[- ]?code|claim\\s*\\d+\\s*(?:->|:|maps?\\b)|maps?\\s+to\\s+claim|(?:element|limitation)\\s+of\\s+claim|claim\\s+chart|claim\\s+mapping'),
-    dirty: f('Claim 1 maps', ' to verify (claim', '-to-', 'code)'),
+    dirty: f('Claim 7 maps', ' to a step (claim', '-to-', 'code)'),
     clean: 'we make no claim about third-party endpoints',
   },
   {

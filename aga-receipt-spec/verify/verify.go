@@ -1,6 +1,6 @@
 // Command verify-sep is a SOUND, standalone Go verifier for the canonical AGA
 // SEP Evidence Bundle. It is a faithful port of the in-server ENGINE
-// (C:/Users/neuro/AGA/src/sep/verify.ts + canonical.ts + receipt.ts + checkpoint.ts),
+// (the AGA engine's src/sep/verify.ts + canonical.ts + receipt.ts + checkpoint.ts),
 // the GROUND TRUTH for SEP verification, mirroring its semantics exactly so its
 // verdicts match the engine: a conformant bundle VERIFIES, every adversarial
 // bundle the engine rejects FAILS, and a hostile/malformed bundle yields FAILED

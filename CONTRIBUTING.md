@@ -30,7 +30,7 @@ npm run test:watch          # Watch mode
 src/               # Core AGA implementation
 independent-verifier/  # Standalone verification tool
 scenarios/         # Deployment scenario implementations
-tests/             # Test suite (94 tests)
+tests/             # Test suite (370 tests)
 scripts/           # Utility scripts
 ```
 

@@ -92,7 +92,7 @@ vector to VERIFIED with a byte-identical `merkle_root` and returns FAILED on eac
 (tampered field, dropped trailing receipt, re-pointed proof, wrong pinned key, malformed key/signature,
 non-canonical timestamp, uppercase Merkle-sibling hex). `npm run conformance:cross-stack` demonstrates
 six independent verifiers (the JS reference, the in-server engine, `aga-verify`, Go, and two Python
-implementations) return byte-identical verdicts on all **56** cross-stack cases.
+implementations) return byte-identical verdicts on all **57** cross-stack cases.
 
 **The SEP conformance oracle is `aga-receipt-spec/vectors/aga_evidence_bundle_vectors.json` plus
 `fixtures/cross-stack/vectors.json`.** The legacy `aga-receipt-spec/vectors/aga_test_vectors.json` in

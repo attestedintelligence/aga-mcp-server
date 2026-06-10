@@ -207,12 +207,12 @@ Automated tests across TypeScript and Python, plus a conformance corpus:
 
 - **TypeScript MCP server:** 370 tests (vitest), including provable-denial and behavioral-monitor regressions
 - **SEP conformance corpus:** `npm run test:conformance` (valid → VERIFIED, negatives → FAILED)
-- **Python companion SDK:** the separately-published `aga-governance` PyPI package (pytest)
+- **Python companion SDK:** the separately-published `aga-governance` PyPI package (install + smoke-checked here; its full pytest suite runs from the source tree)
 
 ```bash
 npm test                              # TypeScript tests (vitest)
 npm run test:conformance              # SEP conformance corpus
-pip install aga-governance && python -m pytest --pyargs aga   # Python companion tests
+pip install aga-governance && python -c "import aga; print(aga.__version__)"   # Python SDK smoke check
 ```
 
 ## Benchmarks
