@@ -33,6 +33,11 @@ export type GovernanceReceipt = SepReceipt;
 export type EvidenceBundle = SepBundle;
 export type { MerkleProof };
 
+// Upper bound on a single newline-delimited JSON-RPC message (and the incomplete-line buffer). A client
+// streaming bytes with no newline must not grow the buffer without limit (memory-exhaustion DoS). Legit
+// messages are far below this; the stdio bridge applies the same bound on the downstream side.
+export const MAX_MESSAGE_BYTES = 8 * 1024 * 1024;
+
 // ── Proxy options ───────────────────────────────────────────
 
 /** Benign MCP protocol methods forwarded WITHOUT a passthrough receipt (no side effects). */
@@ -152,6 +157,14 @@ export class GovernanceProxy extends EventEmitter {
 
     socket.on('data', (chunk) => {
       buffer += chunk.toString();
+      // Fail-closed on a flood with no line terminator: bound the incomplete-line buffer so a client cannot
+      // exhaust memory by streaming bytes without a newline. Reject and close rather than keep accumulating.
+      if (buffer.length > MAX_MESSAGE_BYTES) {
+        this.respond(socket, { jsonrpc: '2.0', error: { code: -32600, message: 'Message too large' }, id: null });
+        buffer = '';
+        socket.destroy();
+        return;
+      }
       const lines = buffer.split('\n');
       buffer = lines.pop() || '';
 

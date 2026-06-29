@@ -7,6 +7,7 @@
  */
 
 import type { ToolPolicy, ToolCallDecision } from './types.js';
+import { performance } from 'node:perf_hooks';
 
 // ── Rate Limiter ────────────────────────────────────────────
 
@@ -17,7 +18,9 @@ interface RateWindow {
 const rateLimits = new Map<string, RateWindow>();
 
 function checkRateLimit(toolName: string, maxPerMinute: number): boolean {
-  const now = Date.now();
+  // Monotonic basis: a wall-clock adjustment (NTP step, DST, manual/container clock change) must not perturb
+  // the rate-limit window. performance.now() is monotonic and immune to such skew, unlike Date.now().
+  const now = performance.now();
   const cutoff = now - 60_000;
 
   let window = rateLimits.get(toolName);

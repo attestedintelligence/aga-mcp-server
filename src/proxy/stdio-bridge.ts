@@ -17,6 +17,10 @@ export interface StdioBridgeOptions {
   cwd?: string;
 }
 
+// Mirror of server.ts MAX_MESSAGE_BYTES (kept local to avoid a server<->bridge circular import). Bounds the
+// downstream incomplete-line buffer so a misbehaving child cannot exhaust the proxy's memory.
+const MAX_MESSAGE_BYTES = 8 * 1024 * 1024;
+
 /**
  * Bridges JSON-RPC messages to/from a child process via stdio.
  * Handles newline-delimited JSON framing.
@@ -66,6 +70,13 @@ export class StdioBridge extends EventEmitter {
   }
 
   private processBuffer(): void {
+    // Bound the downstream incomplete-line buffer (a child flooding without a newline must not grow it
+    // unboundedly). Drop the buffer and continue rather than accumulate.
+    if (this.buffer.length > MAX_MESSAGE_BYTES) {
+      process.stderr.write('[aga-proxy] downstream message exceeded the size bound; dropping the buffer\n');
+      this.buffer = '';
+      return;
+    }
     const lines = this.buffer.split('\n');
     // Keep the last (possibly incomplete) line in the buffer
     this.buffer = lines.pop() || '';
