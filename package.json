@@ -16,9 +16,18 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "exports": {
-    ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" },
-    "./verify": { "types": "./dist/sep/verify.d.ts", "default": "./dist/sep/verify.js" },
-    "./sep": { "types": "./dist/sep/index.d.ts", "default": "./dist/sep/index.js" },
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./verify": {
+      "types": "./dist/sep/verify.d.ts",
+      "default": "./dist/sep/verify.js"
+    },
+    "./sep": {
+      "types": "./dist/sep/index.d.ts",
+      "default": "./dist/sep/index.js"
+    },
     "./package.json": "./package.json"
   },
   "files": [
@@ -57,7 +66,7 @@
     "prepublishOnly": "npm run build && npm run test && npm run test:conformance && npm run check:pack"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.12.0",
+    "@modelcontextprotocol/sdk": "^1.29.0",
     "@noble/ed25519": "2.1.0",
     "@noble/hashes": "1.6.1",
     "@noble/post-quantum": "0.6.1",
@@ -66,6 +75,9 @@
   },
   "optionalDependencies": {
     "better-sqlite3": "^11.7.0"
+  },
+  "overrides": {
+    "hono": ">=4.12.25"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.12",
