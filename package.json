@@ -1,7 +1,7 @@
 {
   "name": "@attested-intelligence/aga-mcp-server",
   "version": "3.3.0",
-  "description": "MCP server for cryptographic AI agent governance. Seal policy artifacts, enforce at runtime, prove with signed receipts and offline-verifiable evidence bundles.",
+  "description": "MCP governance proxy and evidence engine for AI agent tool calls: evaluate each call against a sealed policy, permit or deny it at the proxy boundary, and prove every decision with signed, offline-verifiable evidence bundles.",
   "author": "Attested Intelligence Holdings LLC",
   "license": "MIT",
   "homepage": "https://attestedintelligence.com/technology",
@@ -87,8 +87,7 @@
     "agentic-ai",
     "attestation",
     "governance",
-    "cryptographic-enforcement",
-    "runtime-integrity",
+    "policy-proxy",
     "evidence-bundles",
     "ed25519",
     "policy-artifacts",
