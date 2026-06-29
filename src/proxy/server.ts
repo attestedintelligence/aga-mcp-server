@@ -390,8 +390,13 @@ export class GovernanceProxy extends EventEmitter {
   // ── Response helper ────────────────────────────────────────
 
   private respond(socket: net.Socket, msg: Record<string, unknown>): void {
-    if (!socket.destroyed) {
-      socket.write(JSON.stringify(msg) + '\n');
+    if (socket.destroyed) return;
+    const ok = socket.write(JSON.stringify(msg) + '\n');
+    // Backpressure: a client that does not read its responses must not grow the outbound buffer without
+    // bound (slow-reader memory-exhaustion DoS). If the socket's write buffer is backed up past the cap,
+    // drop the connection rather than accumulate.
+    if (!ok && socket.writableLength > MAX_MESSAGE_BYTES) {
+      socket.destroy();
     }
   }
 
