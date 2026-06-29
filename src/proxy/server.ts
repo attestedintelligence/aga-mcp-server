@@ -24,7 +24,7 @@ import type { ToolPolicy } from './types.js';
 // parallel receipt/Merkle/canonical/@noble implementation; it records governed decisions
 // through a SepGateway and exports the canonical SEP bundle, verified by the one verifier.
 import {
-  SepGateway, generateSigner, sha256Hex, canonicalize, safeArgumentsHash,
+  SepGateway, generateSigner, derivePolicyReference, safeArgumentsHash,
   type SepSigner, type SepReceipt, type SepBundle, type MerkleProof,
 } from '../sep/index.js';
 
@@ -101,7 +101,7 @@ export class GovernanceProxy extends EventEmitter {
   async start(): Promise<void> {
     if (this.started) throw new Error('Proxy already running');
 
-    this.policyHash = sha256Hex(canonicalize(this.policy));
+    this.policyHash = derivePolicyReference(this.policy);
     this.sep.setPolicyReference(this.policyHash);
 
     // Start downstream bridge if configured
@@ -399,7 +399,7 @@ export class GovernanceProxy extends EventEmitter {
 
   async switchPolicy(newPolicy: ToolPolicy): Promise<void> {
     this.policy = newPolicy;
-    this.policyHash = sha256Hex(canonicalize(newPolicy));
+    this.policyHash = derivePolicyReference(newPolicy);
     this.sep.setPolicyReference(this.policyHash);
     resetRateLimits();
     this.emit('policy_switched');

@@ -11,6 +11,7 @@ export { SEP_ALGORITHM, SEP_RECEIPT_VERSION, SEP_RECEIPT_FIELDS, buildReceipt, l
 export { buildCheckpoint, type SignedCheckpoint } from './checkpoint.js';
 export { SepGateway, type SepBundle, type SepGatewayOptions, type RecordInput } from './bundle.js';
 export { verifySepBundle, type SepVerificationResult, type VerifyStep, type VerifyOptions } from './verify.js';
+export { derivePolicyReference } from './policy-ref.js';
 export {
   verifyHybrid, verifyHybridBytes, signHybrid, signHybridBytes,
   hybridSignerFromSeeds, generateHybridSigner, generateHybridKeypair, hybridKeypairFromSeeds,
