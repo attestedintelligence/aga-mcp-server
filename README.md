@@ -103,9 +103,25 @@ A bundle this package emits (via the `generate_evidence_bundle` tool, or `aga-pr
 node aga-receipt-spec/verify/verify-sep.mjs evidence-bundle.json --pubkey <gateway-public-key>
 ```
 
-The published `@attested-intelligence/aga-verify` CLI mirrors this reference (**2.0.0**, published on npm; the older forgeable 1.0.0 is deprecated). Without `--pubkey` you get an **integrity-only** result (`issuerVerified=false`); pin the key to also prove *who* issued it — see `THREAT_BOUNDARY.md` §3.7. A hosted browser verifier is linked under [Links](#links).
+The published `@attested-intelligence/aga-verify` CLI mirrors this reference (published on npm; the older forgeable 1.0.0 is deprecated). Without `--pubkey` you get an **integrity-only** result (`issuerVerified=false`); pin the key to also prove *who* issued it — see `THREAT_BOUNDARY.md` §3.7. A hosted browser verifier is linked under [Links](#links).
 
 The reference §6 algorithm is implemented in **three languages** — JavaScript (`aga-receipt-spec/verify/verify-sep.mjs`), Go (`verify.go`, stdlib `crypto/ed25519`), and Python (`verify.py`, pure-stdlib RFC-8032 Ed25519) — and a cross-stack harness (`npm run conformance:cross-stack`) proves all three, plus the in-server engine and `aga-verify`, render **identical verdicts** on the canonical vectors (valid, adversarial, and every small-order forgery). The **v2 composite** profile (`ML-DSA-65+Ed25519-SHA256-JCS`) is held to the same bar by a second harness (`npm run conformance:cross-stack-v2`): a `@noble`/JavaScript engine and a CIRCL/Go oracle — two genuinely independent toolchains — render identical verdicts on the pinned v2 corpus, and the **reference** v1 verifier (`verify-sep.mjs`/`verify.py`/`verify.go`) returns `UNSUPPORTED_PROFILE` (exit 3) on a v2 bundle — signalling "profile not implemented" rather than a misleading "invalid". *(The published `aga-verify` CLI does not implement this profile trichotomy: on a v2 bundle it returns FAILED (exit 1). Use exit 3 as the unsupported-profile signal only with the reference verifiers.)*
+
+### Check-name mapping across implementations
+
+The JS reference verifier and the Python SDK (`aga-governance`) decompose the same seven-check verification differently. Overall verdicts and exit codes agree on every conformance-corpus case (re-proven 2026-07-01: 10/10 cells across pristine/tampered bundles with unpinned, correct, and wrong keys); the sub-check that reports a given tamper can differ:
+
+| JS reference check | Python result field | What it covers |
+|---|---|---|
+| `structural` | `algorithm_valid` + parts of `bundle_consistent` | algorithm id, key well-formedness, receipt/proof counts |
+| `receipt_signatures` | `receipt_signatures_valid` | Ed25519 over canonical receipt bytes |
+| `chain_and_ordering` | `chain_integrity_valid` | prev-leaf linkage, monotonic ids and timestamps |
+| `merkle_and_bijection` | `merkle_proofs_valid` | leaf recompute, single-root walk, index bijection |
+| `signed_checkpoint` | `checkpoint_valid` | gateway-signed root + count + chain-head binding |
+| `envelope_consistency` | `envelope_consistent` | envelope metadata vs signed content |
+| `gateway_key_match` (with `--pubkey`) | `gateway_key_match` / `provenance` | pinned issuer key |
+
+Known decomposition difference: the JS reference recomputes every Merkle leaf from full receipt content, so a receipt-signature tamper also fails `merkle_and_bijection`; the Python verifier surfaces the same tamper in `receipt_signatures_valid`, `chain_integrity_valid`, and `bundle_consistent` while its `merkle_proofs_valid` can remain true. Neither is looser: the bundle fails in both stacks, exit 1. One input-handling difference is deliberate: a malformed `--pubkey` pin is a usage error (exit 2) in the Python SDK, while the JS reference treats a malformed pin as unpinned; the Python behavior is strictly tighter.
 
 ## How It Works
 
