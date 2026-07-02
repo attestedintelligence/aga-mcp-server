@@ -39,19 +39,19 @@ and exit codes. Usable directly in CI.
 Implements the canonical construction in
 [`aga-receipt-spec/CANONICAL_CONSTRUCTION_v2.md`](https://attestedintelligence.com/spec) §6:
 
-1. **Structural floor** — algorithm, well-formed (non-small-order) key, receipt/proof counts.
-2. **Receipt signatures** — Ed25519 over the canonical receipt bytes, for every receipt.
-3. **Chain + ordering** — each receipt links to the previous leaf; monotonic ids/timestamps.
-4. **Merkle + bijection** — every leaf is **recomputed from receipt content**, walked to one root, and the proof set is the complete contiguous `0..N-1`.
-5. **Signed checkpoint (mandatory)** — a gateway-signed checkpoint binds the root, the receipt count, and the chain head, so adding/dropping/reordering receipts fails.
-6. **Provenance (only with `--pubkey`)** — the bundle key equals the key you pinned.
+1. **Structural floor**: algorithm, well-formed (non-small-order) key, receipt/proof counts.
+2. **Receipt signatures**: Ed25519 over the canonical receipt bytes, for every receipt.
+3. **Chain + ordering**: each receipt links to the previous leaf; monotonic ids/timestamps.
+4. **Merkle + bijection**: every leaf is **recomputed from receipt content**, walked to one root, and the proof set is the complete contiguous `0..N-1`.
+5. **Signed checkpoint (mandatory)**: a gateway-signed checkpoint binds the root, the receipt count, and the chain head, so adding/dropping/reordering receipts fails.
+6. **Provenance (only with `--pubkey`)**: the bundle key equals the key you pinned.
 
 All steps are fully offline. No network calls, ever.
 
-## What a PASS proves — and what it does not
+## What a PASS proves, and what it does not
 
 A PASS proves every **present** receipt is authentic, correctly chained, Merkle-included
-under a signed checkpoint, and (with `--pubkey`) issued by the pinned gateway — nothing
+under a signed checkpoint, and (with `--pubkey`) issued by the pinned gateway: nothing
 present was added, reordered, or truncated.
 
 A PASS does **not** prove **non-omission**: it cannot establish that the signer recorded
@@ -69,7 +69,7 @@ what you can check yourself: this file (read it), the Node runtime, and the key 
 ## From source
 
 ```bash
-npm install        # devDeps only (esbuild, vitest, tsx) — zero runtime deps
+npm install        # devDeps only (esbuild, vitest, tsx), zero runtime deps
 npm test           # vitest: genuine VERIFIES + every tamper/truncation/wrong-key FAILS
 npm run build      # bundles verify.ts -> dist/aga-verify.mjs (esbuild)
 node dist/aga-verify.mjs example-bundle.json --pubkey <key>

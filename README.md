@@ -28,7 +28,7 @@ node aga-receipt-spec/verify/verify-sep.mjs fixtures/valid_minimal.json   # OVER
 node aga-receipt-spec/verify/verify-sep.mjs fixtures/tampered.json        # OVERALL: FAILED
 ```
 
-The published `@attested-intelligence/aga-verify` CLI renders the identical verdict, and `npm run conformance:cross-stack` proves six v1 verifier configurations — spanning **three independent toolchains (JavaScript, Go, and Python, including a pure-stdlib, no-third-party-crypto path)** — agree on all **57** cross-stack cases; `npm run conformance:cross-stack-v2` proves **two genuinely independent-language oracles (@noble/JS and CIRCL/Go)** agree on the v2 composite corpus. For a full trust-free reproduction (build the package yourself, reproduce the published tarball byte-for-byte, re-run every gate), see the **[REVIEWER_GUIDE.md](REVIEWER_GUIDE.md)** (a command-by-command self-service path), **[REPRODUCIBILITY.md](REPRODUCIBILITY.md)**, and the step-by-step **[SKEPTICAL_AUDITOR.md](SKEPTICAL_AUDITOR.md)**. This release carries SLSA build provenance, checkable with `npm audit signatures`.
+The published `@attested-intelligence/aga-verify` CLI renders the identical verdict, and `npm run conformance:cross-stack` (first: `npm run build && npm --prefix independent-verifier run build`) proves six v1 verifier configurations, spanning **three independent toolchains (JavaScript, Go, and Python, including a pure-stdlib, no-third-party-crypto path)**, agree on all **57** cross-stack cases; `npm run conformance:cross-stack-v2` proves **two genuinely independent-language oracles (@noble/JS and CIRCL/Go)** agree on the v2 composite corpus. For a full trust-free reproduction (build the package yourself, reproduce the published tarball byte-for-byte, re-run every gate), see the **[REVIEWER_GUIDE.md](REVIEWER_GUIDE.md)** (a command-by-command self-service path), **[REPRODUCIBILITY.md](REPRODUCIBILITY.md)**, and the step-by-step **[SKEPTICAL_AUDITOR.md](SKEPTICAL_AUDITOR.md)**. This release carries SLSA build provenance, checkable with `npm audit signatures`.
 
 ## What This Does
 
@@ -36,7 +36,7 @@ Every tool call an AI agent makes passes through the AGA gateway. Each call is e
 
 **Record. Prove. Verify.**
 
-**Scope:** a verified bundle proves the *integrity of the receipts present* — each is authentic, correctly ordered, Merkle-included, and (when a key is pinned) provenance-bound. It does **not** prove non-omission (that every action the agent took was logged); completeness is bounded by the tamper-evidence of the interception point, which is outside the bundle. See **[KNOWN_LIMITATIONS.md](https://github.com/attestedintelligence/aga-mcp-server/blob/main/KNOWN_LIMITATIONS.md)** for the full honest boundary, and `THREAT_BOUNDARY.md` for the per-field detail.
+**Scope:** a verified bundle proves the *integrity of the receipts present*: each is authentic, correctly ordered, Merkle-included, and (when a key is pinned) provenance-bound. It does **not** prove non-omission (that every action the agent took was logged); completeness is bounded by the tamper-evidence of the interception point, which is outside the bundle. See **[KNOWN_LIMITATIONS.md](https://github.com/attestedintelligence/aga-mcp-server/blob/main/KNOWN_LIMITATIONS.md)** for the full honest boundary, and `THREAT_BOUNDARY.md` for the per-field detail.
 
 ## Use with Claude Desktop
 
@@ -92,9 +92,9 @@ Keep the seed secret and out of version control; see `DEPLOYMENT.md` for key han
 | **Delegation** | `delegate_to_subagent` |
 | **Audit** | `get_receipts`, `get_chain_events` |
 
-> **`measure_behavior` is detective-only by default** — it observes tool-usage patterns and records a *signed, provable* drift finding, but does not block. Enforcement (drift → quarantine) is opt-in via `enforce=true` and off by default. Hard governance decisions (PERMITTED/DENIED) are made by the portal/PEP, not the behavioral monitor.
+> **`measure_behavior` is detective-only by default**: it observes tool-usage patterns and records a *signed, provable* drift finding, but does not block. Enforcement (drift → quarantine) is opt-in via `enforce=true` and off by default. Hard governance decisions (PERMITTED/DENIED) are made by the portal/PEP, not the behavioral monitor.
 
-## Quick Start — verify a bundle offline
+## Quick Start: verify a bundle offline
 
 A bundle this package emits (via the `generate_evidence_bundle` tool, or `aga-proxy export`) is a **canonical SEP bundle**. Verify it offline, with no network and no callback to us:
 
@@ -103,9 +103,9 @@ A bundle this package emits (via the `generate_evidence_bundle` tool, or `aga-pr
 node aga-receipt-spec/verify/verify-sep.mjs evidence-bundle.json --pubkey <gateway-public-key>
 ```
 
-The published `@attested-intelligence/aga-verify` CLI mirrors this reference (published on npm; the older forgeable 1.0.0 is deprecated). Without `--pubkey` you get an **integrity-only** result (`issuerVerified=false`); pin the key to also prove *who* issued it — see `THREAT_BOUNDARY.md` §3.7. A hosted browser verifier is linked under [Links](#links).
+The published `@attested-intelligence/aga-verify` CLI mirrors this reference (published on npm; the older forgeable 1.0.0 is deprecated). Without `--pubkey` you get an **integrity-only** result (`issuerVerified=false`); pin the key to also prove *who* issued it. See `THREAT_BOUNDARY.md` §3.7. A hosted browser verifier is linked under [Links](#links).
 
-The reference §6 algorithm is implemented in **three languages** — JavaScript (`aga-receipt-spec/verify/verify-sep.mjs`), Go (`verify.go`, stdlib `crypto/ed25519`), and Python (`verify.py`, pure-stdlib RFC-8032 Ed25519) — and a cross-stack harness (`npm run conformance:cross-stack`) proves all three, plus the in-server engine and `aga-verify`, render **identical verdicts** on the canonical vectors (valid, adversarial, and every small-order forgery). The **v2 composite** profile (`ML-DSA-65+Ed25519-SHA256-JCS`) is held to the same bar by a second harness (`npm run conformance:cross-stack-v2`): a `@noble`/JavaScript engine and a CIRCL/Go oracle — two genuinely independent toolchains — render identical verdicts on the pinned v2 corpus, and the **reference** v1 verifier (`verify-sep.mjs`/`verify.py`/`verify.go`) returns `UNSUPPORTED_PROFILE` (exit 3) on a v2 bundle — signalling "profile not implemented" rather than a misleading "invalid". *(The published `aga-verify` CLI does not implement this profile trichotomy: on a v2 bundle it returns FAILED (exit 1). Use exit 3 as the unsupported-profile signal only with the reference verifiers.)*
+The reference §6 algorithm is implemented in **three languages**: JavaScript (`aga-receipt-spec/verify/verify-sep.mjs`), Go (`verify.go`, stdlib `crypto/ed25519`), and Python (`verify.py`, pure-stdlib RFC-8032 Ed25519). A cross-stack harness (`npm run conformance:cross-stack`; first: `npm run build && npm --prefix independent-verifier run build`) proves all three, plus the in-server engine and `aga-verify`, render **identical verdicts** on the canonical vectors (valid, adversarial, and every small-order forgery). The **v2 composite** profile (`ML-DSA-65+Ed25519-SHA256-JCS`) is held to the same bar by a second harness (`npm run conformance:cross-stack-v2`): a `@noble`/JavaScript engine and a CIRCL/Go oracle, two genuinely independent toolchains, render identical verdicts on the pinned v2 corpus, and the **reference** v1 verifier (`verify-sep.mjs`/`verify.py`/`verify.go`) returns `UNSUPPORTED_PROFILE` (exit 3) on a v2 bundle, signalling "profile not implemented" rather than a misleading "invalid". *(The published `aga-verify` CLI does not implement this profile trichotomy: on a v2 bundle it returns FAILED (exit 1). Use exit 3 as the unsupported-profile signal only with the reference verifiers.)*
 
 ### Check-name mapping across implementations
 
@@ -152,10 +152,12 @@ Run AGA as a transparent proxy between any MCP client and any MCP server. Every 
 # stdio upstream = the hardened default (the upstream is a child process, not network-reachable).
 npx -p @attested-intelligence/aga-mcp-server aga-proxy start \
   --upstream "npx -y @modelcontextprotocol/server-filesystem /tmp/test" --profile standard
+```
 
-# Export the canonical SEP evidence bundle, then verify it offline
-npx -p @attested-intelligence/aga-mcp-server aga-proxy export --output evidence.json
-npx -p @attested-intelligence/aga-mcp-server aga-proxy verify evidence.json
+To export the canonical SEP evidence bundle, call the `generate_evidence_bundle` MCP tool from the running server/proxy session and save the returned JSON (e.g. as `evidence.json`). Note: `aga-proxy export` operates within a running proxy process; a separate invocation has no session to export. Verify the exported file offline:
+
+```bash
+npx -y @attested-intelligence/aga-verify evidence.json --pubkey <gateway-public-key>
 ```
 
 The proxy intercepts `tools/call` requests, evaluates them against a sealed policy, and generates a signed SEP receipt for **every** decision. Permitted calls are forwarded to the downstream server; denied calls return an MCP error and never reach it. Every decision is hash-linked and checkpoint-bound into a tamper-evident bundle. (Methods other than `tools/call` aren't policy-evaluated, but non-benign ones are recorded as signed *passthrough* receipts for auditability, and an optional denylist can reject them; see `THREAT_BOUNDARY.md` §3.2.)
@@ -165,7 +167,7 @@ Three built-in policy profiles:
 - **standard** - rate limits + blocks destructive operations
 - **restrictive** - explicit tool allowlist, all unknown tools denied
 
-## Verification _(canonical SEP — 3.0; normative §6 algorithm in `aga-receipt-spec/verify/verify-sep.mjs`)_
+## Verification _(canonical SEP 3.0; normative §6 algorithm in `aga-receipt-spec/verify/verify-sep.mjs`)_
 
 1. **Structural floor** - Bundle declares Ed25519-SHA256-JCS, public key well-formed (all small-order encodings + non-canonical `y ≥ p` rejected), `receipts.length > 0`, proof count = receipt count
 2. **Receipt Signatures** - Ed25519 over JCS-profile canonical JSON, sorted-key (signature field excluded)
@@ -185,7 +187,7 @@ Three built-in policy profiles:
 
 ## Live Gateway
 
-A demo gateway is deployed on Cloudflare Workers (a **separate deployment** that may track its own version; treat it as a convenience mirror, and always verify what it returns offline against a pinned key — not as the canonical artifact):
+A demo gateway is deployed on Cloudflare Workers (a **separate deployment** that may track its own version; treat it as a convenience mirror, and always verify what it returns offline against a pinned key, not as the canonical artifact):
 
 ```bash
 # Check status
@@ -220,7 +222,7 @@ with AgentSession(gateway_id="my-gateway") as session:
 
 Automated tests across TypeScript and Python, plus a conformance corpus:
 
-- **TypeScript MCP server:** 370 tests (vitest), including provable-denial and behavioral-monitor regressions
+- **TypeScript MCP server:** 371 automated tests (vitest), including provable-denial and behavioral-monitor regressions
 - **SEP conformance corpus:** `npm run test:conformance` (valid → VERIFIED, negatives → FAILED)
 - **Python companion SDK:** the separately-published `aga-governance` PyPI package (install + smoke-checked here; its full pytest suite runs from the source tree)
 
@@ -232,20 +234,20 @@ pip install aga-governance && python -c "import aga; print(aga.__version__)"   #
 
 ## Benchmarks
 
-Receipt-format determinism is reproducible here: `npm test` runs the cross-language vectors, and `npm run conformance:cross-stack` shows the six v1 verifier configurations (across three independent toolchains — JS, Go, Python) agree on the canonical 57-case corpus, while `npm run conformance:cross-stack-v2` shows the two independent-language v2 oracles agree on the composite corpus.
+Receipt-format determinism is reproducible here: `npm test` runs the cross-language vectors, and `npm run conformance:cross-stack` (first: `npm run build && npm --prefix independent-verifier run build`) shows the six v1 verifier configurations (across three independent toolchains: JS, Go, Python) agree on the canonical 57-case corpus, while `npm run conformance:cross-stack-v2` shows the two independent-language v2 oracles agree on the composite corpus.
 
 ## Project Structure
 
 ```
 src/
-  sep/                 # Canonical SEP evidence engine — single source of truth (canon, merkle, receipt, checkpoint, bundle, verify)
+  sep/                 # Canonical SEP evidence engine: single source of truth (canon, merkle, receipt, checkpoint, bundle, verify)
   core/                # Governance primitives (portal, artifact, attestation, disclosure, delegation, behavioral) + internal continuity-chain profile
   crypto/              # Internal continuity-chain crypto: Ed25519 (node:crypto), SHA-256/blake2b, salt
   proxy/               # MCP governance proxy (transparent interception + policy enforcement; emits SEP bundles)
   middleware/          # Governance PEP wrapper (records a signed PERMITTED/DENIED receipt per governed call)
-independent-verifier/  # @attested-intelligence/aga-verify — standalone SEP verifier, zero AGA imports
-scenarios/             # Demo scenarios (SCADA, autonomous vehicle, AI agent) — emit SEP bundles
-tests/                 # TypeScript test suite (370 tests)
+independent-verifier/  # @attested-intelligence/aga-verify: standalone SEP verifier, zero AGA imports
+scenarios/             # Demo scenarios (SCADA, autonomous vehicle, AI agent) that emit SEP bundles
+tests/                 # TypeScript test suite (371 automated tests)
 ```
 
 ## Links
