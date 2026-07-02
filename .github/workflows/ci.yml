@@ -39,8 +39,14 @@ jobs:
       - uses: actions/checkout@v4
       - name: Verify independent verifier has zero AGA imports
         run: |
-          if grep -r "from.*\.\./src\|require.*\.\./src\|from.*aga" independent-verifier/verify.ts independent-verifier/src/ 2>/dev/null; then
-            echo "FAIL: Independent verifier contains AGA imports"
+          # verify.ts is the single source file; scan it only. (Passing a nonexistent path like the
+          # old independent-verifier/src/ makes grep exit 2 on the path error, so the `if grep` FAIL
+          # branch never runs and the guard silently passes. Anchoring on the real file fixes that.)
+          if grep -nE "(from|require\()[[:space:]]*['\"](\.\.?/(src|dist)|@attested-intelligence/aga-mcp-server)" independent-verifier/verify.ts; then
+            echo "FAIL: independent verifier imports AGA source or the aga-mcp-server package"
             exit 1
           fi
-          echo "PASS: Zero AGA imports confirmed"
+          echo "PASS: zero AGA imports confirmed"
+      - name: Verify independent verifier has zero third-party runtime deps
+        run: |
+          node -e "const d=require('./independent-verifier/package.json').dependencies||{}; if(Object.keys(d).length){console.error('FAIL: runtime deps present:',Object.keys(d));process.exit(1)} console.log('PASS: zero runtime dependencies')"

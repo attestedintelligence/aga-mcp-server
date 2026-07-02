@@ -8,7 +8,7 @@ await build({
   bundle: true,
   platform: 'node',
   format: 'esm',
-  packages: 'external', // keep @noble/* as runtime deps, do not inline
+  packages: 'external', // node: builtins stay external; there are no third-party deps to inline
   banner: { js: '#!/usr/bin/env node' },
   outfile: 'dist/aga-verify.mjs',
 });
