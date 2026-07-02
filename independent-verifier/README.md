@@ -1,37 +1,43 @@
-# AGA Independent Verifier (`@attested-intelligence/aga-verify`)
+# AGA Offline Verifier (`@attested-intelligence/aga-verify`)
 
-Standalone verification of canonical **AGA SEP Evidence Bundles**. **Zero AGA imports
-and zero third-party dependencies** — it uses only Node's built-in `crypto` (Ed25519 +
-SHA-256). The trust chain dead-ends at the Node runtime and the gateway public key you
-pin; nothing else.
+Standalone, producer-independent verification of canonical **AGA SEP Evidence Bundles**:
+it runs without contacting the producer. The verifier is company-authored, so audit it
+yourself: one source file, **zero AGA imports and zero third-party dependencies**, only
+Node's built-in `crypto` (Ed25519 + SHA-256). The trust chain ends at the Node runtime,
+this package's one auditable source file, and the gateway public key you pin.
 
 ## Why this exists
 
 AGA claims its Evidence Bundles are tamper-evident and offline-verifiable. This tool
-proves that claim is checkable by **anyone**, with no trust in AGA's own code or in any
-npm dependency: it re-implements the complete verification from scratch and runs against
-a bundle you provide.
+makes that claim checkable by **anyone**: the complete verification is implemented from
+scratch in one auditable file with zero AGA imports and zero npm dependencies, and it
+runs against a bundle you provide, offline.
 
 ## Quickstart
 
 ```bash
-# integrity only (proves the bundle is internally authentic + complete-as-presented):
-npx @attested-intelligence/aga-verify <bundle.json>
+# grab a real signed bundle from the public site, then verify it offline:
+curl -sO https://attestedintelligence.com/sample-bundle.json
+npx @attested-intelligence/aga-verify sample-bundle.json
 
-# integrity + PROVENANCE (proves it came from a specific gateway you trust out of band):
-npx @attested-intelligence/aga-verify <bundle.json> --pubkey <64-hex-gateway-key>
+# integrity + PROVENANCE (proves it came from a gateway key you trust out of band;
+# the demo gateway key is published at attestedintelligence.com/verify):
+npx @attested-intelligence/aga-verify sample-bundle.json --pubkey <64-hex-gateway-key>
 
-# smoke-test against the bundled canonical example (a real signed bundle):
-npx @attested-intelligence/aga-verify example-bundle.json \
+# or verify the example shipped inside this package (labeled as the packaged sample):
+npx @attested-intelligence/aga-verify --sample \
   --pubkey ea4a6c63e29c520abef5507b132ec5f9954776aebebe7b92421eea691446d22c
 ```
 
-Exit code is `0` on `VERIFIED`, `1` on `FAILED` — usable directly in CI.
+Exit codes: `0` on `VERIFIED`; `1` on `FAILED` (including an unreadable file, and
+v2/post-quantum bundles, which this CLI does not implement and reports as FAILED);
+`2` on usage error. `--version` prints the CLI version; `--help` prints the checks
+and exit codes. Usable directly in CI.
 
 ## What it verifies
 
 Implements the canonical construction in
-[`aga-receipt-spec/CANONICAL_CONSTRUCTION_v2.md`](https://attestedintelligence.com/technology) §6:
+[`aga-receipt-spec/CANONICAL_CONSTRUCTION_v2.md`](https://attestedintelligence.com/spec) §6:
 
 1. **Structural floor** — algorithm, well-formed (non-small-order) key, receipt/proof counts.
 2. **Receipt signatures** — Ed25519 over the canonical receipt bytes, for every receipt.
@@ -53,11 +59,12 @@ A PASS does **not** prove **non-omission**: it cannot establish that the signer 
 point, which is outside the bundle. Without `--pubkey`, a PASS proves integrity and
 self-consistency under the bundle's own key, **not** provenance.
 
-## Independence guarantee
+## What you have to trust
 
 `npm ls` shows **zero runtime dependencies**. The verifier is one source file
-(`verify.ts`, bundled to `dist/aga-verify.mjs`) using only `node:crypto`. No AGA code, no
-third-party packages, no network for verification.
+(`verify.ts`, bundled to `dist/aga-verify.mjs`) using only `node:crypto`. No AGA library
+imports, no third-party packages, no network for verification. What remains is exactly
+what you can check yourself: this file (read it), the Node runtime, and the key you pin.
 
 ## From source
 

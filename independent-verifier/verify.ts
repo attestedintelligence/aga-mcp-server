@@ -292,18 +292,53 @@ export function verifyEvidenceBundle(bundleJson: string, expectedPublicKey?: str
 
 // ── CLI ──────────────────────────────────────────────────────────────────────
 if (typeof process !== 'undefined' && process.argv[1]?.includes('verify')) {
-  const { readFileSync } = await import('node:fs');
+  const { readFileSync, existsSync } = await import('node:fs');
+  const { fileURLToPath } = await import('node:url');
+  const resolveNear = (rel: string): string | null => {
+    try {
+      const p = fileURLToPath(new URL(rel, import.meta.url));
+      return existsSync(p) ? p : null;
+    } catch { return null; }
+  };
+  const pkgPath = resolveNear('../package.json') ?? resolveNear('./package.json');
+  const pkgVersion = pkgPath ? (JSON.parse(readFileSync(pkgPath, 'utf-8')).version as string) : 'unknown';
+  const USAGE = [
+    'Usage: aga-verify <bundle.json> [--pubkey <64-hex-gateway-key>]',
+    '       aga-verify --sample [--pubkey <key>]    verify the packaged sample bundle',
+    '       aga-verify --version | --help',
+    '',
+    'Checks: structural, receipt signatures, chain + ordering, Merkle + index bijection,',
+    'signed checkpoint, envelope consistency, and (with --pubkey) gateway key match.',
+    '',
+    'Exit codes: 0 VERIFIED; 1 FAILED (including an unreadable file, and v2/post-quantum',
+    'bundles, which this CLI does not implement and reports as FAILED); 2 usage error.',
+  ].join('\n');
   const args = process.argv.slice(2);
-  const file = args.find((a) => !a.startsWith('--'));
+  if (args.includes('--version')) { console.log(pkgVersion); process.exit(0); }
+  if (args.includes('--help')) { console.log(USAGE); process.exit(0); }
+  const useSample = args.includes('--sample');
+  let file = args.find((a) => !a.startsWith('--'));
   const pk = args.includes('--pubkey') ? args[args.indexOf('--pubkey') + 1] : undefined;
-  if (!file) { console.error('Usage: aga-verify <bundle.json> [--pubkey <64-hex-gateway-key>]'); process.exit(2); }
+  if (useSample) {
+    const sample = resolveNear('../example-bundle.json') ?? resolveNear('./example-bundle.json');
+    if (!sample) { console.error('The packaged sample bundle was not found next to the installed package.'); process.exit(2); }
+    file = sample;
+  }
+  if (!file) { console.error(USAGE); process.exit(2); }
   // D8: any failure on the read/parse/verify path => a FAILED line + exit 1 (never an uncaught
-  // stack trace, never exit 2). Missing-arg usage above is the only non-0/1 exit.
+  // stack trace, never exit 2). Usage/--version/--help above are the only non-0/1 exits.
   let raw: string;
   try { raw = readFileSync(file, 'utf-8'); }
-  catch (e) { console.log('\nAGA Independent Verifier\n'); console.log('OVERALL: FAILED (could not read bundle file)'); console.log(`\nErrors:\n  - ${String(e)}`); process.exit(1); }
+  catch (e) {
+    console.log(`\nAGA Offline Verifier v${pkgVersion}\n`);
+    console.log('OVERALL: FAILED (could not read bundle file)');
+    console.log(`\nErrors:\n  - ${String(e)}`);
+    console.log('\nHint: pass a path to a bundle you exported, or run with --sample to verify');
+    console.log('the packaged example (a real signed bundle shipped inside this package).');
+    process.exit(1);
+  }
   const result = verifyEvidenceBundle(raw, pk);
-  console.log('\nAGA Independent Verifier\n');
+  console.log(`\nAGA Offline Verifier v${pkgVersion}${useSample ? ' (packaged sample)' : ''}\n`);
   for (const s of result.steps) console.log(`  ${s.ok ? 'PASS' : 'FAIL'}  ${s.name}`);
   // Suffix reflects the VERDICT: only a VERIFIED bundle gets a provenance/integrity tag; a FAILED
   // bundle prints just "FAILED" (never "FAILED (provenance verified)").

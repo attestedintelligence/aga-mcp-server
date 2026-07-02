@@ -1,11 +1,22 @@
 {
   "name": "@attested-intelligence/aga-verify",
-  "version": "2.0.0",
-  "description": "Standalone, dependency-free verifier for canonical AGA SEP Evidence Bundles (Ed25519 + SHA-256 via Node's built-in crypto; zero AGA imports, zero third-party deps).",
+  "version": "2.1.0",
+  "description": "Standalone offline verifier for canonical AGA SEP Evidence Bundles (Ed25519 + SHA-256 via Node's built-in crypto; zero AGA imports, zero third-party deps; producer-independent).",
   "type": "module",
   "license": "MIT",
   "author": "Attested Intelligence Holdings LLC",
-  "homepage": "https://attestedintelligence.com/technology",
+  "homepage": "https://attestedintelligence.com/verify",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/attestedintelligence/aga-mcp-server.git",
+    "directory": "independent-verifier"
+  },
+  "bugs": {
+    "url": "https://github.com/attestedintelligence/aga-mcp-server/issues"
+  },
+  "engines": {
+    "node": ">=18"
+  },
   "keywords": [
     "aga",
     "evidence-bundle",
