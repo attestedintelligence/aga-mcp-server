@@ -28,6 +28,27 @@ import * as path from 'node:path';
 export const CONTROL_HOST = '127.0.0.1';
 /** Default control port; distinct from the agent-facing proxy port (18800). Overridable via CLI. */
 export const DEFAULT_CONTROL_PORT = 18801;
+/** Identity header set on every control response; checked by the CLI to reject foreign services. */
+export const CONTROL_HEADER = 'x-aga-control';
+export const CONTROL_HEADER_VALUE = 'aga-proxy';
+
+/**
+ * Structural guard: is `b` a well-formed SepBundle? A stale control port can be recycled by an
+ * unrelated local service that returns valid-but-foreign JSON; for an evidence tool, writing that
+ * as "evidence" (even though it would fail verification) is a workflow-integrity defect. Combined
+ * with the identity header, this ensures `export` only ever writes an actual SEP bundle.
+ */
+export function isSepBundleShape(b: unknown): boolean {
+  if (!b || typeof b !== 'object') return false;
+  const o = b as Record<string, unknown>;
+  // v1 "Ed25519-SHA256-JCS" and v2 composite "ML-DSA-65+Ed25519-SHA256-JCS" both name Ed25519.
+  if (typeof o.algorithm !== 'string' || !o.algorithm.includes('Ed25519')) return false;
+  if (!Array.isArray(o.receipts)) return false;
+  const cp = o.checkpoint as Record<string, unknown> | undefined;
+  if (!cp || typeof cp !== 'object') return false;
+  if (typeof cp.merkle_root !== 'string' || typeof cp.signature !== 'string') return false;
+  return true;
+}
 
 /** The read-only surface the control listener exposes from the running proxy. */
 export interface ProxyControlTarget {
@@ -112,7 +133,10 @@ export class ProxyControlServer {
   }
 
   private json(res: http.ServerResponse, status: number, body: unknown): void {
-    res.writeHead(status, { 'content-type': 'application/json' });
+    // Identity header: lets a separate `aga-proxy export` confirm it reached an actual AGA control
+    // channel and not some unrelated local service that happens to hold a recycled control port
+    // (stale ~/.aga-proxy/control.json). A foreign HTTP service will not set this.
+    res.writeHead(status, { 'content-type': 'application/json', [CONTROL_HEADER]: CONTROL_HEADER_VALUE });
     res.end(JSON.stringify(body));
   }
 
@@ -200,7 +224,18 @@ export async function fetchBundleViaControl(loc: ControlLocator): Promise<unknow
   if (!res.ok) {
     throw new Error(`control channel returned HTTP ${res.status}`);
   }
-  return res.json();
+  // Identity guard: a recycled/stale control port could be held by an unrelated local service that
+  // returns valid JSON. Require the AGA control header before trusting the response at all.
+  if (res.headers.get(CONTROL_HEADER) !== CONTROL_HEADER_VALUE) {
+    throw new ExportUnavailableError();
+  }
+  const body = await res.json();
+  // Shape guard: never write foreign JSON labeled as evidence. (Verification would reject it, but
+  // an evidence tool must not report success on a non-bundle.)
+  if (!isSepBundleShape(body)) {
+    throw new Error('control channel returned a response that is not a SEP evidence bundle; refusing to write it');
+  }
+  return body;
 }
 
 /**

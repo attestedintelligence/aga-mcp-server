@@ -106,7 +106,7 @@ program
     try {
       const bound = await control.start(controlPort);
       writeControlFile(dataDir, { host: bound.address, port: bound.port, pid: process.pid });
-      console.log(`Control channel (loopback ${bound.address}:${bound.port}) — separate 'aga-proxy export'/'status' can reach this session.`);
+      console.log(`Control channel (loopback ${bound.address}:${bound.port}) — a separate 'aga-proxy export' can reach this session's live ledger.`);
     } catch (err) {
       control = null;
       console.error(`[aga-proxy] Control channel not started on port ${controlPort} (${(err as Error).message}). Governance is unaffected; out-of-process export is disabled until you retry with a free --control-port.`);

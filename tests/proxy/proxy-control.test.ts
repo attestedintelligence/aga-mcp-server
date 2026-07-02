@@ -12,6 +12,7 @@
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import * as net from 'node:net';
+import * as http from 'node:http';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
@@ -21,7 +22,7 @@ import { GovernanceProxy } from '../../src/proxy/server.js';
 import { verifySepBundle } from '../../src/sep/index.js';
 import {
   ProxyControlServer, CONTROL_HOST, NO_PROXY_MESSAGE, ExportUnavailableError,
-  exportBundleToFile, writeControlFile, readControlFile,
+  exportBundleToFile, writeControlFile, readControlFile, isSepBundleShape,
 } from '../../src/proxy/control.js';
 import type { ToolPolicy } from '../../src/proxy/types.js';
 
@@ -164,6 +165,51 @@ describe('exportBundleToFile — a SEPARATE invocation resolves the live ledger'
       .rejects.toThrowError(NO_PROXY_MESSAGE);
     expect(fs.existsSync(out)).toBe(false);
     fs.rmSync(staleDir, { recursive: true, force: true });
+  });
+
+  it('a recycled port held by a FOREIGN service (valid JSON, no AGA header) is treated as no-proxy — no file written', async () => {
+    // Simulate a stale control.json pointing at a port now held by an unrelated local HTTP service
+    // that returns valid JSON. Without the AGA identity header, export must refuse (ExportUnavailable).
+    const foreign = http.createServer((_req, res) => {
+      res.writeHead(200, { 'content-type': 'application/json' });
+      res.end(JSON.stringify({ hello: 'i am not aga', data: [1, 2, 3] }));
+    });
+    await new Promise<void>((r) => foreign.listen(0, CONTROL_HOST, () => r()));
+    const fport = (foreign.address() as net.AddressInfo).port;
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'aga-foreign-'));
+    writeControlFile(dir, { host: CONTROL_HOST, port: fport, pid: 999999 });
+    const out = path.join(dir, 'nope.json');
+    await expect(exportBundleToFile({ proxy: null, dataDir: dir, output: out }))
+      .rejects.toThrowError(NO_PROXY_MESSAGE);
+    expect(fs.existsSync(out)).toBe(false);
+    await new Promise<void>((r) => foreign.close(() => r()));
+    fs.rmSync(dir, { recursive: true, force: true });
+  });
+
+  it('an AGA channel that returns a non-bundle is refused, not written as evidence', async () => {
+    // A server that sets the AGA identity header but returns a non-SepBundle object: the shape
+    // guard must refuse to write it (an evidence tool never labels foreign JSON as evidence).
+    const bad = http.createServer((_req, res) => {
+      res.writeHead(200, { 'content-type': 'application/json', 'x-aga-control': 'aga-proxy' });
+      res.end(JSON.stringify({ algorithm: 'Ed25519-SHA256-JCS' /* no receipts, no checkpoint */ }));
+    });
+    await new Promise<void>((r) => bad.listen(0, CONTROL_HOST, () => r()));
+    const bport = (bad.address() as net.AddressInfo).port;
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'aga-badshape-'));
+    writeControlFile(dir, { host: CONTROL_HOST, port: bport, pid: 999999 });
+    const out = path.join(dir, 'nope.json');
+    await expect(exportBundleToFile({ proxy: null, dataDir: dir, output: out }))
+      .rejects.toThrow(/not a SEP evidence bundle/);
+    expect(fs.existsSync(out)).toBe(false);
+    await new Promise<void>((r) => bad.close(() => r()));
+    fs.rmSync(dir, { recursive: true, force: true });
+  });
+
+  it('isSepBundleShape accepts a real exported bundle and rejects foreign/partial objects', () => {
+    expect(isSepBundleShape(proxy.exportBundle())).toBe(true);
+    expect(isSepBundleShape({ hello: 'world' })).toBe(false);
+    expect(isSepBundleShape({ algorithm: 'Ed25519-SHA256-JCS' })).toBe(false); // no receipts/checkpoint
+    expect(isSepBundleShape(null)).toBe(false);
   });
 });
 
