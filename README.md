@@ -154,11 +154,25 @@ npx -p @attested-intelligence/aga-mcp-server aga-proxy start \
   --upstream "npx -y @modelcontextprotocol/server-filesystem /tmp/test" --profile standard
 ```
 
-To export the canonical SEP evidence bundle, call the `generate_evidence_bundle` MCP tool from the running MCP **server** session and save the returned JSON (e.g. as `evidence.json`). Known limitation: the proxy records receipts in its own process and does not currently expose that tool or a working standalone export command (`aga-proxy export` in a separate invocation has no session to export), so proxy-recorded receipts lack a documented export path until a release closes this gap. Verify an exported file offline:
+### Exporting the evidence bundle from a running proxy
+
+The proxy records receipts in its own process and keeps the SEP ledger **in memory**. To make that live ledger reachable from a separate shell, `aga-proxy start` opens a **loopback-only control channel** — an HTTP listener bound to `127.0.0.1` (never a routable interface), on its own port (default `18801`, override with `--control-port`), distinct from the agent-facing proxy port (`18800`). It exposes only read routes (`/export`, `/status`, `/receipts`); nothing on it mutates policy or state, and it is unreachable off-host by construction (the loopback bind is the guarantee). The proxy writes the chosen control port to `~/.aga-proxy/control.json` alongside `proxy.pid`.
+
+A **separate** `aga-proxy export` invocation reads that file and fetches the same signed bundle the running proxy would emit:
 
 ```bash
+# Terminal A — start the proxy in front of an upstream MCP server
+npx -p @attested-intelligence/aga-mcp-server aga-proxy start \
+  --upstream "npx -y @modelcontextprotocol/server-filesystem /tmp/test" --profile standard
+
+# Terminal B — export the live ledger from a different shell, then verify it offline
+npx -p @attested-intelligence/aga-mcp-server aga-proxy export -o evidence.json
 npx -y @attested-intelligence/aga-verify evidence.json --pubkey <gateway-public-key>
 ```
+
+If no proxy is running, `aga-proxy export` prints `no running proxy found; start it first, or export from within the session` and exits non-zero — it never emits an empty or placeholder bundle. Within the MCP **server** session you can also call the `generate_evidence_bundle` tool and save the returned JSON.
+
+**In-memory ledger:** the exported bundle is the durable cryptographic record, but the live in-process chain does **not** survive a proxy restart. This flow makes the *live* ledger reachable from another process; it does **not** add cross-restart persistence, which needs the persistent (SQLite) backend and remains roadmap (see [`KNOWN_LIMITATIONS.md`](KNOWN_LIMITATIONS.md)).
 
 The proxy intercepts `tools/call` requests, evaluates them against a sealed policy, and generates a signed SEP receipt for **every** decision. Permitted calls are forwarded to the downstream server; denied calls return an MCP error and never reach it. Every decision is hash-linked and checkpoint-bound into a tamper-evident bundle. (Methods other than `tools/call` aren't policy-evaluated, but non-benign ones are recorded as signed *passthrough* receipts for auditability, and an optional denylist can reject them; see `THREAT_BOUNDARY.md` §3.2.)
 
@@ -222,7 +236,7 @@ with AgentSession(gateway_id="my-gateway") as session:
 
 Automated tests across TypeScript and Python, plus a conformance corpus:
 
-- **TypeScript MCP server:** 371 automated tests (vitest), including provable-denial and behavioral-monitor regressions
+- **TypeScript MCP server:** 381 automated tests (vitest), including provable-denial and behavioral-monitor regressions
 - **SEP conformance corpus:** `npm run test:conformance` (valid → VERIFIED, negatives → FAILED)
 - **Python companion SDK:** the separately-published `aga-governance` PyPI package (install + smoke-checked here; its full pytest suite runs from the source tree)
 
@@ -247,7 +261,7 @@ src/
   middleware/          # Governance PEP wrapper (records a signed PERMITTED/DENIED receipt per governed call)
 independent-verifier/  # @attested-intelligence/aga-verify: standalone SEP verifier, zero AGA imports
 scenarios/             # Demo scenarios (SCADA, autonomous vehicle, AI agent) that emit SEP bundles
-tests/                 # TypeScript test suite (371 automated tests)
+tests/                 # TypeScript test suite (381 automated tests)
 ```
 
 ## Links

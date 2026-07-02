@@ -22,12 +22,17 @@ import * as os from 'node:os';
 import { GovernanceProxy } from './server.js';
 import { PROFILES } from './profiles.js';
 import type { ToolPolicy } from './types.js';
+import {
+  ProxyControlServer, DEFAULT_CONTROL_PORT,
+  writeControlFile, removeControlFile, exportBundleToFile, ExportUnavailableError,
+} from './control.js';
 
 // Single-source the version from package.json (resolves from src/ via tsx and dist/proxy/ when published).
 const PKG = JSON.parse(fs.readFileSync(new URL('../../package.json', import.meta.url), 'utf8')) as { version: string };
 
 const program = new Command();
 let proxy: GovernanceProxy | null = null;
+let control: ProxyControlServer | null = null;
 
 function getDataDir(): string {
   return path.join(os.homedir(), '.aga-proxy');
@@ -48,12 +53,14 @@ program
   .command('start')
   .description('Start the governance proxy')
   .option('-p, --port <port>', 'Proxy port', '18800')
+  .option('--control-port <port>', 'Loopback-only control port for out-of-process export/status (127.0.0.1)', String(DEFAULT_CONTROL_PORT))
   .option('--upstream <command>', 'Downstream MCP server command (stdio)')
   .option('--upstream-url <url>', 'Downstream MCP server URL (HTTP)')
   .option('--profile <name>', 'Policy profile: permissive, standard, restrictive', 'permissive')
   .option('--policy <path>', 'Custom policy JSON file')
   .action(async (opts) => {
     const port = parseInt(opts.port, 10);
+    const controlPort = parseInt(opts.controlPort, 10);
     let policy: ToolPolicy;
 
     if (opts.policy) {
@@ -91,9 +98,28 @@ program
     // Write PID file
     fs.writeFileSync(getPidFile(), String(process.pid));
 
+    // Loopback-only control channel so a SEPARATE `aga-proxy export`/`status` invocation can reach
+    // this process's live in-memory ledger. Bind failure (e.g. control port already in use) is
+    // NON-FATAL: governance is the primary job and keeps running; only out-of-process export is
+    // unavailable until the collision is resolved (pass a free --control-port).
+    control = new ProxyControlServer(proxy);
+    try {
+      const bound = await control.start(controlPort);
+      writeControlFile(dataDir, { host: bound.address, port: bound.port, pid: process.pid });
+      console.log(`Control channel (loopback ${bound.address}:${bound.port}) — separate 'aga-proxy export'/'status' can reach this session.`);
+    } catch (err) {
+      control = null;
+      console.error(`[aga-proxy] Control channel not started on port ${controlPort} (${(err as Error).message}). Governance is unaffected; out-of-process export is disabled until you retry with a free --control-port.`);
+    }
+
     // Graceful shutdown
     const shutdown = async () => {
       console.log('\nShutting down...');
+      if (control) {
+        await control.stop();
+        control = null;
+      }
+      removeControlFile(dataDir);
       if (proxy) {
         await proxy.stop();
         try { fs.unlinkSync(getPidFile()); } catch { /* ok */ }
@@ -111,6 +137,7 @@ program
   .command('run')
   .description('Run proxy in foreground (same as start, Ctrl+C to stop)')
   .option('-p, --port <port>', 'Proxy port', '18800')
+  .option('--control-port <port>', 'Loopback-only control port (127.0.0.1)', String(DEFAULT_CONTROL_PORT))
   .option('--upstream <command>', 'Downstream MCP server command (stdio)')
   .option('--upstream-url <url>', 'Downstream MCP server URL (HTTP)')
   .option('--profile <name>', 'Policy profile', 'permissive')
@@ -172,16 +199,23 @@ program
 
 program
   .command('export')
-  .description('Export evidence bundle')
+  .description('Export the canonical SEP evidence bundle from the running proxy (in-process, or a live proxy over its loopback control channel)')
   .option('-o, --output <path>', 'Output file', 'evidence-bundle.json')
   .action(async (opts) => {
-    if (!proxy) {
-      console.error('Proxy not running in this process. Start the proxy first.');
+    // Two paths, one artifact: if this process IS the running proxy, export its ledger directly;
+    // otherwise reach the live proxy over 127.0.0.1 using the control port it published in the data
+    // dir. Never emit an empty bundle when no proxy is running — fail loudly instead.
+    try {
+      const res = await exportBundleToFile({ proxy, dataDir: getDataDir(), output: opts.output });
+      console.log(`Evidence bundle exported to ${res.output} (${res.receiptCount} receipts, via ${res.source})`);
+    } catch (err) {
+      if (err instanceof ExportUnavailableError) {
+        console.error(err.message);
+      } else {
+        console.error(`Export failed: ${err instanceof Error ? err.message : String(err)}`);
+      }
       process.exit(1);
     }
-    const bundle = await proxy.exportBundle();
-    fs.writeFileSync(opts.output, JSON.stringify(bundle, null, 2));
-    console.log(`Evidence bundle exported to ${opts.output}`);
   });
 
 // ── verify ───────────────────────────────────────────────────
