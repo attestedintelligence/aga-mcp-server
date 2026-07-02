@@ -12,8 +12,9 @@
  *  2) IP-RAIL content scan (Phase 0c): the CONTENTS of every shippable file are scanned for the
  *     unambiguous "must never ship" markers — so a future package can't regress and leak IP. The
  *     scanned markers are deliberately the high-confidence ones (no false positives that would wedge
- *     CI): the bare patent number, claim-to-mechanism mapping phrasing, the blocked vendor name, and
- *     the private post-quantum package name. The noisier classes (generic claim legalese,
+ *     CI): the bare patent number, claim-to-mechanism mapping phrasing, the blocked vendor name, the
+ *     private post-quantum / k8s package names, internal codenames, the private PQC scheme name, and
+ *     local operator paths/handles. The noisier classes (generic claim legalese,
  *     post-quantum-as-roadmap prose) are intentionally NOT hard-gated here — they are caught by the
  *     periodic IP-rail sweep + human review, because regexing them automatically would false-positive
  *     on legitimate copy. Add a marker below only if it can never legitimately appear in a shipped file.
@@ -92,6 +93,42 @@ const CONTENT_FORBIDDEN = [
     rx: rx('aga', '-pqc'),
     dirty: f('import x from "', 'aga', '-pqc', '"'),
     clean: 'this is the aga-mcp-server package',
+  },
+  {
+    label: f('private k8s package (', 'aga', '-k8s', ')'),
+    rx: rx('aga', '-k8s'),
+    dirty: f('deploy the ', 'aga', '-k8s', ' controller'),
+    clean: 'the aga gateway runs on any k8s cluster',
+  },
+  {
+    label: f('internal codename (', 'Myth', 'os', ')'),
+    rx: rx('myth', 'os'),
+    dirty: f('the ', 'Myth', 'os', ' initiative'),
+    clean: 'dispel the myth of secure-by-default OS images',
+  },
+  {
+    label: f('internal codename (', 'Glass', 'wing', ')'),
+    rx: rx('glass', 'wing'),
+    dirty: f('project ', 'Glass', 'wing', ' milestone'),
+    clean: 'a glass pane beside the wing panel',
+  },
+  {
+    label: f('private PQC scheme name (', 'FAL', 'CON', ')'),
+    rx: rx('fal', 'con'),
+    dirty: f('sign with ', 'FAL', 'CON', '-512'),
+    clean: 'fallback config online',
+  },
+  {
+    label: f('local windows user path (C:', '\\', 'Users', ')'),
+    rx: rx('C:', '[\\\\/]+', 'Users'),
+    dirty: f('logs at C:', '\\', 'Users', '\\', 'jack'),
+    clean: 'C: Users should mount the drive first',
+  },
+  {
+    label: f('operator handle (', 'neu', 'ro', ')'),
+    rx: rx('neu', 'ro'),
+    dirty: f('built on ', 'neu', 'ro', "'s machine"),
+    clean: 'neutral routing over the proxy',
   },
 ];
 

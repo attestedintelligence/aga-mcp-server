@@ -28,6 +28,14 @@ on:
         description: 'Dry run: build + full gate + cross-stack + pack guard, but DO NOT publish'
         type: boolean
         default: true
+      publish_server:
+        description: 'Publish @attested-intelligence/aga-mcp-server'
+        type: boolean
+        default: true
+      publish_verifier:
+        description: 'Also publish @attested-intelligence/aga-verify from independent-verifier/ (needs its own npm trusted-publisher config pointing at this repo + release.yml)'
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -79,7 +87,8 @@ jobs:
         # The Go oracle (aga-receipt-spec/verify/v2) fetches CIRCL via the default proxy and verifies it
         # against the committed go.sum. A gapped/divergent v2 verifier cannot be published.
         run: npm run conformance:cross-stack-v2
-      - name: Publish (or dry run)
+      - name: Publish aga-mcp-server (or dry run)
+        if: ${{ inputs.publish_server }}
         env:
           DIST_TAG: ${{ inputs.dist_tag }}
           PROVENANCE: ${{ inputs.provenance }}
@@ -97,3 +106,64 @@ jobs:
           else
             npm publish --access public --tag "$DIST_TAG" $PROV_FLAG
           fi
+      - name: Post-publish gate — npm attestation MUST be present (aga-mcp-server)
+        # A provenance-less publish must fail this workflow loudly. 3.3.0 shipped without
+        # dist.attestations; this gate makes that class of regression impossible to miss.
+        if: ${{ inputs.publish_server && !inputs.dry_run }}
+        run: |
+          set -euo pipefail
+          VERSION=$(node -p "require('./package.json').version")
+          for i in 1 2 3 4 5 6; do
+            if npm view "@attested-intelligence/aga-mcp-server@$VERSION" --json > /tmp/view.json 2>/dev/null \
+               && node -e "const d=JSON.parse(require('fs').readFileSync('/tmp/view.json'));if(!d.dist||!d.dist.attestations){console.error('NO ATTESTATION');process.exit(1)}"; then
+              echo "OK: @attested-intelligence/aga-mcp-server@$VERSION has dist.attestations"
+              exit 0
+            fi
+            echo "attempt $i/6: attestation not visible yet; retrying in 10s"
+            sleep 10
+          done
+          echo "::error::NO ATTESTATION on @attested-intelligence/aga-mcp-server@$VERSION — the publish carried no provenance; fix before it is trusted"
+          exit 1
+      - name: Publish aga-verify (or dry run)
+        # Publishes the standalone verifier from independent-verifier/ with npm provenance via the
+        # SAME OIDC trusted-publishing flow. npm trusted publishing is configured PER PACKAGE on
+        # npmjs.com — @attested-intelligence/aga-verify must have a trusted publisher pointing at
+        # attestedintelligence/aga-mcp-server + release.yml, or this step fails with an auth error.
+        # Ordered AFTER the server publish + its attestation gate so a verifier-side auth failure
+        # can never block an already-gated server release.
+        if: ${{ inputs.publish_verifier }}
+        working-directory: independent-verifier
+        env:
+          DIST_TAG: ${{ inputs.dist_tag }}
+          PROVENANCE: ${{ inputs.provenance }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          set -euo pipefail
+          if [ "$DIST_TAG" = "latest" ] && [ "$PROVENANCE" != "true" ]; then
+            echo "::error::provenance is REQUIRED for a latest publish (this repo is public)"; exit 1
+          fi
+          PROV_FLAG=""
+          [ "$PROVENANCE" = "true" ] && PROV_FLAG="--provenance"
+          if [ "$DRY_RUN" = "true" ]; then
+            echo "DRY RUN — would publish: npm publish --access public --tag $DIST_TAG $PROV_FLAG"
+            npm pack --dry-run
+          else
+            npm publish --access public --tag "$DIST_TAG" $PROV_FLAG
+          fi
+      - name: Post-publish gate — npm attestation MUST be present (aga-verify)
+        if: ${{ inputs.publish_verifier && !inputs.dry_run }}
+        working-directory: independent-verifier
+        run: |
+          set -euo pipefail
+          VERSION=$(node -p "require('./package.json').version")
+          for i in 1 2 3 4 5 6; do
+            if npm view "@attested-intelligence/aga-verify@$VERSION" --json > /tmp/view-verify.json 2>/dev/null \
+               && node -e "const d=JSON.parse(require('fs').readFileSync('/tmp/view-verify.json'));if(!d.dist||!d.dist.attestations){console.error('NO ATTESTATION');process.exit(1)}"; then
+              echo "OK: @attested-intelligence/aga-verify@$VERSION has dist.attestations"
+              exit 0
+            fi
+            echo "attempt $i/6: attestation not visible yet; retrying in 10s"
+            sleep 10
+          done
+          echo "::error::NO ATTESTATION on @attested-intelligence/aga-verify@$VERSION — the publish carried no provenance; fix before it is trusted"
+          exit 1
