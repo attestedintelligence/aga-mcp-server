@@ -96,7 +96,7 @@ Keep the seed secret and out of version control; see `DEPLOYMENT.md` for key han
 
 ## Quick Start: verify a bundle offline
 
-A bundle this package emits (via the `generate_evidence_bundle` tool, or `aga-proxy export`) is a **canonical SEP bundle**. Verify it offline, with no network and no callback to us:
+A bundle this package emits (via the `generate_evidence_bundle` MCP tool) is a **canonical SEP bundle**. Verify it offline, with no network and no callback to us:
 
 ```bash
 # Reference verifier (zero deps, Node 18+). Pin the gateway key (from get_server_info) to prove provenance.
@@ -154,7 +154,7 @@ npx -p @attested-intelligence/aga-mcp-server aga-proxy start \
   --upstream "npx -y @modelcontextprotocol/server-filesystem /tmp/test" --profile standard
 ```
 
-To export the canonical SEP evidence bundle, call the `generate_evidence_bundle` MCP tool from the running server/proxy session and save the returned JSON (e.g. as `evidence.json`). Note: `aga-proxy export` operates within a running proxy process; a separate invocation has no session to export. Verify the exported file offline:
+To export the canonical SEP evidence bundle, call the `generate_evidence_bundle` MCP tool from the running MCP **server** session and save the returned JSON (e.g. as `evidence.json`). Known limitation: the proxy records receipts in its own process and does not currently expose that tool or a working standalone export command (`aga-proxy export` in a separate invocation has no session to export), so proxy-recorded receipts lack a documented export path until a release closes this gap. Verify an exported file offline:
 
 ```bash
 npx -y @attested-intelligence/aga-verify evidence.json --pubkey <gateway-public-key>

@@ -44,7 +44,8 @@ Implements the canonical construction in
 3. **Chain + ordering**: each receipt links to the previous leaf; monotonic ids/timestamps.
 4. **Merkle + bijection**: every leaf is **recomputed from receipt content**, walked to one root, and the proof set is the complete contiguous `0..N-1`.
 5. **Signed checkpoint (mandatory)**: a gateway-signed checkpoint binds the root, the receipt count, and the chain head, so adding/dropping/reordering receipts fails.
-6. **Provenance (only with `--pubkey`)**: the bundle key equals the key you pinned.
+6. **Envelope consistency**: the bundle's envelope metadata matches the signed content it wraps.
+7. **Provenance (only with `--pubkey`)**: the bundle key equals the key you pinned.
 
 All steps are fully offline. No network calls, ever.
 
