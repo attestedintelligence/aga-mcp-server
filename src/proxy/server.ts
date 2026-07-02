@@ -15,6 +15,7 @@
  */
 
 import * as net from 'node:net';
+import { readFileSync } from 'node:fs';
 import { EventEmitter } from 'node:events';
 import { evaluate, resetRateLimits } from './evaluator.js';
 import { StdioBridge, type StdioBridgeOptions } from './stdio-bridge.js';
@@ -24,9 +25,29 @@ import type { ToolPolicy } from './types.js';
 // parallel receipt/Merkle/canonical/@noble implementation; it records governed decisions
 // through a SepGateway and exports the canonical SEP bundle, verified by the one verifier.
 import {
-  SepGateway, generateSigner, derivePolicyReference, safeArgumentsHash,
+  SepGateway, generateSigner, signerFromSeed, seedFromHex, derivePolicyReference, safeArgumentsHash,
   type SepSigner, type SepReceipt, type SepBundle, type MerkleProof,
 } from '../sep/index.js';
+
+/**
+ * Resolve a STABLE signer from the operator's environment (AGA_GATEWAY_KEY, a 64-hex 32-byte Ed25519
+ * seed, or AGA_GATEWAY_KEY_FILE pointing at one) — the SAME contract src/server.ts already honors.
+ * Consulted ONLY when restart persistence is enabled: a persisted ledger's exported bundle verifies
+ * ACROSS a restart only if the gateway resumes with the same key, so durable evidence wants a stable
+ * key. An absent/invalid key falls back to an ephemeral signer (warned) so persistence never fails
+ * closed on key config. The seed is read from the environment and is NEVER written to the receipt log.
+ */
+function resolvePersistentSigner(): SepSigner {
+  const envKey = process.env.AGA_GATEWAY_KEY;
+  const keyFile = process.env.AGA_GATEWAY_KEY_FILE;
+  try {
+    if (envKey) return signerFromSeed(seedFromHex(envKey));
+    if (keyFile) return signerFromSeed(seedFromHex(readFileSync(keyFile, 'utf8')));
+  } catch (e) {
+    process.stderr.write(`[aga-proxy] gateway key from ${envKey ? 'AGA_GATEWAY_KEY' : 'AGA_GATEWAY_KEY_FILE'} is invalid (${String(e)}); using an ephemeral key (bundle will not verify across restart).\n`);
+  }
+  return generateSigner().signer;
+}
 
 // ── Evidence types ARE the canonical src/sep types (no parallel definitions) ──
 export type GovernanceReceipt = SepReceipt;
@@ -57,6 +78,14 @@ export interface ProxyServerOptions {
   passthroughExclude?: string[];
   /** Optional denylist: non-tools/call methods to reject (records a DENIED passthrough receipt; does not forward). */
   denyMethods?: string[];
+  /**
+   * OPT-IN restart persistence (prototype), default UNSET. Path to an append-only JSONL receipt log:
+   * each signed receipt is appended + fsync'd, and an existing log is replayed (re-verified) on
+   * construction so the ledger survives a proxy restart. Unset = pure in-memory (behavior unchanged).
+   * NOTE: the proxy signs with an EPHEMERAL key by default; a bundle assembled after a restart only
+   * verifies across the restart if the proxy resumes with the SAME key (see KNOWN_LIMITATIONS.md).
+   */
+  persistPath?: string;
 }
 
 export class GovernanceProxy extends EventEmitter {
@@ -77,6 +106,8 @@ export class GovernanceProxy extends EventEmitter {
   private gatewayId: string;
   private passthroughExclude: Set<string>;
   private denyMethods: Set<string>;
+  /** Opt-in durable-ledger path (null = in-memory only); surfaced in status for operator visibility. */
+  private persistPath: string | null = null;
 
   private policyHash: string = '';
 
@@ -92,8 +123,16 @@ export class GovernanceProxy extends EventEmitter {
     this.gatewayId = options.gatewayId ?? 'aga-proxy';
     this.passthroughExclude = new Set(options.passthroughExclude ?? DEFAULT_PASSTHROUGH_EXCLUDE);
     this.denyMethods = new Set(options.denyMethods ?? []);
-    this.signer = generateSigner().signer;
-    this.sep = new SepGateway({ gatewayId: this.gatewayId, signer: this.signer });
+    // Signing key. Default (in-memory) is unchanged: an EPHEMERAL key. Under the persistence opt-in we
+    // resolve a STABLE key from AGA_GATEWAY_KEY/_FILE (if the operator set one) so the exported bundle
+    // verifies across a restart — the whole point of durable retention. Existing behavior (no persist)
+    // is byte-for-byte unchanged.
+    this.signer = options.persistPath ? resolvePersistentSigner() : generateSigner().signer;
+    // OPT-IN durable ledger (default off). When a path is given, the SepGateway replays + re-verifies
+    // any existing log on construction and appends + fsyncs each new receipt. The signing key is never
+    // written to the log.
+    this.sep = new SepGateway({ gatewayId: this.gatewayId, signer: this.signer, persistPath: options.persistPath });
+    this.persistPath = options.persistPath ?? null;
   }
 
   // ── Start / Stop ───────────────────────────────────────────
@@ -145,6 +184,10 @@ export class GovernanceProxy extends EventEmitter {
       });
       this.server = null;
     }
+
+    // Release the durable-ledger file handle (no-op when persistence is off). The signed bundle is
+    // already exportable; the in-memory chain is dropped on stop as before.
+    this.sep.close();
 
     this.started = false;
     this.emit('stopped');
@@ -423,6 +466,7 @@ export class GovernanceProxy extends EventEmitter {
       receipt_count: this.sep.count,
       ...this.stats,
       public_key: this.signer.publicKeyHex,
+      persist_path: this.persistPath,
     };
   }
 

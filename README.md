@@ -172,7 +172,25 @@ npx -y @attested-intelligence/aga-verify evidence.json --pubkey <gateway-public-
 
 If no proxy is running, `aga-proxy export` prints `no running proxy found; start it first, or export from within the session` and exits non-zero — it never emits an empty or placeholder bundle. Within the MCP **server** session you can also call the `generate_evidence_bundle` tool and save the returned JSON.
 
-**In-memory ledger:** the exported bundle is the durable cryptographic record, but the live in-process chain does **not** survive a proxy restart. This flow makes the *live* ledger reachable from another process; it does **not** add cross-restart persistence, which needs the persistent (SQLite) backend and remains roadmap (see [`KNOWN_LIMITATIONS.md`](KNOWN_LIMITATIONS.md)).
+**In-memory ledger (default):** the exported bundle is the durable cryptographic record, but by default the live in-process chain does **not** survive a proxy restart. The control-channel flow above makes the *live* ledger reachable from another process; it does not, on its own, add cross-restart persistence.
+
+### Opt-in restart persistence (prototype)
+
+For pilots that must not lose receipts on a restart or crash, `--persist <path>` mirrors the ledger to an append-only JSONL log and replays it on the next start. It is **off by default**; without it, behavior is exactly as before.
+
+```bash
+# A stable gateway key so the bundle VERIFIES across a restart (recommended with --persist).
+export AGA_GATEWAY_KEY=<64-hex 32-byte Ed25519 seed>
+
+npx -p @attested-intelligence/aga-mcp-server aga-proxy start \
+  --upstream "npx -y @modelcontextprotocol/server-filesystem /tmp/test" --profile standard \
+  --persist ./aga-ledger.jsonl
+```
+
+- **What it does:** each **already-signed** receipt is appended as one JSON line and `fsync`'d at record time. On the next start the log is replayed and **re-verified line-by-line** (strict 15-field schema, Ed25519/composite signature, hash-chain linkage, single-key-per-log) before any receipt enters the ledger.
+- **Loud on tampering:** a tampered or foreign committed line is **rejected on replay** (the proxy refuses to start rather than silently trust the file). A partial final line from a crash mid-append is detected and dropped, not fatal.
+- **What it does NOT change:** it does not change what a bundle proves — the on-disk log is signed receipts, re-verified on load. A bundle assembled **after** a restart verifies across the restart **only if the gateway resumes with the same signing key**, which is why `--persist` honors a stable `AGA_GATEWAY_KEY`/`AGA_GATEWAY_KEY_FILE` (with an ephemeral key it warns on stderr).
+- **Prototype limits:** one writer per path (no concurrent-writer coordination), unbounded file growth (no rotation yet), and no external head-pointer. See [`docs/PROXY_PERSISTENCE.md`](docs/PROXY_PERSISTENCE.md) and [`KNOWN_LIMITATIONS.md`](KNOWN_LIMITATIONS.md). The full persistent (SQLite) backend remains roadmap.
 
 The proxy intercepts `tools/call` requests, evaluates them against a sealed policy, and generates a signed SEP receipt for **every** decision. Permitted calls are forwarded to the downstream server; denied calls return an MCP error and never reach it. Every decision is hash-linked and checkpoint-bound into a tamper-evident bundle. (Methods other than `tools/call` aren't policy-evaluated, but non-benign ones are recorded as signed *passthrough* receipts for auditability, and an optional denylist can reject them; see `THREAT_BOUNDARY.md` §3.2.)
 

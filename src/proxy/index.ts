@@ -58,6 +58,7 @@ program
   .option('--upstream-url <url>', 'Downstream MCP server URL (HTTP)')
   .option('--profile <name>', 'Policy profile: permissive, standard, restrictive', 'permissive')
   .option('--policy <path>', 'Custom policy JSON file')
+  .option('--persist <path>', 'OPT-IN (prototype): append-only JSONL receipt log; replays + re-verifies on restart so the ledger survives a crash/restart. Default unset = in-memory only. For a bundle that verifies ACROSS restart, also set a stable AGA_GATEWAY_KEY (see KNOWN_LIMITATIONS.md).')
   .action(async (opts) => {
     const port = parseInt(opts.port, 10);
     const controlPort = parseInt(opts.controlPort, 10);
@@ -76,6 +77,7 @@ program
       policy,
       upstream,
       upstreamUrl: opts.upstreamUrl,
+      persistPath: opts.persist,
     });
 
     proxy.on('started', ({ port: p }: { port: number }) => {
@@ -83,6 +85,12 @@ program
       console.log(`Policy mode: ${policy.mode}`);
       if (opts.upstream) console.log(`Upstream (stdio): ${opts.upstream}`);
       if (opts.upstreamUrl) console.log(`Upstream (HTTP): ${opts.upstreamUrl}`);
+      if (opts.persist) {
+        console.log(`Durable ledger (prototype): appending receipts to ${opts.persist} (replayed + re-verified on restart).`);
+        if (!process.env.AGA_GATEWAY_KEY && !process.env.AGA_GATEWAY_KEY_FILE) {
+          console.error('[aga-proxy] --persist with an EPHEMERAL signing key: the ledger survives restart, but a bundle exported AFTER a restart will NOT verify as one bundle (the key rotated). Set a stable AGA_GATEWAY_KEY for verifiable-across-restart evidence. See KNOWN_LIMITATIONS.md.');
+        }
+      }
     });
 
     proxy.on('error', (err: Error) => {
@@ -142,6 +150,7 @@ program
   .option('--upstream-url <url>', 'Downstream MCP server URL (HTTP)')
   .option('--profile <name>', 'Policy profile', 'permissive')
   .option('--policy <path>', 'Custom policy JSON file')
+  .option('--persist <path>', 'OPT-IN (prototype): append-only JSONL receipt log; replays + re-verifies on restart. Default unset = in-memory only. See KNOWN_LIMITATIONS.md.')
   .action(async (opts) => {
     // Delegate to start - identical behavior in Node.js
     await program.commands.find(c => c.name() === 'start')!.parseAsync(

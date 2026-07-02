@@ -10,6 +10,7 @@ export { nodeHash, merkleRoot, merkleProof, type MerkleProof } from './merkle.js
 export { SEP_ALGORITHM, SEP_RECEIPT_VERSION, SEP_RECEIPT_FIELDS, buildReceipt, leafHash, argumentsHash, safeArgumentsHash, UNCANONICALIZABLE_ARGS_HASH, type SepReceipt, type ReceiptInput, type Decision } from './receipt.js';
 export { buildCheckpoint, type SignedCheckpoint } from './checkpoint.js';
 export { SepGateway, type SepBundle, type SepGatewayOptions, type RecordInput } from './bundle.js';
+export { ReceiptLog, ReceiptLogError, type ReplayResult } from './persistence.js';
 export { verifySepBundle, type SepVerificationResult, type VerifyStep, type VerifyOptions } from './verify.js';
 export { derivePolicyReference } from './policy-ref.js';
 export {
