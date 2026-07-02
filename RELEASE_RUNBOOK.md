@@ -6,7 +6,7 @@ runs **only** through GitHub Actions OIDC trusted publishing (no stored token, n
 
 ## Pre-publish gates (must be green)
 
-- `npm run check` → build + lint + **370 tests** + SEP conformance (6/6) + **`check:pack`**
+- `npm run check` → build + lint + **371 tests** + SEP conformance (6/6) + **`check:pack`**
   (positive-allowlist + IP-rail content scan: exactly `dist/` + the 5 docs + `package.json`, no
   forbidden artifacts, none of the four IP-rail markers in any shippable file).
 - `npm run conformance:cross-stack` → **6 verifiers agree on all 57 canonical cases**.
