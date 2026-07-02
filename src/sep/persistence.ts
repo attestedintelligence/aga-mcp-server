@@ -23,7 +23,8 @@
  *     (a stable gateway key, e.g. AGA_GATEWAY_KEY) — see the provenance note below and
  *     KNOWN_LIMITATIONS.md.
  *
- * CRASH-SAFETY. Each `append()` writes one newline-terminated line with `writeSync` followed by
+ * CRASH-SAFETY. Each `append()` writes one newline-terminated line, looping `writeSync` until every
+ * byte is on the fd (a short/failed write THROWS before the caller advances the chain), then
  * `fsyncSync`, so a returned `append()` means the receipt's bytes are durably on disk (subject to
  * the filesystem honoring fsync). The durable unit is a NEWLINE-TERMINATED line. A crash mid-append
  * can leave a trailing partial line that is NOT newline-terminated; on the next `replay()` that
@@ -221,7 +222,16 @@ export class ReceiptLog {
    */
   append(receipt: SepReceipt): void {
     if (this.fd === null) this.fd = openSync(this.path, 'a');
-    writeSync(this.fd, JSON.stringify(receipt) + '\n');
+    // writeSync issues a single write(2) and can return a SHORT count without throwing (e.g. ENOSPC
+    // mid-line). Loop until every byte is on the fd so a partial/failed persist THROWS here, before
+    // the caller advances the in-memory chain — a returned append() truly means "durably written".
+    const buf = Buffer.from(JSON.stringify(receipt) + '\n', 'utf8');
+    let off = 0;
+    while (off < buf.length) {
+      const n = writeSync(this.fd, buf, off, buf.length - off);
+      if (n <= 0) throw new Error(`persistence: short write to ${this.path} (${off}/${buf.length} bytes)`);
+      off += n;
+    }
     fsyncSync(this.fd);
   }
 
