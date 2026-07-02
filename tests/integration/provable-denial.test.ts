@@ -1,8 +1,8 @@
 /**
- * Mythos centerpiece regression: a denied permissions-workaround must produce a signed,
+ * Provable-denial centerpiece regression: a denied permissions-workaround must produce a signed,
  * chained, checkpoint-bound DENIED receipt that (a) verifies independently with provenance,
- * and (b) CANNOT be erased by re-attestation. Maps to Claude Mythos System Card §4.5.4.1
- * ("covering up a permissions workaround").
+ * and (b) CANNOT be erased by re-attestation. Maps to a frontier lab's system-card finding
+ * on covering up a permissions workaround (§4.5.4.1).
  */
 import { describe, it, expect } from 'vitest';
 import { createAGAServer } from '../../src/server.js';
@@ -23,7 +23,7 @@ async function connect() {
   return { server, client, call };
 }
 
-describe('Mythos: provable DENIED receipt for a permissions workaround', () => {
+describe('provable DENIED receipt for a permissions workaround', () => {
   it('emits a signed, chained, checkpoint-bound DENIED receipt that survives re-attestation and verifies independently', async () => {
     const { server, client, call } = await connect();
     const meta = { filename: 'subject.txt' };

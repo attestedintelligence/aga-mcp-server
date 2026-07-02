@@ -1,11 +1,10 @@
 /**
  * ML-DSA-65 + Ed25519 composite hybrid signature (SHARED_CRYPTO_FOUNDATION.md §2) — v2 profile.
  *
- * Byte-for-byte counterpart of the AGA Go/CIRCL construction in
- * aga-k8s/internal/crypto/backends/hybrid.go AND of VerifyBundle's packages/integrity/src/hybrid.ts
- * (this file is ported verbatim from the latter; only the hex/utf8 util import path differs). A
- * signature produced by any of the three verifies under the others. Proven byte-identical Go<->JS by
- * aga-k8s/internal/crypto/hybrid_xverify_test.go against the pinned cross-verify fixtures.
+ * Byte-for-byte counterpart of the AGA Go/CIRCL construction and of the VerifyBundle hybrid
+ * implementation (this file is ported verbatim from the latter; only the hex/utf8 util import
+ * path differs). A signature produced by any of the three verifies under the others; Go<->JS
+ * byte-identity is proven against the pinned cross-verify fixtures in CI.
  *
  *   algorithm id : "ML-DSA-65+Ed25519-SHA256-JCS"
  *   composite    : len32(a) || a || len32(b) || b   (len32 = 4-byte big-endian uint32)

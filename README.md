@@ -7,7 +7,7 @@ Cryptographic runtime governance for AI agents and autonomous systems.
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![npm provenance](https://img.shields.io/badge/npm-SLSA%20provenance-brightgreen)](https://www.npmjs.com/package/@attested-intelligence/aga-mcp-server)
 
-> **Status: 3.2.0 (published to npm with SLSA build provenance).** The server tools and the `aga-proxy` emit the **canonical SEP evidence bundle**, verifiable offline by the published `@attested-intelligence/aga-verify` and the reference verifier `aga-receipt-spec/verify/verify-sep.mjs`. **As of 3.2.0 the verifier is algorithm-agile and ships a post-quantum profile:** v1 `Ed25519-SHA256-JCS` (the default the gateway emits) and v2 `ML-DSA-65+Ed25519-SHA256-JCS` (a NIST FIPS-204 ML-DSA-65 + RFC-8032 Ed25519 **composite**, both must verify), selected per-bundle by the `algorithm` field with a `VERIFIED / FAILED / UNSUPPORTED_PROFILE` trichotomy. Pre-3.0 releases (a legacy continuity-chain bundle that does *not* verify under the SEP verifier) are deprecated; use `^3.0.0`. Claim scope and residual attack surface are documented honestly in `THREAT_BOUNDARY.md`.
+> **Status: published to npm; this release carries SLSA build provenance (check it: `npm audit signatures`).** The server tools and the `aga-proxy` emit the **canonical SEP evidence bundle**, verifiable offline by the published `@attested-intelligence/aga-verify` and the reference verifier `aga-receipt-spec/verify/verify-sep.mjs`. **Since 3.2.0 the verifier is algorithm-agile and ships a post-quantum profile:** v1 `Ed25519-SHA256-JCS` (the default the gateway emits) and v2 `ML-DSA-65+Ed25519-SHA256-JCS` (a NIST FIPS-204 ML-DSA-65 + RFC-8032 Ed25519 **composite**, both must verify), selected per-bundle by the `algorithm` field with a `VERIFIED / FAILED / UNSUPPORTED_PROFILE` trichotomy. Pre-3.0 releases (a legacy continuity-chain bundle that does *not* verify under the SEP verifier) are deprecated; use `^3.0.0`. Claim scope and residual attack surface are documented honestly in `THREAT_BOUNDARY.md`.
 
 ```bash
 # This package IS the AGA MCP server (TypeScript, runs over stdio). Use it from any MCP client:
@@ -16,9 +16,9 @@ npx -y @attested-intelligence/aga-mcp-server
 
 A Python companion SDK (`aga-governance`) is documented in the Python SDK section below.
 
-## Verify this yourself (no trust required)
+## Verify this yourself (don't take our word)
 
-You do not have to take any of this on faith. The repo ships the reference verifier, the canonical vectors, and sample bundles, so you can check one offline right now with no network and no dependency on us:
+You do not have to take any of this on faith. The repo ships the reference verifier, the canonical vectors, and sample bundles, so you can check one offline right now, with no network and no callback to us:
 
 ```bash
 git clone https://github.com/attestedintelligence/aga-mcp-server
@@ -28,7 +28,7 @@ node aga-receipt-spec/verify/verify-sep.mjs fixtures/valid_minimal.json   # OVER
 node aga-receipt-spec/verify/verify-sep.mjs fixtures/tampered.json        # OVERALL: FAILED
 ```
 
-The published `@attested-intelligence/aga-verify@2.0.0` CLI renders the identical verdict, and `npm run conformance:cross-stack` proves six v1 verifier configurations — spanning **three independent toolchains (JavaScript, Go, and Python, including a pure-stdlib, no-third-party-crypto path)** — agree on all **57** cross-stack cases; `npm run conformance:cross-stack-v2` proves **two genuinely independent-language oracles (@noble/JS and CIRCL/Go)** agree on the v2 composite corpus. For a full trust-free reproduction (build the package yourself, reproduce the published tarball byte-for-byte, re-run every gate), see the **[REVIEWER_GUIDE.md](REVIEWER_GUIDE.md)** (a command-by-command self-service path), **[REPRODUCIBILITY.md](REPRODUCIBILITY.md)**, and the step-by-step **[SKEPTICAL_AUDITOR.md](SKEPTICAL_AUDITOR.md)**. The 3.2.0 npm release carries SLSA build provenance, checkable with `npm audit signatures`.
+The published `@attested-intelligence/aga-verify@2.0.0` CLI renders the identical verdict, and `npm run conformance:cross-stack` proves six v1 verifier configurations — spanning **three independent toolchains (JavaScript, Go, and Python, including a pure-stdlib, no-third-party-crypto path)** — agree on all **57** cross-stack cases; `npm run conformance:cross-stack-v2` proves **two genuinely independent-language oracles (@noble/JS and CIRCL/Go)** agree on the v2 composite corpus. For a full trust-free reproduction (build the package yourself, reproduce the published tarball byte-for-byte, re-run every gate), see the **[REVIEWER_GUIDE.md](REVIEWER_GUIDE.md)** (a command-by-command self-service path), **[REPRODUCIBILITY.md](REPRODUCIBILITY.md)**, and the step-by-step **[SKEPTICAL_AUDITOR.md](SKEPTICAL_AUDITOR.md)**. This release carries SLSA build provenance, checkable with `npm audit signatures`.
 
 ## What This Does
 
@@ -86,7 +86,7 @@ Keep the seed secret and out of version control; see `DEPLOYMENT.md` for key han
 |----------|-------|
 | **Identity** | `get_server_info`, `get_portal_state` |
 | **Lifecycle** | `init_chain`, `attest_subject`, `revoke_artifact` |
-| **Enforcement** | `measure_integrity`, `measure_behavior`, `verify_chain` |
+| **Measurement & decision** | `measure_integrity`, `measure_behavior`, `verify_chain` |
 | **Evidence** | `generate_evidence_bundle`, `verify_bundle_offline` |
 | **Privacy** | `request_claim`, `list_claims` |
 | **Delegation** | `delegate_to_subagent` |
@@ -96,7 +96,7 @@ Keep the seed secret and out of version control; see `DEPLOYMENT.md` for key han
 
 ## Quick Start — verify a bundle offline
 
-A bundle this package emits (via the `generate_evidence_bundle` tool, or `aga-proxy export`) is a **canonical SEP bundle**. Verify it offline, with no network and no dependency on us:
+A bundle this package emits (via the `generate_evidence_bundle` tool, or `aga-proxy export`) is a **canonical SEP bundle**. Verify it offline, with no network and no callback to us:
 
 ```bash
 # Reference verifier (zero deps, Node 18+). Pin the gateway key (from get_server_info) to prove provenance.

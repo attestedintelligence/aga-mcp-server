@@ -222,7 +222,8 @@ export async function createAGAServer(): Promise<McpServer> {
       behavioralMonitor.reset();
       // NOTE: the SEP ledger (`sep`) is intentionally NOT reset on re-attestation. The
       // tamper-evident record of prior decisions (including DENIED) MUST survive, so an agent
-      // cannot "cover up" a denied permissions-workaround by re-attesting (Claude Mythos §4.5.4.1).
+      // cannot "cover up" a denied permissions-workaround by re-attesting (the provable-denial
+      // property; regression-tested in tests/integration/provable-denial.test.ts).
       if (behavioral_baseline) behavioralMonitor.setBaseline(behavioral_baseline);
 
       await autoChain('POLICY_ISSUANCE', { artifact_hash: hashArtifact(artifact), sealed_hash: artifact.sealed_hash });
