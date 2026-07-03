@@ -70,6 +70,10 @@ jobs:
           python-version: '3.12'
       - name: Install deps
         run: npm ci
+      - name: Required gate — dependency CVE audit (prod deps only, high+)
+        # BLOCKS the release before publish on a high/critical CVE in a PRODUCTION dependency.
+        # Dev-only deps are excluded (--omit=dev): they are never present in the published tarball.
+        run: npm audit --omit=dev --audit-level=high
       - name: Install audited Ed25519 for the default Python verifier
         run: python -m pip install --upgrade cryptography
       - name: Required gate — build + lint + tests + SEP conformance + pack guard

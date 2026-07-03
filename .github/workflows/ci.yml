@@ -20,6 +20,22 @@ jobs:
       - run: npm ci
       - run: npm run build
       - run: npm test
+      - name: Dependency CVE audit — prod deps only (gate on high+)
+        # Fails the build on a high/critical CVE in a PRODUCTION dependency. Dev-only deps are
+        # excluded (--omit=dev): they never ship in the published tarball. The audit is
+        # lockfile-deterministic, so run it once (node 20 leg) rather than redundantly per matrix entry.
+        if: matrix.node-version == 20
+        run: npm audit --omit=dev --audit-level=high
+      - name: OSV-Scanner lockfile CVE scan (non-blocking)
+        # Cross-ecosystem OSV-database coverage over the lockfile, for visibility. Non-blocking
+        # (continue-on-error) so an OSV advisory — or a scanner/download hiccup — never fails CI;
+        # the npm audit step above is the enforcing gate. Pinned binary, no third-party action needed.
+        if: matrix.node-version == 20
+        continue-on-error: true
+        run: |
+          curl -sSfL -o "$RUNNER_TEMP/osv-scanner" https://github.com/google/osv-scanner/releases/download/v2.4.0/osv-scanner_linux_amd64
+          chmod +x "$RUNNER_TEMP/osv-scanner"
+          "$RUNNER_TEMP/osv-scanner" -r .
 
   independent-verifier:
     runs-on: ubuntu-latest
