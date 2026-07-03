@@ -205,10 +205,10 @@ A demo gateway is deployed on Cloudflare Workers (a **separate deployment** that
 
 ```bash
 # Check status
-curl https://aga-mcp-gateway.attestedintelligence.workers.dev/health
+curl https://aga-mcp-gateway.attested-intelligence.workers.dev/health
 
 # Export evidence bundle
-curl https://aga-mcp-gateway.attestedintelligence.workers.dev/bundle -o evidence-bundle.json
+curl https://aga-mcp-gateway.attested-intelligence.workers.dev/bundle -o evidence-bundle.json
 ```
 
 ## Python SDK
