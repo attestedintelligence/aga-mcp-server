@@ -46,7 +46,7 @@ export interface EnforcementParams {           // Ref 130
   behavioral_baseline?: BehavioralBaselineRef; // NCCoE §6: optional behavioral baseline reference
 }
 
-/** Inline behavioral baseline reference for EnforcementParams (NCCoE §6, CAISI §1a) */
+/** Inline behavioral baseline reference for EnforcementParams (NCCoE §6, behavioral-drift guard) */
 export interface BehavioralBaselineRef {
   permitted_tools: string[];
   forbidden_sequences: string[][];
@@ -139,7 +139,7 @@ export type EventType =
   | 'KEY_ROTATION'            // V3: key lifecycle event
   | 'BEHAVIORAL_DRIFT'        // NCCoE §6: behavioral pattern deviation
   | 'DELEGATION'              // NCCoE §4: sub-agent delegation
-  | 'DEGRADATION'             // CAISI §4a: graceful degradation event
+  | 'DEGRADATION'             // graceful-degradation event
   | 'RE_ATTESTATION';         // TTL re-attestation
 
 export interface GenesisPayload {

@@ -9,8 +9,10 @@
  *     rejects forgeable/stale evidence artifacts that could slip in under dist/ (finding C-2: `tsc`
  *     does not delete stale outputs).
  *
- *  2) IP-RAIL content scan (Phase 0c): the CONTENTS of every shippable file are scanned for the
- *     unambiguous "must never ship" markers — so a future package can't regress and leak IP. The
+ *  2) IP-RAIL content scan (Phase 0c): the CONTENTS of every shippable file AND every emitted dist/
+ *     file (the to-be-published TypeScript output, walked directly off disk so a marker can't slip
+ *     through even if the pack manifest ever changed) are scanned for the unambiguous "must never
+ *     ship" markers — so a future package can't regress and leak IP. The
  *     scanned markers are deliberately the high-confidence ones (no false positives that would wedge
  *     CI): the bare patent number, claim-to-mechanism mapping phrasing, the blocked vendor name, the
  *     private post-quantum / k8s package names, internal codenames, the private PQC scheme name, and
@@ -27,7 +29,8 @@
  * Self-test the content scan without touching the tree:  node scripts/check-pack.mjs --selftest
  */
 import { execSync } from 'node:child_process';
-import { readFileSync, statSync } from 'node:fs';
+import { readFileSync, statSync, readdirSync, existsSync } from 'node:fs';
+import { join } from 'node:path';
 
 // ---- Gate 1: PATH allowlist -------------------------------------------------
 // Top-level files allowed beyond everything under dist/. npm always includes package.json;
@@ -101,6 +104,12 @@ const CONTENT_FORBIDDEN = [
     clean: 'the aga gateway runs on any k8s cluster',
   },
   {
+    label: f('retired integration package (', 'aga', '-lattice', ')'),
+    rx: rx('aga', '-lattice'),
+    dirty: f('bridge into ', 'aga', '-lattice', ' adapters'),
+    clean: 'a lattice of aga verifier nodes',
+  },
+  {
     label: f('internal codename (', 'Myth', 'os', ')'),
     rx: rx('myth', 'os'),
     dirty: f('the ', 'Myth', 'os', ' initiative'),
@@ -125,24 +134,78 @@ const CONTENT_FORBIDDEN = [
     clean: 'C: Users should mount the drive first',
   },
   {
-    label: f('operator handle (', 'neu', 'ro', ')'),
+    label: f('operator handle (', 'neu', 'ro', ')'),   // also covers the Neu·roCrypt codename
     rx: rx('neu', 'ro'),
     dirty: f('built on ', 'neu', 'ro', "'s machine"),
     clean: 'neutral routing over the proxy',
   },
+  {
+    label: f('internal governance codename (', 'CA', 'ISI', ')'),
+    rx: rx('ca', 'isi'),
+    dirty: f('graceful degradation (', 'CA', 'ISI', ' §4a)'),
+    clean: 'the caisson wall holds under load',
+  },
 ];
+
+// ---- shared scanners --------------------------------------------------------
+// Scan one file's text; return [{ label, snippet }] for every marker that hits (≤1 per marker).
+function scanText(text) {
+  const hits = [];
+  const lines = text.split(/\r?\n/);
+  for (const m of CONTENT_FORBIDDEN) {
+    for (let i = 0; i < lines.length; i++) {
+      if (m.rx.test(lines[i])) {
+        hits.push({ label: m.label, snippet: lines[i].trim().slice(0, 160) });
+        break;                                                             // one hit per marker is enough
+      }
+    }
+  }
+  return hits;
+}
+
+// Recursively list every file under a directory (forward-slash paths for cross-platform dedupe).
+function walk(dir) {
+  const out = [];
+  for (const ent of readdirSync(dir, { withFileTypes: true })) {
+    const p = join(dir, ent.name);
+    if (ent.isDirectory()) out.push(...walk(p));
+    else out.push(p.replace(/\\/g, '/'));
+  }
+  return out;
+}
 
 // ---- selftest mode ----------------------------------------------------------
 if (process.argv.includes('--selftest')) {
   let pass = true;
+  // (a) per-marker: each planted "dirty" sample must be caught, each benign "clean" sample ignored.
   for (const m of CONTENT_FORBIDDEN) {
     const dirtyOk = m.rx.test(m.dirty);
     const cleanOk = !m.rx.test(m.clean);
     console.log(`  [${dirtyOk && cleanOk ? 'PASS' : 'FAIL'}] ${m.label}: catches dirty=${dirtyOk}, ignores clean=${cleanOk}`);
     if (!dirtyOk || !cleanOk) pass = false;
   }
-  if (pass) { console.log('check-pack --selftest OK: every IP-rail marker catches its planted sample and ignores its benign sample.'); process.exit(0); }
-  console.error('check-pack --selftest FAILED: a marker regex is mis-tuned.'); process.exit(1);
+  // (b) end-to-end: run the whole file scanner over a planted-dirty blob (must fail) and a
+  //     realistic benign blob (must pass) — proves the dist scan wiring rejects a re-leak.
+  const dirtyBlob = [
+    'export type EventType =',
+    f("  | 'DEGRADATION'  // ", 'CA', 'ISI', ' §4a: graceful degradation event'),
+    f('// bridge into ', 'aga', '-lattice'),
+  ].join('\n');
+  const benignBlob = [
+    'export type EventType =',
+    "  | 'DEGRADATION'  // graceful-degradation event",
+    '// NCCoE §6: optional behavioral baseline reference',
+  ].join('\n');
+  const dirtyHits = scanText(dirtyBlob);
+  const benignHits = scanText(benignBlob);
+  const dirtyCaught = dirtyHits.length > 0;
+  const benignClean = benignHits.length === 0;
+  console.log(`  [${dirtyCaught ? 'PASS' : 'FAIL'}] end-to-end scan catches a planted dirty blob (${dirtyHits.map((h) => h.label).join('; ') || 'NONE'})`);
+  console.log(`  [${benignClean ? 'PASS' : 'FAIL'}] end-to-end scan passes a benign blob${benignClean ? '' : ` (unexpected: ${benignHits.map((h) => h.label).join('; ')})`}`);
+  if (!dirtyCaught || !benignClean) pass = false;
+
+  if (pass) { console.log('check-pack --selftest OK: every IP-rail marker catches its planted sample and ignores its benign sample; end-to-end dirty/benign scan behaves.'); process.exit(0); }
+  console.error('check-pack --selftest FAILED: a marker regex is mis-tuned or the end-to-end scan misbehaved.'); process.exit(1);
 }
 
 // ---- run: build the manifest -----------------------------------------------
@@ -167,9 +230,13 @@ const unexpected = files.filter((p) => !isAllowed(p));                 // positi
 const forbiddenPath = files.filter((p) => FORBIDDEN_PATHS.some((r) => r.test(p)));
 const missing = REQUIRED.filter((r) => !files.includes(r));
 
-// ---- Gate 2 checks: scan the CONTENT of every shippable file ----------------
+// ---- Gate 2 checks: scan the CONTENT of every shippable file + emitted dist/ -
+// Union of the pack manifest and a direct walk of dist/ (deduped) so the to-be-published
+// TypeScript output is scanned even if the pack manifest ever drifts from what's on disk.
+const distFiles = existsSync('dist') ? walk('dist') : [];
+const scanTargets = Array.from(new Set([...files, ...distFiles]));
 const contentHits = [];   // { file, label, snippet }
-for (const p of files) {
+for (const p of scanTargets) {
   let text;
   try {
     if (statSync(p).size > 8 * 1024 * 1024) continue;                  // skip oversized blobs
@@ -177,14 +244,8 @@ for (const p of files) {
     if (buf.includes(0)) continue;                                     // skip binary (null byte)
     text = buf.toString('utf8');
   } catch { continue; }                                                // unreadable / not-on-disk → skip
-  const lines = text.split(/\r?\n/);
-  for (const m of CONTENT_FORBIDDEN) {
-    for (let i = 0; i < lines.length; i++) {
-      if (m.rx.test(lines[i])) {
-        contentHits.push({ file: p, label: m.label, snippet: lines[i].trim().slice(0, 160) });
-        break;                                                         // one hit per (file, marker) is enough
-      }
-    }
+  for (const h of scanText(text)) {
+    contentHits.push({ file: p, label: h.label, snippet: h.snippet });
   }
 }
 
@@ -213,7 +274,7 @@ if (contentHits.length) {
 
 if (ok) {
   const docs = files.filter((p) => !p.startsWith(ALLOWED_DIR_PREFIX));
-  console.log(`check-pack OK: ${files.length} files — dist/ + exactly [${docs.join(', ')}]; no forbidden artifacts; all ${REQUIRED.length} required present; IP-rail content scan clean (${CONTENT_FORBIDDEN.length} markers × ${files.length} files).`);
+  console.log(`check-pack OK: ${files.length} files — dist/ + exactly [${docs.join(', ')}]; no forbidden artifacts; all ${REQUIRED.length} required present; IP-rail content scan clean (${CONTENT_FORBIDDEN.length} markers × ${scanTargets.length} files incl. emitted dist/).`);
   process.exit(0);
 }
 console.error('\ncheck-pack FAILED — do not publish this tarball.');

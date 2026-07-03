@@ -1,5 +1,5 @@
 /**
- * Fail-Closed Tests - CAISI §4a
+ * Fail-Closed Tests - fail-closed conditions
  * Block execution if ANY of 4 conditions is true
  */
 import { describe, it, expect } from 'vitest';
@@ -11,7 +11,7 @@ import { generateKeyPair, pkToHex, signStr, sigToB64 } from '../../src/crypto/si
 import { sha256Str } from '../../src/crypto/hash.js';
 import { canonicalize } from '../../src/utils/canonical.js';
 
-describe('fail-closed semantics (CAISI §4a)', () => {
+describe('fail-closed semantics (fail-closed conditions)', () => {
   const kp = generateKeyPair();
   const content = 'print("hello")';
   const meta = { filename: 'app.py', version: '1.0' };
@@ -28,7 +28,7 @@ describe('fail-closed semantics (CAISI §4a)', () => {
     });
   }
 
-  it('fail-closed: invalid signature blocks execution - CAISI §4a condition 2', () => {
+  it('fail-closed: invalid signature blocks execution - fail-closed condition 2', () => {
     const portal = new Portal();
     const wrongKP = generateKeyPair();
     const result = portal.loadArtifact(makeArtifact(), pkToHex(wrongKP.publicKey));
@@ -37,7 +37,7 @@ describe('fail-closed semantics (CAISI §4a)', () => {
     expect(portal.state).toBe('TERMINATED');
   });
 
-  it('fail-closed: expired TTL blocks execution - CAISI §4a condition 3', () => {
+  it('fail-closed: expired TTL blocks execution - fail-closed condition 3', () => {
     const portal = new Portal();
     const result = portal.loadArtifact(makeArtifact(0), pkToHex(kp.publicKey));
     // TTL=0 means immediately expired; loadArtifact checks effective period
@@ -55,7 +55,7 @@ describe('fail-closed semantics (CAISI §4a)', () => {
     }
   });
 
-  it('fail-closed: initial hash mismatch blocks execution - CAISI §4a condition 4', () => {
+  it('fail-closed: initial hash mismatch blocks execution - fail-closed condition 4', () => {
     const portal = new Portal();
     portal.loadArtifact(makeArtifact(), pkToHex(kp.publicKey));
     expect(portal.state).toBe('ACTIVE_MONITORING');

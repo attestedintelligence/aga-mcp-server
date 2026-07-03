@@ -454,7 +454,7 @@ describe('Group 3: Portal State Machine', () => {
     expect(portal.degradationLog[0].reason).toBe('TTL_EXPIRED');
   });
 
-  it('3.7 [CAISI 4a]: Fail-closed - 4 conditions', () => {
+  it('3.7 [fail-closed conditions]: Fail-closed - 4 conditions', () => {
     const { artifact, issuerKP, content, meta } = makeTestInfra();
     const pkHex = pkToHex(issuerKP.publicKey);
 
@@ -936,7 +936,7 @@ describe('Group 7: NIST Extension Capabilities', () => {
     expect(m.violations.some(v => v.type === 'UNAUTHORIZED_TOOL')).toBe(true);
   });
 
-  it('7.3 [CAISI 1a]: Behavioral drift - rate limit', () => {
+  it('7.3 [behavioral-drift guard]: Behavioral drift - rate limit', () => {
     const monitor = new BehavioralMonitor();
     monitor.setBaseline({
       permitted_tools: ['write'],
