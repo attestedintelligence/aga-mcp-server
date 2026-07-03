@@ -38,6 +38,7 @@ import { join } from 'node:path';
 const ALLOWED_TOPLEVEL = new Set([
   'package.json',
   'README.md',
+  'CHANGELOG.md',
   'LICENSE',
   'SECURITY.md',
   'THREAT_BOUNDARY.md',

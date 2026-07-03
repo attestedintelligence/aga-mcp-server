@@ -59,8 +59,8 @@ Call the `get_server_info` tool → **`gateway_public_key`**. That 64-hex value 
 ```bash
 # reference verifier (zero deps)
 node aga-receipt-spec/verify/verify-sep.mjs evidence-bundle.json --pubkey <gateway_public_key>
-# or the published CLI (@attested-intelligence/aga-verify 2.0.0)
-aga-verify evidence-bundle.json --pubkey <gateway_public_key>
+# or the published CLI (ships on npm; renders the identical verdict)
+npx -y @attested-intelligence/aga-verify evidence-bundle.json --pubkey <gateway_public_key>
 ```
 Or via the tool: `verify_bundle_offline(bundle, pinned_public_key=<gateway_public_key>)`. **Without a pin you get an integrity-only result** (`issuerVerified=false`, summary says "NOT provenance"). See §3.7 of the boundary doc.
 

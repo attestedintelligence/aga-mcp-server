@@ -35,6 +35,12 @@ _tmp_*
 _tmp_*.*
 _nc-*
 
+# Scratch evidence / bundle captures at repo root — runtime output, never source (keep out of git + tarball)
+/live-bundle.json
+/*bundle*.json
+/evidence.json
+/*.local.json
+
 # Internal harness documents (one pre-existing is tracked)
 AGA_*_HARNESS.md
 
