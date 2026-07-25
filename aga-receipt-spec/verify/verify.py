@@ -48,16 +48,36 @@ CHECKPOINT_FIELDS = (
 #     HTML-escape). SEP receipt/checkpoint fields are ASCII; ensure_ascii=False
 #     keeps any non-ASCII byte-for-byte identical to JS JSON.stringify.
 # ---------------------------------------------------------------------------
+# Number.MAX_SAFE_INTEGER = 2^53 - 1: the largest integer that round-trips identically through an
+# IEEE-754 double, i.e. the exact set JS's Number.isSafeInteger accepts.
+_MAX_SAFE_INT = (1 << 53) - 1  # 9007199254740991
+
+
 def _dump_scalar(x):
     # Matches JS JSON.stringify for null/bool/number/string within the SEP field set.
     #
-    # JCS / RFC 8785 number normalization (T2): an INTEGRAL float must serialize as its shortest
-    # INTEGER form ("2", never "2.0"/"2e0"/"2.0e0"), matching json.dumps of an int and JS's
-    # JSON.stringify(2.0) === "2". json.dumps(2.0) would emit "2.0", so coerce integral floats to
-    # int first. (bool is a subclass of int but is handled by json.dumps directly; exclude it.)
-    if isinstance(x, float) and not isinstance(x, bool):
-        if x == int(x) and x not in (float("inf"), float("-inf")) and x == x:
-            x = int(x)
+    # R3 SAFE-INTEGER FLOOR: reject any JSON number that is not a JS SAFE INTEGER — an integer with
+    # |value| <= 2^53-1. JS JSON.parse decodes every number to an IEEE-754 double, so an integer
+    # literal with |value| > 2^53-1 (or a non-integral / non-finite number) cannot round-trip
+    # identically across JS/Go/Python: JS silently rounds it before canon (breaking the signed bytes)
+    # while Python's arbitrary-precision int and Go's json.Number preserve the literal and VERIFY — a
+    # 3/3 cross-stack verdict split on a validly-signed bundle. Raising here (caught by
+    # verify_sep_bundle's try/except -> FAILED) makes all six stacks reject it identically. The only
+    # signed numerics in a conformant bundle are the small integers leaf_count / leaf_index. bool is a
+    # subclass of int but is a boolean, not a number: skip it.
+    if isinstance(x, bool):
+        pass
+    elif isinstance(x, int):
+        if x > _MAX_SAFE_INT or x < -_MAX_SAFE_INT:
+            raise ValueError("canon: integer %d is not a JS-safe integer" % x)
+    elif isinstance(x, float):
+        # NaN/inf, non-integral, or out-of-safe-range float => reject. json.load has already rounded
+        # any literal to the nearest double, so this mirrors JS's isSafeInteger on the parsed double
+        # exactly. JCS / RFC 8785 (T2): an in-range integral float serializes as its shortest INTEGER
+        # form ("2", never "2.0"), matching json.dumps of an int and JS JSON.stringify(2.0).
+        if x != x or x in (float("inf"), float("-inf")) or x != int(x) or x > _MAX_SAFE_INT or x < -_MAX_SAFE_INT:
+            raise ValueError("canon: float %r is not a JS-safe integer" % (x,))
+        x = int(x)
     return json.dumps(x, ensure_ascii=False, separators=(",", ":"))
 
 

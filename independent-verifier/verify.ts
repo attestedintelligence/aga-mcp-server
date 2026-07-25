@@ -68,10 +68,19 @@ const LONE_SURROGATE = /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[
 // Depth-bounded JCS-profile canon: input nested beyond MAX_CANON_DEPTH throws a CONTROLLED
 // error well before a native stack overflow (anti-DoS). verifySepBundle's try/catch turns that
 // into a FAILED verdict — a depth bomb can never crash the verifier. Mirrors src/sep/canonical.ts.
+// Safe-integer floor (cross-stack numeric agreement, R3): reject any JSON number that is not a JS
+// SAFE INTEGER — an integer with |value| <= 2^53-1 (Number.MAX_SAFE_INTEGER). JS JSON.parse decodes
+// every number to an IEEE-754 double, so an integer literal with |value| > 2^53-1 (or a non-integral
+// / non-finite number) cannot round-trip identically across the JS/Go/Python stacks: JS silently
+// rounds it before canon while Go (json.Number) and Python (arbitrary-precision int) preserve the
+// literal — a validly-signed bundle then splits the six verifiers 3/3. Throwing here (caught by the
+// never-throw try/catch -> FAILED) makes all six reject identically; the only signed numerics in a
+// conformant bundle are the small integers leaf_count / leaf_index. [R3]
 function canon(o: unknown): string {
   const rec = (v: unknown, depth: number): string => {
     if (depth > MAX_CANON_DEPTH) throw new Error(`canon: input nesting exceeds ${MAX_CANON_DEPTH} levels`);
     if (typeof v === 'string' && LONE_SURROGATE.test(v)) throw new Error('canonicalize: lone surrogate');
+    if (typeof v === 'number' && !Number.isSafeInteger(v)) throw new Error('canonicalize: number is not a JS-safe integer');
     if (v === null || typeof v !== 'object') return JSON.stringify(v);
     if (Array.isArray(v)) return '[' + v.map((x) => rec(x, depth + 1)).join(',') + ']';
     const m = v as Record<string, unknown>;

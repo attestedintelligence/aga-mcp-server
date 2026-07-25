@@ -10,7 +10,7 @@
  * profile this verifier does not implement (e.g. a v1-only build handed a v2 bundle). An UNKNOWN /
  * unregistered algorithm is FAILED, never a false VERIFIED, never a partial verify.
  */
-import { canonicalize } from './canonical.js';
+import { canonicalize, MAX_CANON_DEPTH } from './canonical.js';
 import { sha256Hex, isHex } from './crypto.js';
 import { nodeHash } from './merkle.js';
 import { SEP_RECEIPT_FIELDS } from './receipt.js';
@@ -37,6 +37,25 @@ export interface VerifyOptions {
 const leaf = (r: unknown): string => sha256Hex(canonicalize(r));
 const strip = (o: Record<string, unknown>, f: string): Record<string, unknown> =>
   Object.fromEntries(Object.entries(o).filter(([k]) => k !== f));
+
+/**
+ * R3 safe-integer floor (VERIFY-side). A validly-signed receipt/checkpoint carrying a JSON number
+ * that is NOT a JS SAFE INTEGER — an integer with |value| > 2^53-1, a non-integral, or a non-finite
+ * number — splits the six verifiers: JS JSON.parse rounds it to an IEEE-754 double before canon
+ * (breaking the signed bytes -> FAILED) while Go (json.Number) and Python (arbitrary-precision int)
+ * preserve the literal and VERIFY. The engine's `canonicalize` is a SHARED emit+verify primitive
+ * (it also hashes tool arguments, which may legitimately carry integers > 2^53), so the floor is
+ * applied HERE, only to the objects the signed path canonicalizes (each receipt and the checkpoint).
+ * Throwing is caught by verifySepBundle's outer try/catch -> FAILED, matching the reference verdict.
+ * The only signed numerics in a conformant bundle are the small integers leaf_count / leaf_index. [R3]
+ */
+const assertSafeNumbers = (o: unknown, depth = 0): void => {
+  if (depth > MAX_CANON_DEPTH) throw new Error(`canonicalize: input nesting exceeds ${MAX_CANON_DEPTH} levels`);
+  if (typeof o === 'number' && !Number.isSafeInteger(o)) throw new Error('canonicalize: number is not a JS-safe integer');
+  if (o === null || typeof o !== 'object') return;
+  if (Array.isArray(o)) { for (const v of o) assertSafeNumbers(v, depth + 1); return; }
+  for (const v of Object.values(o as Record<string, unknown>)) assertSafeNumbers(v, depth + 1);
+};
 
 /**
  * Canonical SEP timestamp validation (cross-stack unified). A timestamp is VALID iff it matches the
@@ -98,6 +117,12 @@ export function verifySepBundle(bundle: any, expectedPublicKey?: string, opts?: 
     const receipts: any[] = Array.isArray(bundle?.receipts) ? bundle.receipts : [];
     const proofs: any[] = Array.isArray(bundle?.merkle_proofs) ? bundle.merkle_proofs : [];
     const pub: string = bundle?.public_key;
+
+    // R3 safe-integer floor: reject (fail closed) any non-JS-safe-integer number in a signed object
+    // (each receipt + the checkpoint) — the objects the signed path canonicalizes — so a >2^53 /
+    // non-integral / non-finite literal cannot split this stack from the reference verifiers.
+    for (const r of receipts) assertSafeNumbers(r);
+    assertSafeNumbers(bundle?.checkpoint);
 
     // A pin is honored only if it is well-formed for the bundle's (supported, registered) profile;
     // a malformed pin is an integrity-only check (pinned=false), never a silent provenance pass.

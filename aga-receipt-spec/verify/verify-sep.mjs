@@ -32,10 +32,20 @@ const MAX_CANON_DEPTH = 100;
 // and VERIFY — a cross-stack split. Throw on it (caught by verifySepBundle's try/catch -> FAILED) so all
 // six agree. Valid surrogate PAIRS (astral chars / emoji) do NOT match and canonicalize unchanged. [C2]
 const LONE_SURROGATE = /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/;
+// Safe-integer floor (cross-stack numeric agreement, R3): reject any JSON number that is not a
+// JS SAFE INTEGER — an integer with |value| <= 2^53-1 (Number.MAX_SAFE_INTEGER). JS JSON.parse
+// decodes every number to an IEEE-754 double, so an integer literal with |value| > 2^53-1 (or a
+// non-integral / non-finite number) cannot round-trip identically across the JS/Go/Python stacks:
+// JS silently rounds it before canon (breaking the signed bytes -> FAILED) while Go (json.Number)
+// and Python (arbitrary-precision int) preserve the literal and VERIFY — a 3/3 cross-stack verdict
+// split on a validly-signed bundle. Throwing here (caught by verifySepBundle's try/catch -> FAILED)
+// makes all six stacks reject it identically. The ONLY signed numerics in a conformant bundle are
+// the small integers leaf_count / leaf_index, so this rejects only non-conformant bundles. [R3]
 const canon = (o) => {
   const rec = (v, depth) => {
     if (depth > MAX_CANON_DEPTH) throw new Error(`canon: input nesting exceeds ${MAX_CANON_DEPTH} levels`);
     if (typeof v === 'string' && LONE_SURROGATE.test(v)) throw new Error('canonicalize: lone surrogate');
+    if (typeof v === 'number' && !Number.isSafeInteger(v)) throw new Error('canonicalize: number is not a JS-safe integer');
     if (v === null || typeof v !== 'object') return JSON.stringify(v);
     if (Array.isArray(v)) return '[' + v.map((e) => rec(e, depth + 1)).join(',') + ']';
     return '{' + Object.keys(v).sort().map((k) => JSON.stringify(k) + ':' + rec(v[k], depth + 1)).join(',') + '}';

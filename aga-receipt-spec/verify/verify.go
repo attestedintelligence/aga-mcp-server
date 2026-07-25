@@ -130,16 +130,16 @@ func canonRec(v interface{}, depth int) string {
 		// JSON.stringify of an integer byte-for-byte. SEP signed numeric fields
 		// (checkpoint.leaf_count, proof leaf_index/leaf_count) are integers, so a
 		// value re-encoded as 2.0 / 2e0 canonicalizes IDENTICALLY to 2 and its
-		// signature still verifies on all six stacks. Non-integral values keep
-		// their source literal.
+		// signature still verifies on all six stacks. R3 safe-integer floor:
+		// normalizeNumber PANICS (recovered -> FAILED) on any number that is not a
+		// JS-safe integer, so a >2^53 / non-integral / non-finite literal fails
+		// closed here exactly as JS's Number.isSafeInteger guard does.
 		return normalizeNumber(t.String())
 	case float64:
-		// UseNumber() means floats normally don't appear, but if one does, apply
-		// the same integral-normalization so a stray float64 matches JS output.
-		if t == float64(int64(t)) {
-			return strconv.FormatInt(int64(t), 10)
-		}
-		return strconv.FormatFloat(t, 'g', -1, 64)
+		// UseNumber() means floats normally don't appear, but if one does, apply the
+		// same R3 safe-integer floor so a stray float64 matches JS output or fails
+		// closed identically.
+		return safeIntegerFormat(t)
 	case string:
 		return encodeJSONString(t)
 	case []interface{}:
@@ -167,33 +167,55 @@ func canonRec(v interface{}, depth int) string {
 	}
 }
 
+// maxSafeInteger is Number.MAX_SAFE_INTEGER = 2^53 - 1. A JS-safe integer is an
+// integer whose absolute value does not exceed this — the exact set JS's
+// Number.isSafeInteger accepts and the exact set that round-trips identically
+// through JSON.parse (IEEE-754 double) on every stack.
+const maxSafeInteger = 9007199254740991 // 2^53 - 1
+
 // normalizeNumber implements the T2 (JCS / RFC 8785) integral-number rule for a
-// json.Number's source literal: if the value is integral, return its shortest
-// integer form ("2", never "2.0" / "2e0" / "2.0e0" / "2E0"), matching JS
-// JSON.stringify of an integer byte-for-byte. A non-integral value (e.g. "0.5")
-// is returned unchanged, preserving the engine's source-literal behavior for the
-// numbers the SEP profile never signs.
+// json.Number's source literal AND the R3 safe-integer floor. If the value is a
+// JS-safe integer, return its shortest integer form ("2", never "2.0" / "2e0" /
+// "2.0e0" / "2E0"), matching JS JSON.stringify of an integer byte-for-byte. Any
+// number that is NOT a JS-safe integer — |value| > 2^53-1, non-integral, or
+// non-finite — PANICS with a controlled error (recovered by VerifySepBundle ->
+// FAILED), so a literal JS silently rounds (e.g. 9007199254740993 -> 2^53) cannot
+// VERIFY here while FAILing on JS: all six stacks reject it identically.
 func normalizeNumber(lit string) string {
-	// Int64 fast path: literals with no '.', 'e', or 'E' parse directly.
+	// Int64 fast path: literals with no '.', 'e', or 'E' parse directly. Enforce the
+	// safe-integer range on the exact integer value (no float rounding on this path).
 	if i, err := strconv.ParseInt(lit, 10, 64); err == nil {
+		if i > maxSafeInteger || i < -maxSafeInteger {
+			panic("canon: integer literal exceeds Number.MAX_SAFE_INTEGER")
+		}
 		return strconv.FormatInt(i, 10)
 	}
 	// Float path: JCS / RFC 8785 serializes numbers as IEEE-754 doubles — exactly what JS
 	// JSON.parse and Python json.loads produce — so round via float64, NOT big.Float, or a
 	// sub-ULP literal like "2.0000000000000001" would canonicalize differently here than on the
-	// JS/Python stacks (a cross-stack divergence). Emit the integer form only within the exact
-	// integer range (covers every real leaf_count); degenerate large/exponential values are left
-	// as-is and fail the count/signature check uniformly on every stack.
+	// JS/Python stacks (a cross-stack divergence). A parse error (e.g. "1e400" -> ±Inf with
+	// ErrRange) fails closed, matching JS Infinity/isSafeInteger rejection.
 	f, err := strconv.ParseFloat(lit, 64)
 	if err != nil {
-		return lit // unparseable as a float: leave the source literal untouched
+		panic("canon: number literal is non-finite or unparseable as a float64")
 	}
-	if f >= -9007199254740992.0 && f <= 9007199254740992.0 {
-		if i := int64(f); float64(i) == f {
-			return strconv.FormatInt(i, 10)
-		}
+	return safeIntegerFormat(f)
+}
+
+// safeIntegerFormat enforces the R3 safe-integer floor on an already-parsed
+// float64 and returns its shortest integer form. It PANICS (recovered -> FAILED)
+// when f is non-finite, non-integral, or outside [-(2^53-1), 2^53-1] — i.e.
+// whenever JS's Number.isSafeInteger(f) would be false — so a stray float64
+// (Inf/NaN/2.5/2^53) rejects on every stack identically. Because the range check
+// runs before the int64 conversion, int64(f) is always well-defined here.
+func safeIntegerFormat(f float64) string {
+	if f > maxSafeInteger || f < -maxSafeInteger {
+		panic("canon: number is not a JS-safe integer (out of range or non-finite)")
 	}
-	return lit // non-integral or out of exact-integer range: keep the source literal
+	if f != float64(int64(f)) {
+		panic("canon: number is not a JS-safe integer (non-integral)")
+	}
+	return strconv.FormatInt(int64(f), 10)
 }
 
 // encodeJSONString emits a JSON string literal WITHOUT HTML escaping, matching
