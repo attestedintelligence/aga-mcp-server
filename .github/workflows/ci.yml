@@ -52,6 +52,18 @@ jobs:
       - run: npm run build
       - run: cd independent-verifier && npm ci && npm test
 
+  spec-vendor-freeze:
+    # CA-05: the vendored aga-receipt-spec/ tree is release-frozen. Any edit to it that does not
+    # come through scripts/sync-spec-vendor.mjs (which rewrites the manifest in the same commit)
+    # fails here — a spec rule change can never be hand-copied inconsistently again.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: node scripts/check-spec-vendor.mjs
+
   verify-zero-imports:
     runs-on: ubuntu-latest
     steps:
