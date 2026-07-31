@@ -184,6 +184,8 @@ Three built-in policy profiles:
 - **standard** - rate limits + blocks destructive operations
 - **restrictive** - explicit tool allowlist, all unknown tools denied
 
+Because the default (`permissive`) is audit-only, starting with an `audit_only` policy prints a loud stderr banner stating that every call is permitted and recorded and **no call is denied** in that mode — denial happens only under an allowlist-mode policy (`standard`, `restrictive`, or a custom `--policy` file). An unrecognized `--profile` value is a hard error (exit 2 listing the valid names), never a silent fallback to `permissive`.
+
 ## Verification _(canonical SEP 3.0; normative §6 algorithm in `aga-receipt-spec/verify/verify-sep.mjs`)_
 
 1. **Structural floor** - Bundle declares Ed25519-SHA256-JCS, public key well-formed (all small-order encodings + non-canonical `y ≥ p` rejected), `receipts.length > 0`, proof count = receipt count
