@@ -56,8 +56,9 @@ jobs:
           registry-url: 'https://registry.npmjs.org'
       - name: Upgrade npm for OIDC trusted publishing
         # node 20 ships npm 10, which cannot authenticate the registry publish via OIDC trusted
-        # publishing (needs npm >= 11.5.1). Upgrade so the publish authenticates.
-        run: npm install -g npm@latest
+        # publishing (needs npm >= 11.5.1). npm 12 dropped node 20 (EBADENGINE), so pin the
+        # npm 11 line — OIDC-capable and compatible with the node pin above.
+        run: npm install -g npm@11
       - name: Setup Go (cross-stack harness)
         uses: actions/setup-go@3041bf56c941b39c61721a86cd11f3bb1338122a # v5.2.0
         with:
