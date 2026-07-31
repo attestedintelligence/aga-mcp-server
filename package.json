@@ -67,7 +67,7 @@
     "prepublishOnly": "npm run build && npm run test && npm run test:conformance && npm run check:pack"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.29.0",
+    "@modelcontextprotocol/sdk": "^1.30.0",
     "@noble/ed25519": "2.1.0",
     "@noble/hashes": "1.6.1",
     "@noble/post-quantum": "0.6.1",
@@ -78,7 +78,8 @@
     "better-sqlite3": "^11.7.0"
   },
   "overrides": {
-    "hono": ">=4.12.25"
+    "hono": ">=4.12.25",
+    "@hono/node-server": ">=2.0.5"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.12",
