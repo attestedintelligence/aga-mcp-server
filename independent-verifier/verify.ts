@@ -18,6 +18,9 @@
  * Attested Intelligence Holdings LLC · MIT
  */
 import { createHash, createPublicKey, verify as edVerify } from 'node:crypto';
+import { existsSync, readFileSync, realpathSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const ALGORITHM = 'Ed25519-SHA256-JCS';
 const SPKI_PREFIX = Buffer.from('302a300506032b6570032100', 'hex'); // Ed25519 SPKI DER prefix
@@ -300,9 +303,25 @@ export function verifyEvidenceBundle(bundleJson: string, expectedPublicKey?: str
 }
 
 // ── CLI ──────────────────────────────────────────────────────────────────────
-if (typeof process !== 'undefined' && process.argv[1]?.includes('verify')) {
-  const { readFileSync, existsSync } = await import('node:fs');
-  const { fileURLToPath } = await import('node:url');
+// Entry-point detection: run the CLI ONLY when this module file itself is the
+// script node was told to execute — i.e. resolved argv[1] equals this module's
+// own file path (realpath-resolved so npm .bin symlinks still match; case-folded
+// on Windows). The previous check — argv[1] CONTAINS the substring 'verify' —
+// fired for ANY entry script whose path merely contained 'verify', so importing
+// this library from such a script hijacked stdout and called process.exit().
+function isCliEntry(): boolean {
+  if (typeof process === 'undefined' || !process.argv?.[1]) return false;
+  try {
+    let self = fileURLToPath(import.meta.url);
+    let entry = resolve(process.argv[1]);
+    try { self = realpathSync(self); } catch { /* keep the unresolved path */ }
+    try { entry = realpathSync(entry); } catch { /* keep the resolved path */ }
+    if (process.platform === 'win32') { self = self.toLowerCase(); entry = entry.toLowerCase(); }
+    return self === entry;
+  } catch { return false; }
+}
+
+if (isCliEntry()) {
   const resolveNear = (rel: string): string | null => {
     try {
       const p = fileURLToPath(new URL(rel, import.meta.url));
