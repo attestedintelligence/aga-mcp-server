@@ -58,7 +58,13 @@ program
   .option('--upstream-url <url>', 'Downstream MCP server URL (HTTP)')
   .option('--profile <name>', 'Policy profile: permissive, standard, restrictive', 'permissive')
   .option('--policy <path>', 'Custom policy JSON file')
-  .action(async (opts) => {
+  .action(startAction);
+
+// Shared by `start` and `run` (identical option sets). `run` previously delegated by re-parsing
+// argv through the start subcommand with 'start' left in the array, which commander rejects as a
+// stray operand — `aga-proxy run` exited 1 on every invocation from 3.0.0 through 3.3.3 without
+// ever reaching policy resolution. A shared action function cannot regress that way.
+async function startAction(opts: { port: string; controlPort: string; upstream?: string; upstreamUrl?: string; profile: string; policy?: string }) {
     const port = parseInt(opts.port, 10);
     const controlPort = parseInt(opts.controlPort, 10);
     let policy: ToolPolicy;
@@ -144,7 +150,7 @@ program
 
     process.on('SIGINT', shutdown);
     process.on('SIGTERM', shutdown);
-  });
+}
 
 // ── run (foreground, alias for start) ────────────────────────
 
@@ -157,12 +163,7 @@ program
   .option('--upstream-url <url>', 'Downstream MCP server URL (HTTP)')
   .option('--profile <name>', 'Policy profile', 'permissive')
   .option('--policy <path>', 'Custom policy JSON file')
-  .action(async (opts) => {
-    // Delegate to start - identical behavior in Node.js
-    await program.commands.find(c => c.name() === 'start')!.parseAsync(
-      ['node', 'aga-proxy', 'start', ...process.argv.slice(3)],
-    );
-  });
+  .action(startAction);
 
 // ── stop ─────────────────────────────────────────────────────
 
@@ -285,7 +286,9 @@ policyCmd
       console.error('Proxy not running in this process.');
       process.exit(1);
     }
-    const newPolicy = PROFILES[profile];
+    // REL-04: own-property lookup, so `policy switch constructor` (etc.) resolves undefined and is
+    // rejected, matching the `start --profile` guard rather than picking up an Object.prototype key.
+    const newPolicy = resolveProfile(profile);
     if (!newPolicy) {
       console.error(`Unknown profile: ${profile}. Available: ${Object.keys(PROFILES).join(', ')}`);
       process.exit(1);

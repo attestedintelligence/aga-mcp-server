@@ -47,7 +47,9 @@ const strip = (o: Record<string, unknown>, f: string): Record<string, unknown> =
  * (it also hashes tool arguments, which may legitimately carry integers > 2^53), so the floor is
  * applied HERE, only to the objects the signed path canonicalizes (each receipt and the checkpoint).
  * Throwing is caught by verifySepBundle's outer try/catch -> FAILED, matching the reference verdict.
- * The only signed numerics in a conformant bundle are the small integers leaf_count / leaf_index. [R3]
+ * The only SIGNED numeric in a conformant bundle is the small integer checkpoint.leaf_count;
+ * leaf_index lives in the unsigned merkle_proofs, outside this floor (a bad leaf_index is caught by
+ * merkle_and_bijection instead). [R3]
  */
 const assertSafeNumbers = (o: unknown, depth = 0): void => {
   if (depth > MAX_CANON_DEPTH) throw new Error(`canonicalize: input nesting exceeds ${MAX_CANON_DEPTH} levels`);

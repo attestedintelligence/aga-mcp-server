@@ -109,6 +109,17 @@ const rawCases = [
   { name: 'raw: a second JSON document appended', raw: validRaw + '\n' + validRaw, expect: 'FAILED' },
   { name: 'raw: trailing whitespace only (control — must stay VERIFIED)', raw: validRaw + '\n   \n', expect: 'VERIFIED' },
   { name: 'raw: sub-ULP integral leaf_count literal (JCS float64 collapse → VERIFIED)', raw: validRaw.replace(/("leaf_count":)(\d+)/, '$1$2.0000000000000001'), expect: 'VERIFIED' },
+  // R3 safe-integer floor — the release tree's proof that the 3.4.0 headline change is load-bearing.
+  // A signed field carrying a JSON integer with |value| > 2^53-1 (or a non-finite / non-integral
+  // literal) is preserved verbatim by Go (json.Number) and Python (arbitrary-precision int); a
+  // file-parsing verifier WITHOUT the floor would re-canonicalize the preserved literal and could
+  // VERIFY, while JS rounds it — a cross-stack split. With the floor applied in all five file-parse
+  // verifiers, every stack rejects these at the canon step. If the floor regressed, these three
+  // would split (Go/Python VERIFIED vs JS FAILED) and this gate would go red — the coverage the
+  // GATE-01 review found missing from this tree (the monorepo already carried them).
+  { name: 'raw: request_id = 9007199254740993 (2^53+1) exact literal → FAILED on all stacks', raw: validRaw.replace(/"request_id":"r1"/, '"request_id":9007199254740993'), expect: 'FAILED' },
+  { name: 'raw: request_id = -9007199254740993 exact literal → FAILED', raw: validRaw.replace(/"request_id":"r1"/, '"request_id":-9007199254740993'), expect: 'FAILED' },
+  { name: 'raw: request_id = 1e400 (large-exponent → non-finite) → FAILED', raw: validRaw.replace(/"request_id":"r1"/, '"request_id":1e400'), expect: 'FAILED' },
 ];
 console.log('\n--- raw-byte / file-parse cases (literal files; engine excluded — library-only) ---');
 for (const c of rawCases) {

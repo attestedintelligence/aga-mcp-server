@@ -60,7 +60,11 @@ function main() {
     console.error("re-vendors from the authority repo and rewrites the manifest) and commit both.");
     process.exit(1);
   }
-  console.log(`spec-vendor freeze OK: ${actual.length} files match aga-receipt-spec.MANIFEST.json (synced from authority ${manifest.authority_commit ?? "UNRECORDED"} at ${manifest.synced_at ?? "?"}).`);
+  // Say only what this guard actually proves: that the vendored bytes match the manifest. The
+  // manifest records which authority commit was HEAD when it was written, but this guard never
+  // compares the vendored bytes to the authority (the authority repo is private; CI cannot see it).
+  // The two can genuinely diverge — run scripts/sync-spec-vendor.mjs --report locally for parity.
+  console.log(`spec-vendor freeze OK: ${actual.length} files match aga-receipt-spec.MANIFEST.json (no accidental drift). Authority parity is NOT checked here (manifest was pinned against authority ${manifest.authority_commit ?? "UNRECORDED"} at ${manifest.synced_at ?? "?"}; use sync-spec-vendor.mjs --report to compare).`);
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

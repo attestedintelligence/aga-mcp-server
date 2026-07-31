@@ -77,8 +77,9 @@ const LONE_SURROGATE = /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[
 // / non-finite number) cannot round-trip identically across the JS/Go/Python stacks: JS silently
 // rounds it before canon while Go (json.Number) and Python (arbitrary-precision int) preserve the
 // literal — a validly-signed bundle then splits the six verifiers 3/3. Throwing here (caught by the
-// never-throw try/catch -> FAILED) makes all six reject identically; the only signed numerics in a
-// conformant bundle are the small integers leaf_count / leaf_index. [R3]
+// never-throw try/catch -> FAILED) makes all six reject identically; the only SIGNED numeric in a
+// conformant bundle is the small integer checkpoint.leaf_count (leaf_index lives in the unsigned
+// merkle_proofs, outside this floor). [R3]
 function canon(o: unknown): string {
   const rec = (v: unknown, depth: number): string => {
     if (depth > MAX_CANON_DEPTH) throw new Error(`canon: input nesting exceeds ${MAX_CANON_DEPTH} levels`);
