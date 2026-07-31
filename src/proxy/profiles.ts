@@ -45,3 +45,39 @@ export const PROFILES: Record<string, ToolPolicy> = {
   standard: STANDARD,
   restrictive: RESTRICTIVE,
 };
+
+/**
+ * REL-04: resolve a --profile name to its policy, or undefined for an
+ * UNRECOGNIZED name. Own-property check so prototype-chain names (e.g.
+ * 'constructor') can never resolve to garbage. The caller decides the
+ * failure behavior — the CLI refuses to start rather than silently
+ * falling back to 'permissive' (audit_only).
+ */
+export function resolveProfile(name: string): ToolPolicy | undefined {
+  return Object.prototype.hasOwnProperty.call(PROFILES, name) ? PROFILES[name] : undefined;
+}
+
+/**
+ * REL-04: the loud stderr banner printed when the proxy starts with an
+ * audit_only policy. audit_only records and signs every decision but
+ * denies nothing; denial happens only under an allowlist-mode policy
+ * (--profile standard / restrictive, or a custom --policy file).
+ * `source` names where the policy came from, e.g. "--profile permissive".
+ */
+export function auditOnlyWarningBanner(source: string): string {
+  const bar = '!'.repeat(76);
+  return [
+    bar,
+    '!!  AUDIT-ONLY MODE — THIS PROXY WILL NOT BLOCK ANY TOOL CALL',
+    '!!',
+    `!!  The active policy (${source}) has mode 'audit_only': every tool call`,
+    '!!  is PERMITTED and recorded. No call is denied in this mode. Signed',
+    '!!  receipts are still issued for every decision, so the evidence trail',
+    '!!  remains verifiable offline.',
+    '!!',
+    '!!  To enforce an allowlist (calls outside it are DENIED at the proxy',
+    '!!  boundary), start with --profile standard or --profile restrictive,',
+    '!!  or pass --policy <file> with "mode": "allowlist".',
+    bar,
+  ].join('\n');
+}

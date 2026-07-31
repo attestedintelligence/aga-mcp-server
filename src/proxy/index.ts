@@ -20,7 +20,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as os from 'node:os';
 import { GovernanceProxy } from './server.js';
-import { PROFILES } from './profiles.js';
+import { PROFILES, resolveProfile, auditOnlyWarningBanner } from './profiles.js';
 import type { ToolPolicy } from './types.js';
 import {
   ProxyControlServer, DEFAULT_CONTROL_PORT,
@@ -66,7 +66,22 @@ program
     if (opts.policy) {
       policy = JSON.parse(fs.readFileSync(opts.policy, 'utf-8'));
     } else {
-      policy = PROFILES[opts.profile] ?? PROFILES.permissive;
+      // REL-04: an unrecognized profile name is a hard error, not a silent
+      // fallback to 'permissive' (which is audit_only and denies nothing).
+      const resolved = resolveProfile(opts.profile);
+      if (!resolved) {
+        console.error(
+          `aga-proxy: unknown --profile '${opts.profile}'. Valid profiles: ${Object.keys(PROFILES).join(', ')}.\n` +
+          `Refusing to start: silently falling back to 'permissive' would run in audit-only mode (no call denied).`,
+        );
+        process.exit(2);
+      }
+      policy = resolved;
+    }
+
+    // REL-04: audit_only permits everything — make that impossible to miss.
+    if (policy.mode === 'audit_only') {
+      console.error(auditOnlyWarningBanner(opts.policy ? `--policy ${opts.policy}` : `--profile ${opts.profile}`));
     }
 
     const upstream = opts.upstream ? parseUpstreamCommand(opts.upstream) : undefined;
