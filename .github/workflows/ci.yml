@@ -1,10 +1,20 @@
 name: CI
 
 on:
+  # Was `branches: [main]` on both, unchanged since the 3.0.0 commit. Release work does not happen
+  # on main — it happens on `rc/*` branches, which is where the CVE fix, the R3 verdict-split fix
+  # and this session's security fixes all live. A filter that excludes the release-candidate branch
+  # excludes exactly the code most in need of the gate.
+  #
+  # (Runs ARE visible against rc/3.4.0 in the history, so GitHub's push filtering evidently admitted
+  # them somehow; I could not reproduce the rule without pushing, and did not want the RC's coverage
+  # to depend on a behaviour I cannot explain. Firing on every push and PR removes the question.)
+  #
+  # All four jobs were run locally on this branch before widening, so this does not hand over a red
+  # build: npm test 404/404, npm run build clean, npm audit --omit=dev 0 vulnerabilities,
+  # check-spec-vendor.mjs OK (27 files), zero-AGA-imports PASS, zero-runtime-deps PASS.
   push:
-    branches: [main]
   pull_request:
-    branches: [main]
 
 permissions:
   contents: read
