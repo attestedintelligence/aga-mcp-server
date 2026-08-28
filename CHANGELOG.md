@@ -4,6 +4,25 @@ All notable changes to `@attested-intelligence/aga-mcp-server` are recorded here
 
 ## Unreleased — honesty + safety fixes (2026-08-28)
 
+- **Security: two HIGH-severity production advisories cleared, both newly in range.** `npm audit
+  --omit=dev --audit-level=high` was **failing** on this branch:
+  - `fast-uri` — GHSA-v2hh-gcrm-f6hx (host confusion via backslash authority delimiter, CVSS 7.5).
+    **The 3.4.0 entry below is not wrong about what it did** — it refreshed `fast-uri` to 3.1.4, which
+    was clean at the time. The advisory range has since **widened to `<3.1.5`**, so the pinned version
+    became vulnerable without anything in this repo changing. Now overridden to `^3.1.5` (resolves 3.1.6).
+  - `ip-address` — GHSA-mwp4-54f8-5fhr (Address4 decodes leading-zero octets as decimal while
+    resolvers decode them as octal; SSRF / trust-boundary bypass). Overridden to `>=10.3.1`
+    (resolves 10.5.0). Reached via `@modelcontextprotocol/sdk` → `express-rate-limit`.
+  - `hono` — the existing `>=4.12.25` override no longer covered a moderate CORS ReDoS whose range
+    extends to `<4.12.34`; bumped accordingly (resolves 4.13.5).
+
+  Production dependencies are once again **clean at all severities** (`npm audit --omit=dev`:
+  found 0 vulnerabilities), which is what the 3.4.0 entry claims — that claim had silently gone false.
+  **This is a standing hazard worth naming: a dependency claim is only true as of the day it was
+  measured.** Advisory ranges widen over unchanged code, so a "clean" statement in a changelog decays
+  on its own. Re-run the audit immediately before publishing, not once at RC time.
+  Verified after the change: suite 404/404, `npm run build` clean, cross-stack 61/61.
+
 > Version number pending a founder decision: `3.4.0` is currently claimed by **two different trees**
 > (this release line and the quarantined governance branch) that are ~93 commits apart. Publishing
 > this line as 3.4.0 permanently burns that number for the other. These entries will move under
