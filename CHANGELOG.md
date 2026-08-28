@@ -2,7 +2,43 @@
 
 All notable changes to `@attested-intelligence/aga-mcp-server` are recorded here, newest first. This package follows [Semantic Versioning](https://semver.org). The signed receipt and evidence-bundle wire format is the canonical SEP profile; any format-affecting change is called out explicitly.
 
-## 3.4.0 — 2026-07-31
+## Unreleased — honesty + safety fixes (2026-08-28)
+
+> Version number pending a founder decision: `3.4.0` is currently claimed by **two different trees**
+> (this release line and the quarantined governance branch) that are ~93 commits apart. Publishing
+> this line as 3.4.0 permanently burns that number for the other. These entries will move under
+> whatever number is chosen.
+
+- **TTL expiry no longer signs an enforcement that never happened.** `measure_integrity` sealed
+  `enforcement_action: "TERMINATE"` into a signed receipt on TTL expiry and described the branch as
+  "fail-closed termination". Nothing terminates: the portal degrades to `SAFE_STATE` and keeps
+  accepting measurements, and `portal.enforce()` is never called on that path — nor *can* it be, since
+  it throws unless the state is `DRIFT_DETECTED`. Post-expiry calls kept succeeding and kept minting
+  fresh receipts, each asserting a termination that did not occur. The receipt now records what
+  actually happened. The sibling revocation branch was already honest and is unchanged.
+  **Not changed here:** whether TTL expiry *should* hard-terminate and force re-attestation. That is an
+  open product decision; until it is ruled, the record must not claim a behavior the code lacks.
+- **`aga-proxy export --output` no longer destroys an existing file.** Pointing `--output` at an
+  existing path silently truncated it and exited 0 reporting success — an ordinary path, no symlink,
+  no attacker, on the very artifact a verifier consumes. Export is now exclusive-create by default;
+  replacing a file requires an explicit `--force`.
+- **A malformed `--pubkey` is now a hard error (exit 2) instead of a silent downgrade.** A truncated or
+  mistyped key previously produced `VERIFIED (integrity only)` at exit 0, so an operator who intended
+  to pin provenance got a green result. The reference verifier has always guarded this; the guard had
+  never propagated to the CLI that becomes the published package.
+- **The cross-stack release gate now exercises the pinned path.** The corpus had no wrong-pin case, and
+  the harness collapses each stack to VERIFIED/FAILED without reading `issuerVerified`, so a verifier
+  that silently discarded the pin still read VERIFIED and the gate stayed green. A valid-but-wrong pin
+  control was added; all six verifiers agree FAILED across 61 cases.
+  Recorded, not fixed: on a 64-hex pin that is **not a valid curve point**, the stacks split 1-vs-5 on
+  whether that means "no pin" or "a pin that cannot match". Needs a spec ruling on malformed-pin
+  semantics before "six verifiers agree" is stated without qualification.
+
+## 3.4.0 — UNRELEASED (work completed 2026-07-31; npm `latest` is still 3.3.3)
+
+> **Not published.** This header previously read as a dated, shipped release. It is not on npm and has
+> not been since the work was completed. Nothing below is available to a consumer running
+> `npm install @attested-intelligence/aga-mcp-server`, which still resolves 3.3.3.
 
 - **Verification now fail-closed rejects integers outside ±2^53 in receipt/checkpoint numeric fields — bundles previously VERIFIED may now FAIL; this closes the cross-language verdict split.** JavaScript loses integer precision beyond `Number.MAX_SAFE_INTEGER`, so a bundle carrying e.g. `leaf_count > 2^53` could VERIFY in the JS stack on bytes the Go and Python verifiers read as a different number. Every stack now rejects the same out-of-range bundles at the same floor.
 - Security: cleared GHSA-frvp-7c67-39w9 (`@hono/node-server` < 2.0.5, Windows encoded-backslash path traversal in `serve-static`, moderate): `@modelcontextprotocol/sdk` bumped to `^1.30.0` (resolves `@hono/node-server` 2.0.12) and an `overrides` pin holds `@hono/node-server` at `>= 2.0.5`. Production dependencies (`npm audit --omit=dev`) are clean at all severities; `body-parser` (2.3.0) and `fast-uri` (3.1.4) transitives refreshed in the same pass.
