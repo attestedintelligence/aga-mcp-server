@@ -71,6 +71,42 @@ const vb = vectors.valid_bundle;
 cases.push({ name: 'valid (pinned)', bundle: vb.bundle, pin: vb.pinned_public_key, expect: 'VERIFIED' });
 cases.push({ name: 'valid (unpinned)', bundle: vb.bundle, pin: undefined, expect: 'VERIFIED' });
 for (const v of (vectors.valid_variants || [])) cases.push({ name: `valid-variant: ${v.desc}`, bundle: v.bundle, pin: v.pinned_public_key, expect: 'VERIFIED' });
+
+// ── PINNED-PATH NEGATIVE CONTROLS ─────────────────────────────────────────────
+// Without these, the pinned half of "six verifiers agree" was never exercised. Every pinned case
+// above expects VERIFIED, and this harness collapses each stack to VERIFIED/FAILED (verdict only —
+// `issuerVerified` is never read, and the subprocess stacks decide on exit code alone). So a stack
+// that SILENTLY DISCARDED the pin still returned VERIFIED and the gate stayed green: "provenance
+// verified" and "pin ignored" were indistinguishable. That is precisely the blind spot the shipped
+// aga-verify fell into (a malformed --pubkey downgraded to integrity-only and exited 0) and the one
+// the reviewer download's verifier fell into from the other direction (it lowercased an uppercase
+// pin and asserted a key match the canonical verifiers do not make).
+//
+// A WRONG-but-well-formed pin is the control that closes it: any verifier honoring the pin must
+// FAIL, and any verifier discarding it returns VERIFIED — a disagreement this gate now goes red on.
+// The pin must be a GENUINE Ed25519 curve point, not merely 64 hex chars. A 64-hex value that is
+// not a valid point (e.g. 'f'*64, whose y >= 2^255-19) is MALFORMED, and the stacks legitimately
+// disagree about what a malformed pin means — see the KNOWN DIVERGENCE note below. Using such a
+// value here would test that disagreement instead of the thing we want: that a pin which IS
+// honored, and does NOT match, fails everywhere. Derived deterministically from the fixed seed
+// 0x2a*32 (no randomness — this harness must be reproducible). NOTE: seed 0x07*32 derives the
+// CORPUS's own key, so the collision guard below is load-bearing, not decorative — it already
+// caught exactly that.
+const wrongPin = '197f6b23e16c8532c6abc838facd5ea789be0c76b2920334039bfa8b3d368d61';
+if (wrongPin === vb.pinned_public_key) throw new Error('negative-control pin collides with the corpus key');
+cases.push({ name: 'NEGATIVE CONTROL: valid-but-wrong pin must FAIL on every stack', bundle: vb.bundle, pin: wrongPin, expect: 'FAILED' });
+
+// ── KNOWN DIVERGENCE, recorded not hidden (surfaced by adding the control above) ───────────────
+// On a pin that is 64 hex but NOT a valid curve point, the stacks split:
+//   engine (src/sep/verify.ts:131) gates `pinned` on validPublicKeyForProfile -> wellFormedKey,
+//     which rejects a non-canonical y, so the pin is DISCARDED and the bundle reads VERIFIED
+//     (integrity-only);
+//   reference / aga-verify / go / python gate `pinned` on a plain ^[0-9a-f]{64}$ hex test, so the
+//     pin is HONORED, mismatches, and the bundle reads FAILED.
+// Same input, opposite verdicts, 1-vs-5. Neither is unsound — they disagree on whether a malformed
+// pin means "no pin" or "a pin that cannot match" — but "six verifiers agree" must not paper over
+// it. Deliberately NOT added as a passing case here: that would freeze the divergence into the
+// corpus as if it were intended. It needs a spec ruling on malformed-pin semantics first.
 for (const [i, a] of vectors.adversarial.entries()) cases.push({ name: `adversarial[${i}] ${a.desc}`, bundle: a.bundle, pin: undefined, expect: 'FAILED' });
 
 let failures = 0;
