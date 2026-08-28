@@ -348,6 +348,13 @@ if (isCliEntry()) {
   const useSample = args.includes('--sample');
   let file = args.find((a) => !a.startsWith('--'));
   const pk = args.includes('--pubkey') ? args[args.indexOf('--pubkey') + 1] : undefined;
+  // A PRESENT-but-malformed --pubkey is a usage error, NOT a silent downgrade to integrity-only:
+  // an operator who intended to pin (and fat-fingered/truncated the key) must not get a green exit 0.
+  // Mirrors aga-receipt-spec/verify/verify-sep.mjs's CLI guard, which this file never inherited.
+  if (pk !== undefined && !isHex(pk, 64)) {
+    console.error('error: --pubkey must be exactly 64 lowercase hex (a 32-byte Ed25519 key); refusing to silently downgrade to an integrity-only check.');
+    process.exit(2);
+  }
   if (useSample) {
     const sample = resolveNear('../example-bundle.json') ?? resolveNear('./example-bundle.json');
     if (!sample) { console.error('The packaged sample bundle was not found next to the installed package.'); process.exit(2); }

@@ -141,7 +141,12 @@ describe('exportBundleToFile — a SEPARATE invocation resolves the live ledger'
   });
 
   it('the in-process path still works (source = in-process)', async () => {
-    const res = await exportBundleToFile({ proxy, dataDir, output: outFile });
+    // Distinct output path: the preceding test already wrote `outFile`, and since RC9-06 the
+    // exporter refuses an existing destination by default (exclusive-create, D-21.7). This test
+    // asserts source resolution and receipt count — it never asserted overwrite semantics, so it
+    // gets its own path rather than depending on the destructive behavior that was just removed.
+    const freshOut = path.join(dataDir, 'evidence-in-process.json');
+    const res = await exportBundleToFile({ proxy, dataDir, output: freshOut });
     expect(res.source).toBe('in-process');
     expect(res.receiptCount).toBeGreaterThan(0);
   });

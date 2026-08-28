@@ -261,8 +261,23 @@ export async function createAGAServer(): Promise<McpServer> {
       let driftDesc: string | null = null;
 
       if (!result.ttl_ok) {
-        driftDesc = 'TTL expired - fail-closed termination';
-        action = 'TERMINATE';
+        // HONESTY FIX: this branch previously sealed `action = 'TERMINATE'` and described itself as
+        // "fail-closed termination". No termination occurs. portal.measure() degrades the portal to
+        // SAFE_STATE on TTL expiry (see core/portal.ts, "Graceful degradation") and keeps accepting
+        // measurements; portal.enforce() is NOT called here and CANNOT be — it throws unless state
+        // is DRIFT_DETECTED. The entry guard above rejects only TERMINATED, so post-expiry calls
+        // keep succeeding and would keep minting fresh receipts each asserting a termination that
+        // never happened. A signed receipt asserting an enforcement that did not occur is the exact
+        // failure this product exists to prevent, so the receipt now records what actually happened.
+        //
+        // NOTE: the sibling `revoked` branch below is honest — portal.measure() genuinely sets
+        // TERMINATED there, so sealing 'TERMINATE' is accurate. TTL was uniquely hollow.
+        //
+        // OPEN PRODUCT DECISION (founder/architecture, deliberately NOT made here): whether TTL
+        // expiry SHOULD hard-terminate and require re-attestation. Several public pages describe
+        // that behavior. Until it is ruled, the record must not claim a behavior the code lacks.
+        driftDesc = 'TTL expired - portal degraded to SAFE_STATE; no enforcement performed, measurement logging continues';
+        action = null;
       } else if (result.revoked) {
         driftDesc = 'Artifact revoked - fail-closed termination';
         action = 'TERMINATE';

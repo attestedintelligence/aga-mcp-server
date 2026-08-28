@@ -217,12 +217,13 @@ program
   .command('export')
   .description('Export the canonical SEP evidence bundle from the running proxy (in-process, or a live proxy over its loopback control channel)')
   .option('-o, --output <path>', 'Output file', 'evidence-bundle.json')
+  .option('--force', 'Replace the output file if it already exists (default: refuse, never destroy an existing file)')
   .action(async (opts) => {
     // Two paths, one artifact: if this process IS the running proxy, export its ledger directly;
     // otherwise reach the live proxy over 127.0.0.1 using the control port it published in the data
     // dir. Never emit an empty bundle when no proxy is running — fail loudly instead.
     try {
-      const res = await exportBundleToFile({ proxy, dataDir: getDataDir(), output: opts.output });
+      const res = await exportBundleToFile({ proxy, dataDir: getDataDir(), output: opts.output, force: opts.force === true });
       console.log(`Evidence bundle exported to ${res.output} (${res.receiptCount} receipts, via ${res.source})`);
     } catch (err) {
       if (err instanceof ExportUnavailableError) {

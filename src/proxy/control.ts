@@ -243,13 +243,38 @@ export async function fetchBundleViaControl(loc: ControlLocator): Promise<unknow
  * live proxy over its loopback control channel. Never writes an empty/placeholder bundle — if no
  * live proxy can be reached it throws {@link ExportUnavailableError}.
  */
+export class ExportTargetExistsError extends Error {
+  constructor(public readonly output: string) {
+    super(
+      `Refusing to overwrite an existing file: ${output}\n` +
+      `Export writes with exclusive-create by default so it can never destroy an operator's file.\n` +
+      `Choose a different --output path, or pass --force to replace this file deliberately.`
+    );
+    this.name = 'ExportTargetExistsError';
+  }
+}
+
 export async function exportBundleToFile(opts: {
   proxy: { exportBundle(): unknown } | null;
   dataDir: string;
   output: string;
+  /** RC9-06 / D-21.7: replacement is opt-in only. Default refuses an existing destination. */
+  force?: boolean;
   writeFile?: (filePath: string, data: string) => void;
 }): Promise<{ source: 'in-process' | 'control-channel'; output: string; receiptCount: number }> {
-  const write = opts.writeFile ?? ((p: string, d: string) => fs.writeFileSync(p, d));
+  // RC9-06 (founder ruling D-21.7): this previously called fs.writeFileSync unconditionally, so
+  // `export --output <existing-file>` silently TRUNCATED whatever the operator pointed at — a
+  // config, a key file, a prior bundle — and exited 0 reporting success. No attacker and no
+  // unusual deployment required, on the exact artifact a verifier consumes. Default is now
+  // exclusive-create ('wx', which fails if the path exists); replacement requires --force.
+  const write = opts.writeFile ?? ((p: string, d: string) => {
+    try {
+      fs.writeFileSync(p, d, opts.force ? undefined : { flag: 'wx' });
+    } catch (e) {
+      if (!opts.force && (e as NodeJS.ErrnoException)?.code === 'EEXIST') throw new ExportTargetExistsError(p);
+      throw e;
+    }
+  });
   let bundle: unknown;
   let source: 'in-process' | 'control-channel';
 
