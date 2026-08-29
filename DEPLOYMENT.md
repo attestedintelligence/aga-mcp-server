@@ -38,22 +38,40 @@ Only `method === "tools/call"` is policy-evaluated. Other JSON-RPC methods are f
 
 The **gateway key** is the Ed25519 key that signs every receipt and checkpoint. Pinning its public key is what turns a bundle from "internally consistent" into "provably issued by *this* gateway."
 
+> ### ⚠️ Which entry point are you running? The two do NOT handle the key the same way.
+>
+> | | `aga-mcp-server` (stdio MCP server) | `aga-proxy` (governance proxy) |
+> |---|---|---|
+> | Reads `AGA_GATEWAY_KEY` / `AGA_GATEWAY_KEY_FILE` | **yes** | **no — silently ignored** |
+> | Key when unset | ephemeral, **warns on stderr** | ephemeral, **no warning** |
+> | Provenance pinnable across restarts | yes, once persisted | **no** |
+>
+> `aga-proxy` calls `generateSigner()` unconditionally at construction: it takes no key CLI option, reads no key environment variable, and accepts no signer through its constructor. Setting `AGA_GATEWAY_KEY` before starting the proxy has **no effect and produces no warning** — two runs with an identical `AGA_GATEWAY_KEY` produce different gateway public keys.
+>
+> **Consequence for the proxy:** its bundles verify for *integrity* normally, but its public key changes on every restart, so a key you record and distribute today is wrong after the next restart. Treat `aga-proxy` evidence as integrity-verifiable and **not** provenance-pinnable across restarts. Note also that a verifier given a key lifted out of the same bundle it is checking will still print `provenance verified` — it cannot know where you got the key. That check is circular; only a key you obtained **before** the bundle proves issuance.
+>
+> Everything in the rest of this section — persisting, obtaining, pinning — applies to **`aga-mcp-server`**. Verified against 3.3.3.
+
 ### Generate a 32-byte seed (64-hex)
 ```bash
 node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 ```
 
-### Persist it (so provenance survives restarts and is pinnable)
+### Persist it (so provenance survives restarts and is pinnable) — `aga-mcp-server` only
 Either:
 ```bash
 export AGA_GATEWAY_KEY=<64-hex-seed>            # environment variable
 # or
 export AGA_GATEWAY_KEY_FILE=/run/secrets/aga-gateway-key   # file containing the hex seed
 ```
-If neither is set, the server uses an **ephemeral** key that rotates on every restart (it warns on stderr). Ephemeral is fine for local experiments but means **provenance cannot be pinned across restarts** — avoid it in anything you'll later audit.
+If neither is set, `aga-mcp-server` uses an **ephemeral** key that rotates on every restart (it warns on stderr). Ephemeral is fine for local experiments but means **provenance cannot be pinned across restarts** — avoid it in anything you'll later audit.
+
+`aga-proxy` ignores both variables and always uses an ephemeral key — see the table above.
 
 ### Obtain the public key to pin
-Call the `get_server_info` tool → **`gateway_public_key`**. That 64-hex value is what verifiers pin.
+For `aga-mcp-server`: call the `get_server_info` tool → **`gateway_public_key`**. That 64-hex value is what verifiers pin.
+
+For `aga-proxy` there is no equivalent: `aga-proxy status` reports only `running` and `pid`, and the gateway key appears **only inside an exported bundle** (`public_key`). Since that key is this process's key and rotates on restart, pinning it proves the bundle is internally consistent — not who issued it.
 
 ### Pin it when verifying
 ```bash
