@@ -62,11 +62,26 @@ export class Portal {
       expectedBytesHash: this.artifact.subject_identifier.bytes_hash,
       expectedMetaHash: this.artifact.subject_identifier.metadata_hash };
 
-    // Graceful degradation: TTL expiry -> SAFE_STATE + DEGRADATION event + continued logging
+    // FAIL CLOSED on TTL expiry (founder decision D1, ruled 2026-08-29).
+    //
+    // This branch previously set SAFE_STATE and kept accepting measurements, so an expired artifact
+    // went on being measured indefinitely and every public page describing TTL as an enforcement
+    // boundary was describing a behavior the code did not have. It now terminates, which is exactly
+    // what the revocation branch immediately below already does — TTL was the odd one out, not the
+    // new behavior.
+    //
+    // Consequence, deliberate: the entry guard above throws on TERMINATED, so the FIRST post-expiry
+    // measurement returns this result and any SUBSEQUENT call throws 'Portal is terminated'. That is
+    // the point of failing closed — an expired artifact stops being a usable measurement channel and
+    // re-attestation is required to get one back. Callers that previously looped on measure() past
+    // expiry must handle the throw.
+    //
+    // The degradation entry is still recorded. It is the forensic record of WHY termination happened,
+    // and dropping it would trade one honesty problem for another.
     const ttl_ok = !isExpired(this.artifact.issued_timestamp, this.artifact.enforcement_parameters.ttl_seconds);
     if (!ttl_ok) {
       const prevState = this.state;
-      this.state = 'SAFE_STATE';
+      this.state = 'TERMINATED';
       this.degradationLog.push({
         reason: 'TTL_EXPIRED',
         timestamp: utcNow(),

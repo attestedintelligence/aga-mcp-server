@@ -347,7 +347,7 @@ describe('Group 2: Policy Artifact Completeness', () => {
     const r = portal.measure(enc.encode(content), meta);
     expect(r.ttl_ok).toBe(false);
     expect(r.degraded).toBe(true);
-    expect(portal.state).toBe('SAFE_STATE');
+    expect(portal.state).toBe('TERMINATED')  // D1: TTL fails closed;
   });
 });
 
@@ -428,7 +428,7 @@ describe('Group 3: Portal State Machine', () => {
     expect(portal.state).toBe('TERMINATED');
   });
 
-  it('3.6 Graceful degradation on TTL expiry', () => {
+  it('3.6 TTL expiry fails closed (degradation reason still logged)', () => {
     const kp = generateKeyPair();
     const content = 'test-content';
     const meta = { filename: 'test.bin' };
@@ -449,7 +449,7 @@ describe('Group 3: Portal State Machine', () => {
 
     expect(r.ttl_ok).toBe(false);
     expect(r.degraded).toBe(true);
-    expect(portal.state).toBe('SAFE_STATE');
+    expect(portal.state).toBe('TERMINATED')  // D1: TTL fails closed;
     expect(portal.degradationLog).toHaveLength(1);
     expect(portal.degradationLog[0].reason).toBe('TTL_EXPIRED');
   });
@@ -484,7 +484,7 @@ describe('Group 3: Portal State Machine', () => {
     portal3.loadArtifact(expiredArt, pkToHex(kp.publicKey));
     const r3 = portal3.measure(enc.encode(content), meta);
     expect(r3.ttl_ok).toBe(false);
-    expect(portal3.state).toBe('SAFE_STATE');
+    expect(portal3.state).toBe('TERMINATED')  // D1: TTL fails closed;
 
     // d) Initial hash mismatch -> drift detected
     const portal4 = new Portal();

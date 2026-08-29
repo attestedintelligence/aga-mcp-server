@@ -10,6 +10,43 @@ publishing either line under that number would permanently burn it for the other
 work *and* the 3.4.0 work completed 2026-07-31 — releases together; npm `latest` has been 3.3.3 since
 2026-07-03.
 
+### BEHAVIOR CHANGE — TTL expiry now fails closed
+
+**If you rely on measurement continuing after an artifact's TTL lapses, this release breaks that.**
+Founder decision D1, ruled 2026-08-29.
+
+Previously `Portal.measure()` treated TTL expiry as *graceful degradation*: it moved the portal to
+`SAFE_STATE`, logged the reason, and **kept accepting measurements indefinitely**. An expired artifact
+therefore went on being measured, and the receipt recorded no enforcement because none occurred.
+
+Now TTL expiry sets `TERMINATED`, exactly as the sibling revocation branch always has — TTL was the
+odd one out, not the new behavior. Concretely:
+
+- The first post-expiry `measure()` returns `ttl_ok: false`, `degraded: true`, and the portal is
+  `TERMINATED`.
+- **Any subsequent `measure()` throws `Portal is terminated`.** Re-attestation is the only way back.
+  Callers that looped on `measure()` past expiry must handle this.
+- `measure_integrity` now seals `enforcement_action: 'TERMINATE'` on TTL expiry, and that is accurate:
+  termination genuinely happens. The invariant across every version of this code is unchanged — the
+  receipt says what actually happened. Only the underlying behavior moved.
+- The `TTL_EXPIRED` degradation entry is still written. It is the forensic record of *why* the portal
+  terminated, and dropping it would trade one honesty problem for another.
+
+**Semver note, stated plainly:** this is a behavioral break and a strict reading argues for a major
+version. It ships as a minor because the previous behavior contradicted the documented intent, and
+because no released consumer depends on post-expiry measurement (npm `latest` has been 3.3.3 since
+2026-07-03). If that reading is wrong for your deployment, pin `3.3.3`.
+
+Found while implementing this: `tests/core/fail-closed.test.ts` contained a test named
+**"fail-closed: expired TTL blocks execution"** that asserted `SAFE_STATE` — the state in which
+measurement *continues*. A test whose name claimed the boundary blocked execution had been green while
+proving it did not. It now asserts termination and that a second call throws. Six other assertions
+across four files encoded the old behavior and were updated with it; all were seen to go red before
+going green.
+
+Checked and unchanged: no shipped document and no public page makes a TTL enforcement claim, so this
+change corrects no external copy.
+
 ### Documentation: proxy key-persistence claims corrected
 
 `DEPLOYMENT.md` and `THREAT_BOUNDARY.md` ship inside this tarball, and both described key persistence

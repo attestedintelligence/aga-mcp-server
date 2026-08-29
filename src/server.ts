@@ -261,23 +261,21 @@ export async function createAGAServer(): Promise<McpServer> {
       let driftDesc: string | null = null;
 
       if (!result.ttl_ok) {
-        // HONESTY FIX: this branch previously sealed `action = 'TERMINATE'` and described itself as
-        // "fail-closed termination". No termination occurs. portal.measure() degrades the portal to
-        // SAFE_STATE on TTL expiry (see core/portal.ts, "Graceful degradation") and keeps accepting
-        // measurements; portal.enforce() is NOT called here and CANNOT be — it throws unless state
-        // is DRIFT_DETECTED. The entry guard above rejects only TERMINATED, so post-expiry calls
-        // keep succeeding and would keep minting fresh receipts each asserting a termination that
-        // never happened. A signed receipt asserting an enforcement that did not occur is the exact
-        // failure this product exists to prevent, so the receipt now records what actually happened.
+        // D1 RULED 2026-08-29: TTL expiry fails closed.
         //
-        // NOTE: the sibling `revoked` branch below is honest — portal.measure() genuinely sets
-        // TERMINATED there, so sealing 'TERMINATE' is accurate. TTL was uniquely hollow.
+        // History worth keeping, because it is the reason this comment is long. This branch once
+        // sealed 'TERMINATE' while portal.measure() only degraded to SAFE_STATE and kept accepting
+        // measurements — a signed receipt asserting an enforcement that never happened, which is the
+        // exact failure this product exists to prevent. That was corrected by making the RECEIPT
+        // honest about the weaker behavior (action = null). The founder has now ruled the other way:
+        // the BEHAVIOR is what changes, so portal.measure() genuinely sets TERMINATED on TTL expiry
+        // (see core/portal.ts) and sealing 'TERMINATE' is accurate again — for the same reason it has
+        // always been accurate on the sibling `revoked` branch below.
         //
-        // OPEN PRODUCT DECISION (founder/architecture, deliberately NOT made here): whether TTL
-        // expiry SHOULD hard-terminate and require re-attestation. Several public pages describe
-        // that behavior. Until it is ruled, the record must not claim a behavior the code lacks.
-        driftDesc = 'TTL expired - portal degraded to SAFE_STATE; no enforcement performed, measurement logging continues';
-        action = null;
+        // The invariant across all three versions is the one that matters: the receipt says what
+        // actually happened. Only the underlying behavior moved.
+        driftDesc = 'TTL expired - fail-closed termination; re-attestation required';
+        action = 'TERMINATE';
       } else if (result.revoked) {
         driftDesc = 'Artifact revoked - fail-closed termination';
         action = 'TERMINATE';

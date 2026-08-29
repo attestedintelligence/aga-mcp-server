@@ -48,7 +48,13 @@ describe('fail-closed semantics (fail-closed conditions)', () => {
     if (result.ok) {
       const m = portal.measure(enc.encode(content), meta);
       expect(m.ttl_ok).toBe(false);
-      expect(portal.state).toBe('SAFE_STATE');
+      // D1 (2026-08-29): TTL expiry now genuinely blocks execution, which is what this test has
+      // always been NAMED for. It previously asserted SAFE_STATE — the state in which measurement
+      // CONTINUES — so a test called "expired TTL blocks execution" was green while proving that
+      // execution was not blocked. The name is now true.
+      expect(portal.state).toBe('TERMINATED');
+      // Blocking has to mean the channel is actually closed, not merely relabelled.
+      expect(() => portal.measure(enc.encode(content), meta)).toThrow(/terminated/i);
     } else {
       // If load rejected due to period check, that's also fail-closed
       expect(portal.state).toBe('TERMINATED');

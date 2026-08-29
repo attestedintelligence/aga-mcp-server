@@ -50,7 +50,18 @@ const PAST_TTL_MS = 3601 * 1000;
 describe('TTL expiry receipt honesty', () => {
   afterEach(() => { vi.useRealTimers(); });
 
-  it('does NOT seal enforcement_action TERMINATE when nothing was terminated', async () => {
+  // D1 RULED 2026-08-29 — TTL expiry fails closed.
+  //
+  // The previous version of this file pinned the fail-OPEN behaviour and left a note saying that if
+  // TTL were ever made genuinely fail-closed, these assertions should go red and force the public
+  // claims to be revisited. That is exactly what happened: the change turned both red, and the public
+  // TTL claims were re-checked as a result. The tripwire worked; these are its replacements.
+  //
+  // The invariant is unchanged and is the only one that ever mattered: THE RECEIPT SAYS WHAT ACTUALLY
+  // HAPPENED. Before, nothing terminated, so sealing TERMINATE was a lie. Now termination genuinely
+  // occurs, so NOT sealing it would be the lie.
+
+  it('seals enforcement_action TERMINATE because termination genuinely occurs', async () => {
     const { call } = await connect();
     const meta = { filename: 'subject.txt' };
 
@@ -65,14 +76,12 @@ describe('TTL expiry receipt honesty', () => {
     // The TTL really did lapse — otherwise this test proves nothing.
     expect(expired.ttl_ok).toBe(false);
 
-    // THE GUARD: the signed receipt must not claim a termination that did not occur.
-    expect(expired.enforcement_action).not.toBe('TERMINATE');
-
-    // And the portal must not be reported as terminated, because it isn't.
-    expect(expired.portal_state).not.toBe('TERMINATED');
+    // THE GUARD, in its new direction: the receipt must record the termination that did occur.
+    expect(expired.enforcement_action).toBe('TERMINATE');
+    expect(expired.portal_state).toBe('TERMINATED');
   });
 
-  it('reports the portal state it is actually in after TTL expiry (SAFE_STATE, still serving)', async () => {
+  it('refuses further measurement after TTL expiry — the channel is actually closed', async () => {
     const { call } = await connect();
     const meta = { filename: 'subject.txt' };
     await call('attest_subject', { subject_content: 'hello', subject_metadata: meta });
@@ -82,14 +91,13 @@ describe('TTL expiry receipt honesty', () => {
 
     const first = await call('measure_integrity', { subject_content: 'hello', subject_metadata: meta });
     expect(first.ttl_ok).toBe(false);
-    expect(first.portal_state).toBe('SAFE_STATE');
+    expect(first.portal_state).toBe('TERMINATED');
 
-    // Documents the real fail-OPEN behavior: a second post-expiry call still succeeds.
-    // This is pinned deliberately. If TTL is ever made genuinely fail-closed, THIS is the
-    // assertion that should go red and force the public claims to be revisited with it.
+    // The load-bearing half. "Fail closed" has to mean the second call cannot proceed; a state label
+    // that still served measurements would be the same defect wearing a different word. Re-attestation
+    // is the only way back.
     const second = await call('measure_integrity', { subject_content: 'hello', subject_metadata: meta });
-    expect(second.success).toBe(true);
-    expect(second.enforcement_action).not.toBe('TERMINATE');
+    expect(second.success).not.toBe(true);
   });
 
   it('still seals TERMINATE for revocation, which genuinely does terminate (negative control)', async () => {
