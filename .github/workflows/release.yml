@@ -28,6 +28,10 @@ on:
         description: 'Dry run: build + full gate + cross-stack + pack guard, but DO NOT publish'
         type: boolean
         default: true
+      promote_only:
+        description: 'Promote the ALREADY-PUBLISHED version to dist_tag (npm dist-tag add). Use this to move an rc to latest — a second npm publish of the same version fails with EPUBLISHCONFLICT.'
+        type: boolean
+        default: false
       publish_server:
         description: 'Publish @attested-intelligence/aga-mcp-server'
         type: boolean
@@ -98,8 +102,27 @@ jobs:
           DIST_TAG: ${{ inputs.dist_tag }}
           PROVENANCE: ${{ inputs.provenance }}
           DRY_RUN: ${{ inputs.dry_run }}
+          PROMOTE_ONLY: ${{ inputs.promote_only }}
         run: |
           set -euo pipefail
+          VERSION=$(node -p "require('./package.json').version")
+          # PROMOTE path. npm refuses to publish a version that already exists
+          # (EPUBLISHCONFLICT), so the rc -> latest move is a TAG operation, not a publish. This
+          # existed as a real gap: the 3.5.0 latest run failed here because the rc run had already
+          # published that exact version. Provenance is unaffected — the attestation is bound to the
+          # published tarball, and moving a dist-tag only repoints a pointer at it.
+          if [ "$PROMOTE_ONLY" = "true" ]; then
+            if [ "$DRY_RUN" = "true" ]; then
+              echo "DRY RUN — would promote: npm dist-tag add @attested-intelligence/aga-mcp-server@$VERSION $DIST_TAG"
+            else
+              # Refuse to promote something that was never published, rather than failing obscurely.
+              npm view "@attested-intelligence/aga-mcp-server@$VERSION" version > /dev/null 2>&1 \
+                || { echo "::error::@attested-intelligence/aga-mcp-server@$VERSION is not published; promote_only has nothing to point at"; exit 1; }
+              npm dist-tag add "@attested-intelligence/aga-mcp-server@$VERSION" "$DIST_TAG"
+              echo "promoted @attested-intelligence/aga-mcp-server@$VERSION to $DIST_TAG"
+            fi
+            exit 0
+          fi
           if [ "$DIST_TAG" = "latest" ] && [ "$PROVENANCE" != "true" ]; then
             echo "::error::provenance is REQUIRED for a latest publish (this repo is public)"; exit 1
           fi
@@ -142,8 +165,24 @@ jobs:
           DIST_TAG: ${{ inputs.dist_tag }}
           PROVENANCE: ${{ inputs.provenance }}
           DRY_RUN: ${{ inputs.dry_run }}
+          PROMOTE_ONLY: ${{ inputs.promote_only }}
         run: |
           set -euo pipefail
+          VERSION=$(node -p "require('./package.json').version")
+          # PROMOTE path — see the equivalent block in the server step for why a tag move is not a
+          # publish. Kept symmetrical deliberately: the two packages release together, so a promote
+          # that covered only one of them would leave `latest` split across versions.
+          if [ "$PROMOTE_ONLY" = "true" ]; then
+            if [ "$DRY_RUN" = "true" ]; then
+              echo "DRY RUN — would promote: npm dist-tag add @attested-intelligence/aga-verify@$VERSION $DIST_TAG"
+            else
+              npm view "@attested-intelligence/aga-verify@$VERSION" version > /dev/null 2>&1 \
+                || { echo "::error::@attested-intelligence/aga-verify@$VERSION is not published; promote_only has nothing to point at"; exit 1; }
+              npm dist-tag add "@attested-intelligence/aga-verify@$VERSION" "$DIST_TAG"
+              echo "promoted @attested-intelligence/aga-verify@$VERSION to $DIST_TAG"
+            fi
+            exit 0
+          fi
           if [ "$DIST_TAG" = "latest" ] && [ "$PROVENANCE" != "true" ]; then
             echo "::error::provenance is REQUIRED for a latest publish (this repo is public)"; exit 1
           fi
