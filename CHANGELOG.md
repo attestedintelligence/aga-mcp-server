@@ -2,7 +2,39 @@
 
 All notable changes to `@attested-intelligence/aga-mcp-server` are recorded here, newest first. This package follows [Semantic Versioning](https://semver.org). The signed receipt and evidence-bundle wire format is the canonical SEP profile; any format-affecting change is called out explicitly.
 
-## Unreleased — honesty + safety fixes (2026-08-28)
+## 3.5.0 — 2026-08-29
+
+**Version ruled 2026-08-29.** `3.4.0` was claimed by two different trees ~93 commits apart, so
+publishing either line under that number would permanently burn it for the other. This line ships as
+**3.5.0** and `3.4.0` is abandoned unpublished. Everything below — the 2026-08-28 honesty and safety
+work *and* the 3.4.0 work completed 2026-07-31 — releases together; npm `latest` has been 3.3.3 since
+2026-07-03.
+
+### Documentation: proxy key-persistence claims corrected
+
+`DEPLOYMENT.md` and `THREAT_BOUNDARY.md` ship inside this tarball, and both described key persistence
+that **`aga-proxy` does not implement**. DEPLOYMENT §1 is explicitly about the proxy; §2 then told
+operators to set `AGA_GATEWAY_KEY` / `AGA_GATEWAY_KEY_FILE`, said the ephemeral fallback "warns on
+stderr", and pointed at `get_server_info`. For the proxy none of that is true — an operator following
+it pinned a key that rotates on the next restart.
+
+- `GovernanceProxy` calls `generateSigner()` unconditionally in its constructor: no key CLI option, no
+  environment variable, no signer through `ProxyServerOptions`. Two runs with an identical
+  `AGA_GATEWAY_KEY` produce different gateway public keys (measured). `dist/server.js` carries the
+  `EPHEMERAL gateway signing key` stderr warning; `dist/proxy/` has none.
+- `THREAT_BOUNDARY.md` §3.4 previously read **"Key persistence — mitigated in 3.0"** while §3.1–3.3 are
+  each prefixed "Proxy —" and §3.4 was not, so it scanned as covering the package. A residual-risk
+  register must not record an unmitigated risk as mitigated. It now states the asymmetry.
+- Both files gained an entry-point comparison table, and record that a verifier handed a key taken from
+  the bundle under test will still print `provenance verified` — that check is **circular**, and only a
+  key obtained beforehand proves issuance.
+
+**KNOWN LIMITATION, unchanged in this release:** `aga-proxy` still has no way to persist its signing
+key, so proxy-issued bundles are integrity-verifiable but **not provenance-pinnable across restarts**.
+`aga-mcp-server` (the stdio server) is unaffected and persists normally. Closing the proxy gap is
+runtime work that is deliberately out of scope here.
+
+### Honesty + safety fixes (2026-08-28)
 
 - **Security: two HIGH-severity production advisories cleared, both newly in range.** `npm audit
   --omit=dev --audit-level=high` was **failing** on this branch:
@@ -23,10 +55,8 @@ All notable changes to `@attested-intelligence/aga-mcp-server` are recorded here
   on its own. Re-run the audit immediately before publishing, not once at RC time.
   Verified after the change: suite 404/404, `npm run build` clean, cross-stack 61/61.
 
-> Version number pending a founder decision: `3.4.0` is currently claimed by **two different trees**
-> (this release line and the quarantined governance branch) that are ~93 commits apart. Publishing
-> this line as 3.4.0 permanently burns that number for the other. These entries will move under
-> whatever number is chosen.
+> Resolved 2026-08-29: this line ships as **3.5.0**; `3.4.0` is abandoned unpublished so the number
+> stays free for the other tree. See the release heading above.
 
 - **TTL expiry no longer signs an enforcement that never happened.** `measure_integrity` sealed
   `enforcement_action: "TERMINATE"` into a signed receipt on TTL expiry and described the branch as
@@ -53,7 +83,7 @@ All notable changes to `@attested-intelligence/aga-mcp-server` are recorded here
   whether that means "no pin" or "a pin that cannot match". Needs a spec ruling on malformed-pin
   semantics before "six verifiers agree" is stated without qualification.
 
-## 3.4.0 — UNRELEASED (work completed 2026-07-31; npm `latest` is still 3.3.3)
+### Included from the abandoned 3.4.0 line (work completed 2026-07-31, never published)
 
 > **Not published.** This header previously read as a dated, shipped release. It is not on npm and has
 > not been since the work was completed. Nothing below is available to a consumer running
