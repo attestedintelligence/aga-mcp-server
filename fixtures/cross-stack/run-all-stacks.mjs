@@ -172,5 +172,15 @@ rmSync(work, { recursive: true, force: true });
 
 console.log(failures
   ? `\nCROSS-STACK CONFORMANCE FAILED (${failures}/${total} cases had a disagreement)`
-  : `\nCROSS-STACK CONFORMANCE PASSED — ${STACKS.length} verifiers agree on all ${total} cases (incl. ${rawCases.length} raw-byte/file-parse cases)`);
+  // PRECISION, not pedantry. The engine is library-only — it receives pre-parsed objects in-server
+  // and never raw file bytes — so it does NOT run the file-parse cases. RAW_STACKS has five entries,
+  // not six. "Six verifiers agree on all N" therefore overclaims by one verifier on those cases, and
+  // that sentence has been copied into README.md, THREAT_BOUNDARY.md, REVIEWER_GUIDE.md and two
+  // public site pages, several of them also carrying a stale total. State the split explicitly so
+  // the number that gets copied outward is the true one.
+  //
+  // This wording already existed on the quarantined p2/security-startup-safety branch and never
+  // reached main or rc/3.4.0 — so the corrected claim was trapped in a branch that can never ship
+  // while the overclaim shipped. Ported here deliberately.
+  : `\nCROSS-STACK CONFORMANCE PASSED — ${STACKS.length} verifier configurations agree on the ${total - rawCases.length} object-level cases; the ${RAW_STACKS.length} file-parsing verifiers (the engine is library-only and never receives raw bytes) agree on the ${rawCases.length} raw-byte/file-parse cases — ${total} cases total`);
 process.exit(failures ? 1 : 0);
