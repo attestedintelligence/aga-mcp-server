@@ -50,7 +50,7 @@ The **gateway key** is the Ed25519 key that signs every receipt and checkpoint. 
 >
 > **Consequence for the proxy:** its bundles verify for *integrity* normally, but its public key changes on every restart, so a key you record and distribute today is wrong after the next restart. Treat `aga-proxy` evidence as integrity-verifiable and **not** provenance-pinnable across restarts. Note also that a verifier given a key lifted out of the same bundle it is checking will still print `provenance verified` — it cannot know where you got the key. That check is circular; only a key you obtained **before** the bundle proves issuance.
 >
-> Everything in the rest of this section — persisting, obtaining, pinning — applies to **`aga-mcp-server`**. Verified against 3.3.3.
+> Everything in the rest of this section — persisting, obtaining, pinning — applies to **`aga-mcp-server`**. Verified against 3.5.0.
 
 ### Generate a 32-byte seed (64-hex)
 ```bash
@@ -71,7 +71,7 @@ If neither is set, `aga-mcp-server` uses an **ephemeral** key that rotates on ev
 ### Obtain the public key to pin
 For `aga-mcp-server`: call the `get_server_info` tool → **`gateway_public_key`**. That 64-hex value is what verifiers pin.
 
-For `aga-proxy` there is no equivalent: `aga-proxy status` reports only `running` and `pid`, and the gateway key appears inside the exported bundle (`public_key`) — whether saved to a file or fetched live from the loopback control channel's `GET /export`. Either way it is this process's key and rotates on restart, so pinning it is circular. Since that key is this process's key and rotates on restart, pinning it proves the bundle is internally consistent — not who issued it.
+For `aga-proxy` there is no equivalent: `aga-proxy status` reports only `running` and `pid`, and the gateway key appears inside the exported bundle (`public_key`) — whether saved to a file or fetched live from the loopback control channel's `GET /export`. Either way it is this process's key and rotates on restart, so pinning it proves the bundle is internally consistent — not who issued it.
 
 ### Pin it when verifying
 ```bash
@@ -92,7 +92,9 @@ The gateway key is a signing secret — **anyone who holds it can mint a fully V
 ## 3. Recommended hardened configuration
 
 ```jsonc
-// Claude Desktop / MCP client config — proxy in front of a stdio upstream, persisted key
+// Claude Desktop MCP config — the stdio server with a persisted gateway key.
+// (This runs `aga-mcp-server`, which honors the key. For an aga-proxy-in-front-of-upstream
+//  deployment see §1; note the proxy does NOT read this env var — §2.)
 {
   "mcpServers": {
     "aga": {
@@ -104,7 +106,7 @@ The gateway key is a signing secret — **anyone who holds it can mint a fully V
 }
 ```
 Checklist:
-- [ ] stdio upstream (no HTTP upstream, or HTTP only behind network isolation).
+- [ ] For a proxy deployment: stdio upstream (no HTTP upstream, or HTTP only behind network isolation).
 - [ ] Persisted gateway key from a secret manager / restricted file.
 - [ ] The agent's **only** route to tools is through the proxy (network isolation).
 - [ ] Verifiers **pin** `gateway_public_key`; an unpinned PASS is treated as integrity-only, not provenance.
