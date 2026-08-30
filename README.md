@@ -7,7 +7,7 @@ Cryptographic runtime governance for AI agents and autonomous systems.
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/attestedintelligence/aga-mcp-server/blob/main/LICENSE)
 [![npm provenance](https://img.shields.io/badge/npm-SLSA%20provenance-brightgreen)](https://www.npmjs.com/package/@attested-intelligence/aga-mcp-server)
 
-> **Status: published to npm; this release carries SLSA build provenance (check it: `npm audit signatures`).** The server tools and the `aga-proxy` emit the **canonical SEP evidence bundle**, verifiable offline by the published `@attested-intelligence/aga-verify` and the reference verifier `aga-receipt-spec/verify/verify-sep.mjs`. **Since 3.2.0 the verifier is algorithm-agile and ships a post-quantum profile:** v1 `Ed25519-SHA256-JCS` (the default the gateway emits) and v2 `ML-DSA-65+Ed25519-SHA256-JCS` (a NIST FIPS-204 ML-DSA-65 + RFC-8032 Ed25519 **composite**, both must verify), selected per-bundle by the `algorithm` field with a `VERIFIED / FAILED / UNSUPPORTED_PROFILE` trichotomy. Pre-3.0 releases (a legacy continuity-chain bundle that does *not* verify under the SEP verifier) are deprecated; use `^3.0.0`. Claim scope and residual attack surface are documented honestly in `THREAT_BOUNDARY.md`.
+> **Status: published to npm; this release carries SLSA build provenance (check it: `npm audit signatures`).** The server tools and the `aga-proxy` emit the **canonical SEP evidence bundle**, verifiable offline by the published `@attested-intelligence/aga-verify` and the reference verifier `aga-receipt-spec/verify/verify-sep.mjs`. **Since 3.2.0 the verifier is algorithm-agile and ships a post-quantum profile:** v1 `Ed25519-SHA256-JCS` (the default the gateway emits) and v2 `ML-DSA-65+Ed25519-SHA256-JCS` (a NIST FIPS-204 ML-DSA-65 + RFC-8032 Ed25519 **composite**, both must verify), selected per-bundle by the `algorithm` field with a `VERIFIED / FAILED / UNSUPPORTED_PROFILE` trichotomy. Pre-3.0 releases (a legacy continuity-chain bundle that does *not* verify under the SEP verifier) are deprecated; use `^3.0.0`. Claim scope and residual attack surface are documented honestly in `THREAT_BOUNDARY.md`. **3.5.0 (2026-08-29) changes one behavior:** an artifact's TTL now *fails closed* — on expiry the portal terminates and a further measurement is refused, where earlier releases degraded and kept measuring. If you depend on the old post-expiry behavior, pin `3.3.3`. See `CHANGELOG.md`.
 
 ```bash
 # This package IS the AGA MCP server (TypeScript, runs over stdio). Use it from any MCP client:
@@ -58,6 +58,8 @@ Claude can then seal artifacts, measure integrity, generate evidence bundles, an
 ### Persist the signing key (do this first)
 
 By default the gateway signs with an **ephemeral** key that rotates on every restart. That is fine for a first look, but evidence-bundle provenance cannot be pinned across restarts (and the server warns about it on stderr). Set one stable 64-hex Ed25519 seed so provenance stays pinnable:
+
+> This applies to the **`aga-mcp-server`** stdio server (below, as a Claude Desktop MCP server). **`aga-proxy` ignores `AGA_GATEWAY_KEY` / `AGA_GATEWAY_KEY_FILE`** and always uses an ephemeral key — its bundles are integrity-verifiable but not provenance-pinnable across restarts. See `DEPLOYMENT.md` §2.
 
 ```bash
 # generate a seed once (32 random bytes, hex)
@@ -168,6 +170,8 @@ A **separate** `aga-proxy export` invocation reads that file and fetches the sam
 npx -p @attested-intelligence/aga-mcp-server aga-proxy start \
   --upstream "npx -y @modelcontextprotocol/server-filesystem /tmp/test" --profile standard
 
+# (First, drive at least one tools/call through the proxy from your MCP client — an empty
+#  ledger has no receipts to checkpoint, and the export reports there is nothing to export.)
 # Terminal B — export the live ledger from a different shell, then verify it offline
 npx -p @attested-intelligence/aga-mcp-server aga-proxy export -o evidence.json
 npx -y @attested-intelligence/aga-verify evidence.json --pubkey <gateway-public-key>
@@ -278,6 +282,9 @@ tests/                 # TypeScript test suite (404 automated tests)
 - [Diligence Materials](https://attestedintelligence.com/diligence)
 - [MCP Server (npm)](https://www.npmjs.com/package/@attested-intelligence/aga-mcp-server)
 - [Python SDK (PyPI)](https://pypi.org/project/aga-governance/)
+- [Changelog](https://github.com/attestedintelligence/aga-mcp-server/blob/main/CHANGELOG.md)
+- [Threat boundary](https://github.com/attestedintelligence/aga-mcp-server/blob/main/THREAT_BOUNDARY.md)
+- [Deployment guide](https://github.com/attestedintelligence/aga-mcp-server/blob/main/DEPLOYMENT.md)
 
 ## Security
 

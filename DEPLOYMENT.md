@@ -71,7 +71,7 @@ If neither is set, `aga-mcp-server` uses an **ephemeral** key that rotates on ev
 ### Obtain the public key to pin
 For `aga-mcp-server`: call the `get_server_info` tool → **`gateway_public_key`**. That 64-hex value is what verifiers pin.
 
-For `aga-proxy` there is no equivalent: `aga-proxy status` reports only `running` and `pid`, and the gateway key appears **only inside an exported bundle** (`public_key`). Since that key is this process's key and rotates on restart, pinning it proves the bundle is internally consistent — not who issued it.
+For `aga-proxy` there is no equivalent: `aga-proxy status` reports only `running` and `pid`, and the gateway key appears inside the exported bundle (`public_key`) — whether saved to a file or fetched live from the loopback control channel's `GET /export`. Either way it is this process's key and rotates on restart, so pinning it is circular. Since that key is this process's key and rotates on restart, pinning it proves the bundle is internally consistent — not who issued it.
 
 ### Pin it when verifying
 ```bash
