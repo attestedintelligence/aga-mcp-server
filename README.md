@@ -241,7 +241,7 @@ with AgentSession(gateway_id="my-gateway") as session:
 
 Automated tests across TypeScript and Python, plus a conformance corpus:
 
-- **TypeScript MCP server:** 384 automated tests (vitest), including provable-denial and behavioral-monitor regressions
+- **TypeScript MCP server:** 404 automated tests (vitest), including provable-denial and behavioral-monitor regressions
 - **SEP conformance corpus:** `npm run test:conformance` (valid → VERIFIED, negatives → FAILED)
 - **Python companion SDK:** the separately-published `aga-governance` PyPI package (install + smoke-checked here; its full pytest suite runs from the source tree)
 
@@ -266,7 +266,7 @@ src/
   middleware/          # Governance PEP wrapper (records a signed PERMITTED/DENIED receipt per governed call)
 independent-verifier/  # @attested-intelligence/aga-verify: standalone SEP verifier, zero AGA imports
 scenarios/             # Demo scenarios (SCADA, autonomous vehicle, AI agent) that emit SEP bundles
-tests/                 # TypeScript test suite (384 automated tests)
+tests/                 # TypeScript test suite (404 automated tests)
 ```
 
 ## Links

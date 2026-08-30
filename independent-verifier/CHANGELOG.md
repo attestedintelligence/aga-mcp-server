@@ -2,7 +2,9 @@
 
 All notable changes to `@attested-intelligence/aga-verify` are recorded here, newest first. This package follows [Semantic Versioning](https://semver.org). Any change that can flip a verification verdict is called out explicitly, first.
 
-## Unreleased — malformed-pin guard (2026-08-28)
+## 2.2.0 — 2026-08-29 (npm `latest`)
+
+Published to npm as `latest` on 2026-08-29 with SLSA provenance. Includes the malformed-pin guard below.
 
 - **A malformed `--pubkey` is now a hard usage error (exit 2), never a silent downgrade.** A key that
   is not exactly 64 lowercase hex previously fell through to `pinned = false`, skipping the
@@ -13,9 +15,9 @@ All notable changes to `@attested-intelligence/aga-verify` are recorded here, ne
   `REVIEWER_GUIDE.md`'s claim that "a malformed `--pubkey` is a hard error, not a silent downgrade"
   was false for the shipped tool and is now true. Regression-tested in both directions.
 
-## 2.2.0 — UNRELEASED (work completed 2026-07-31; npm `latest` is still 2.1.1)
+## 2.2.0 — details (work completed 2026-07-31; shipped 2026-08-29)
 
-> **Not published.** This header previously read as a dated, shipped release. Consumers running
+> Superseded: 2.2.0 is now published. (Historical note, prior to 2026-08-29:) consumers running
 > `npx @attested-intelligence/aga-verify` still get 2.1.1, which contains none of the below.
 
 - **Verification now fail-closed rejects integers outside ±2^53 in receipt/checkpoint numeric fields — bundles previously VERIFIED may now FAIL; this closes the cross-language verdict split.** JavaScript loses integer precision beyond `Number.MAX_SAFE_INTEGER`, so a bundle carrying e.g. `leaf_count > 2^53` could VERIFY here on bytes the Go and Python verifiers read as a different number. Every stack now rejects the same out-of-range bundles at the same floor.

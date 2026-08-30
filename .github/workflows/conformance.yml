@@ -15,7 +15,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: recursive   # aga-receipt-spec hosts the normative verify-sep.mjs
       - uses: actions/setup-node@v4
         with:
           node-version: '20'

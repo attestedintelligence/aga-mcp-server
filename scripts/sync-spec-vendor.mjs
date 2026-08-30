@@ -23,7 +23,8 @@ import { hashFile, trackedVendorFiles } from "./check-spec-vendor.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const manifestPath = path.join(root, "aga-receipt-spec.MANIFEST.json");
-const AUTHORITY = process.env.AGA_SPEC_AUTHORITY ?? "C:\\Users\\neuro\\AGA\\aga-receipt-spec";
+const AUTHORITY = process.env.AGA_SPEC_AUTHORITY;
+if (!AUTHORITY) throw new Error("AGA_SPEC_AUTHORITY must be set to the spec-authority path; refusing a machine-specific default.");
 
 const mode = process.argv[2];
 if (!["--report", "--pin-current", "--sync"].includes(mode ?? "")) {
