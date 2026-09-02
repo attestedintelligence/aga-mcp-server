@@ -26,6 +26,7 @@ import type { ToolPolicy } from './types.js';
 import {
   SepGateway, generateSigner, derivePolicyReference, safeArgumentsHash,
   type SepSigner, type SepReceipt, type SepBundle, type MerkleProof,
+  resolveGatewaySigner, describeGatewayKey, type ResolvedGatewayKey,
 } from '../sep/index.js';
 
 // ── Evidence types ARE the canonical src/sep types (no parallel definitions) ──
@@ -57,6 +58,12 @@ export interface ProxyServerOptions {
   passthroughExclude?: string[];
   /** Optional denylist: non-tools/call methods to reject (records a DENIED passthrough receipt; does not forward). */
   denyMethods?: string[];
+  /**
+   * Deliberately use a throwaway signing key, ignoring AGA_GATEWAY_KEY / AGA_GATEWAY_KEY_FILE.
+   * Turns the old silent default into a stated choice: the proxy still warns that provenance cannot
+   * be pinned, but the operator has said they want that.
+   */
+  ephemeral?: boolean;
 }
 
 export class GovernanceProxy extends EventEmitter {
@@ -83,6 +90,13 @@ export class GovernanceProxy extends EventEmitter {
   // Stats
   private stats = { permitted: 0, denied: 0, total: 0, started_at: '' };
 
+  /** One line naming the active signing identity, for the startup banner. Public key only. */
+  describeKey(): string { return describeGatewayKey(this.gatewayKey); }
+  /** True when the signing key rotates on restart, so provenance cannot be pinned across one. */
+  get keyIsEphemeral(): boolean { return this.gatewayKey.ephemeral; }
+  /** How the active signing key was obtained; drives the startup banner and honest provenance wording. */
+  private gatewayKey: ResolvedGatewayKey;
+
   constructor(options: ProxyServerOptions = {}) {
     super();
     this.port = options.port ?? 18800;
@@ -92,7 +106,14 @@ export class GovernanceProxy extends EventEmitter {
     this.gatewayId = options.gatewayId ?? 'aga-proxy';
     this.passthroughExclude = new Set(options.passthroughExclude ?? DEFAULT_PASSTHROUGH_EXCLUDE);
     this.denyMethods = new Set(options.denyMethods ?? []);
-    this.signer = generateSigner().signer;
+    // Honour the SAME key contract the MCP server honours (AGA_GATEWAY_KEY / _FILE). Before this,
+    // the proxy called generateSigner() unconditionally and silently ignored a correctly-set
+    // variable, leaving operators with unpinnable evidence and no warning. See DEPLOYMENT.md.
+    this.gatewayKey = resolveGatewaySigner({
+      forceEphemeral: options.ephemeral === true,
+      logPrefix: 'aga-proxy',
+    });
+    this.signer = this.gatewayKey.signer;
     this.sep = new SepGateway({ gatewayId: this.gatewayId, signer: this.signer });
   }
 

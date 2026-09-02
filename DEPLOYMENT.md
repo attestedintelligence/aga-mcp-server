@@ -42,7 +42,7 @@ The **gateway key** is the Ed25519 key that signs every receipt and checkpoint. 
 >
 > | | `aga-mcp-server` (stdio MCP server) | `aga-proxy` (governance proxy) |
 > |---|---|---|
-> | Reads `AGA_GATEWAY_KEY` / `AGA_GATEWAY_KEY_FILE` | **yes** | **no — silently ignored** |
+> | Reads `AGA_GATEWAY_KEY` / `AGA_GATEWAY_KEY_FILE` | **yes** | **yes** (since 3.6.0; ignored and unwarned in 3.5.0 and earlier) |
 > | Key when unset | ephemeral, **warns on stderr** | ephemeral, **no warning** |
 > | Provenance pinnable across restarts | yes, once persisted | **no** |
 >
@@ -66,7 +66,7 @@ export AGA_GATEWAY_KEY_FILE=/run/secrets/aga-gateway-key   # file containing the
 ```
 If neither is set, `aga-mcp-server` uses an **ephemeral** key that rotates on every restart (it warns on stderr). Ephemeral is fine for local experiments but means **provenance cannot be pinned across restarts** — avoid it in anything you'll later audit.
 
-`aga-proxy` ignores both variables and always uses an ephemeral key — see the table above.
+`aga-proxy` honours both variables as of **3.6.0**, through the same resolver the MCP server uses, and prints the active public key at startup so you can pin it out of band. Pass `--ephemeral` to deliberately use a throwaway key instead. **In 3.5.0 and earlier the proxy ignored both variables silently** — if you are on an older version, a key you set had no effect and no warning was printed.
 
 ### Obtain the public key to pin
 For `aga-mcp-server`: call the `get_server_info` tool → **`gateway_public_key`**. That 64-hex value is what verifiers pin.

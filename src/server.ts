@@ -29,33 +29,12 @@ import { createGovernanceWrapper, type ToolHandler } from './middleware/governan
 import { BehavioralMonitor } from './core/behavioral.js';
 import type { EnforcementParams, DisclosurePolicy, QuarantineState, RevocationRecord } from './core/types.js';
 import { readFileSync } from 'node:fs';
-import { SepGateway, signerFromSeed, seedFromHex, verifySepBundle } from './sep/index.js';
+import { SepGateway, signerFromSeed, seedFromHex, verifySepBundle, resolveGatewaySigner } from './sep/index.js';
 
 // Single-source the reported version from package.json — no more hardcoded version drift.
 // Resolves to the package root from both src/ (tsx dev) and dist/ (published bin).
 const PKG = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')) as { version: string };
 const SERVER_VERSION: string = PKG.version;
-
-/**
- * Resolve the gateway signing seed (the key that signs evidence bundles).
- * Optional persistence so provenance survives restarts and a verifier can PIN the key:
- *   - AGA_GATEWAY_KEY       — a 64-hex (32-byte) Ed25519 seed, OR
- *   - AGA_GATEWAY_KEY_FILE  — path to a file containing that hex seed.
- * If neither is set (or the value is invalid), fall back to an EPHEMERAL key and warn on stderr.
- * See DEPLOYMENT.md. stderr only — never stdout (would corrupt the JSON-RPC stream).
- */
-function resolveGatewaySeed(fallback: Uint8Array): Uint8Array {
-  const envKey = process.env.AGA_GATEWAY_KEY;
-  const keyFile = process.env.AGA_GATEWAY_KEY_FILE;
-  try {
-    if (envKey) return seedFromHex(envKey);
-    if (keyFile) return seedFromHex(readFileSync(keyFile, 'utf8'));
-  } catch (e) {
-    console.error(`[aga] gateway key from ${envKey ? 'AGA_GATEWAY_KEY' : 'AGA_GATEWAY_KEY_FILE'} is invalid (${String(e)}); falling back to an ephemeral key.`);
-  }
-  console.error('[aga] Using an EPHEMERAL gateway signing key — it rotates on restart, so evidence-bundle provenance cannot be pinned across restarts. Set AGA_GATEWAY_KEY (64-hex 32-byte seed) or AGA_GATEWAY_KEY_FILE to persist it. See DEPLOYMENT.md.');
-  return fallback;
-}
 
 // ── Default Policies ────────────────────────────────────────────
 
@@ -124,7 +103,10 @@ export async function createAGAServer(): Promise<McpServer> {
   // Canonical SEP evidence ledger — single source of truth for the public bundle.
   // Gateway signing key: persisted (AGA_GATEWAY_KEY / _FILE) so provenance is pinnable across
   // restarts, else an ephemeral key (warned on stderr). This key signs every receipt + checkpoint.
-  const sep = new SepGateway({ gatewayId: 'aga-mcp-server', signer: signerFromSeed(resolveGatewaySeed(portalKP.secretKey)) });
+  // Shared resolver (src/sep/gateway-key.ts) — one key contract for both bins. fallbackSeed keeps the
+  // unconfigured case byte-identical to previous releases: the portal keypair's secret, not a new key.
+  const gatewayKey = resolveGatewaySigner({ fallbackSeed: portalKP.secretKey });
+  const sep = new SepGateway({ gatewayId: 'aga-mcp-server', signer: gatewayKey.signer });
 
   // Registration convention (single partition, enforced by tests/core/governance-partition.test.ts):
   //   governedTool(...) → side-effecting agent action → emits a signed PERMITTED/DENIED SEP receipt.

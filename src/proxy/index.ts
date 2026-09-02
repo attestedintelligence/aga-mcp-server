@@ -58,6 +58,7 @@ program
   .option('--upstream-url <url>', 'Downstream MCP server URL (HTTP)')
   .option('--profile <name>', 'Policy profile: permissive, standard, restrictive', 'permissive')
   .option('--policy <path>', 'Custom policy JSON file')
+  .option('--ephemeral', 'Deliberately use a throwaway signing key, ignoring AGA_GATEWAY_KEY / AGA_GATEWAY_KEY_FILE. Evidence stays integrity-verifiable but provenance cannot be pinned across restarts.')
   .action(startAction);
 
 // Shared by `start` and `run` (identical option sets). `run` previously delegated by re-parsing
