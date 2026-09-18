@@ -1,6 +1,6 @@
 # AGA - Attested Governance Artifacts
 
-Cryptographic runtime governance for AI agents and autonomous systems.
+Verifiable decision records for AI agents: each governed tool-call decision becomes a signed, hash-chained receipt, exported in evidence bundles anyone can verify offline against the published format.
 
 [![npm](https://img.shields.io/npm/v/@attested-intelligence/aga-mcp-server)](https://www.npmjs.com/package/@attested-intelligence/aga-mcp-server)
 [![PyPI](https://img.shields.io/pypi/v/aga-governance)](https://pypi.org/project/aga-governance/)
@@ -14,7 +14,7 @@ Cryptographic runtime governance for AI agents and autonomous systems.
 npx -y @attested-intelligence/aga-mcp-server
 ```
 
-A Python companion SDK (`aga-governance`) is documented in the Python SDK section below.
+A Python companion SDK (`aga-governance`) is documented in the Python SDK section below. Read the advisory at the top of that section before you install it.
 
 ## Verify this yourself (don't take our word)
 
@@ -32,7 +32,9 @@ The published `@attested-intelligence/aga-verify` CLI renders the identical verd
 
 ## What This Does
 
-Every tool call an AI agent makes passes through the AGA gateway. Each call is evaluated against policy, and the decision (PERMITTED or DENIED) is recorded as a signed, hash-linked governance receipt. Receipts are collected into evidence bundles that any third party can verify offline using standard cryptography.
+This is built for teams shipping agentic-AI products into financial services and insurance, at the moment a customer's vendor-risk, model-risk, or internal-audit review asks what your agent did and how anyone would know.
+
+Tool calls routed through the AGA gateway are evaluated against the sealed policy, and each decision (PERMITTED or DENIED) is recorded as a signed, hash-linked governance receipt. Receipts are collected into evidence bundles that anyone holding the published format and the public key can verify offline, with no callback to us.
 
 **Record. Prove. Verify.**
 
@@ -222,8 +224,10 @@ curl https://aga-mcp-gateway.attested-intelligence.workers.dev/bundle -o evidenc
 
 ## Python SDK
 
+> **Advisory, recomputed against PyPI on 2026-09-18: do not use the published Python verifier on untrusted input.** The latest release on the registry is `0.3.0` (uploaded 2026-08-29, not yanked). Its bundle verifier has no depth guard: on a deeply nested `receipts` payload it raises instead of returning a `FAILED` verdict, so a caller that treats an exception as anything other than a rejection reads a hostile bundle as unverified rather than refused. A corrected release is built and staged. **It is not on PyPI, so `pip install aga-governance` installs the affected version today.** Until a newer version appears at <https://pypi.org/project/aga-governance/>, treat this SDK as a recording and export client only, and verify with the JavaScript reference verifier (`aga-receipt-spec/verify/verify-sep.mjs`) or the published `@attested-intelligence/aga-verify` CLI. Recheck the registry before you rely on any of this.
+
 ```bash
-pip install aga-governance
+pip install aga-governance   # installs 0.3.0 today; see the advisory above
 ```
 
 ```python
@@ -237,7 +241,7 @@ with AgentSession(gateway_id="my-gateway") as session:
         request_id="req-1",
     )
     bundle = session.export_bundle()
-    result = session.verify()
+    result = session.verify()          # see the advisory: not for untrusted input on 0.3.0
     assert result["overall_valid"]
 ```
 
@@ -247,7 +251,7 @@ Automated tests across TypeScript and Python, plus a conformance corpus:
 
 - **TypeScript MCP server:** 428 automated tests (vitest), including provable-denial and behavioral-monitor regressions
 - **SEP conformance corpus:** `npm run test:conformance` (valid → VERIFIED, negatives → FAILED)
-- **Python companion SDK:** the separately-published `aga-governance` PyPI package (install + smoke-checked here; its full pytest suite runs from the source tree)
+- **Python companion SDK:** the separately-published `aga-governance` PyPI package (install + smoke-checked here; its full pytest suite runs from the source tree). The smoke check imports the package and prints its version. It does not exercise the verifier, which on the published 0.3.0 is subject to the advisory in the Python SDK section.
 
 ```bash
 npm test                              # TypeScript tests (vitest)
@@ -266,7 +270,7 @@ src/
   sep/                 # Canonical SEP evidence engine: single source of truth (canon, merkle, receipt, checkpoint, bundle, verify)
   core/                # Governance primitives (portal, artifact, attestation, disclosure, delegation, behavioral) + internal continuity-chain profile
   crypto/              # Internal continuity-chain crypto: Ed25519 (node:crypto), SHA-256/blake2b, salt
-  proxy/               # MCP governance proxy (transparent interception + policy enforcement; emits SEP bundles)
+  proxy/               # MCP governance proxy (transparent interception + policy evaluation; emits SEP bundles)
   middleware/          # Governance PEP wrapper (records a signed PERMITTED/DENIED receipt per governed call)
 independent-verifier/  # @attested-intelligence/aga-verify: standalone SEP verifier, zero AGA imports
 scenarios/             # Demo scenarios (SCADA, autonomous vehicle, AI agent) that emit SEP bundles
