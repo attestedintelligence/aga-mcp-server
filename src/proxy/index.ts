@@ -65,7 +65,7 @@ program
 // argv through the start subcommand with 'start' left in the array, which commander rejects as a
 // stray operand — `aga-proxy run` exited 1 on every invocation from 3.0.0 through 3.3.3 without
 // ever reaching policy resolution. A shared action function cannot regress that way.
-async function startAction(opts: { port: string; controlPort: string; upstream?: string; upstreamUrl?: string; profile: string; policy?: string }) {
+async function startAction(opts: { port: string; controlPort: string; upstream?: string; upstreamUrl?: string; profile: string; policy?: string; ephemeral?: boolean }) {
     const port = parseInt(opts.port, 10);
     const controlPort = parseInt(opts.controlPort, 10);
     let policy: ToolPolicy;
@@ -98,11 +98,25 @@ async function startAction(opts: { port: string; controlPort: string; upstream?:
       policy,
       upstream,
       upstreamUrl: opts.upstreamUrl,
+      // --ephemeral was accepted by the parser but never reached the proxy, so the flag did
+      // nothing: an operator who asked for a throwaway key still got whichever key the
+      // environment supplied, and an operator who set no key got one silently. A declared flag
+      // that the entry point does not read is not a feature.
+      ephemeral: opts.ephemeral === true,
     });
 
     proxy.on('started', ({ port: p }: { port: number }) => {
       console.log(`AGA Governance Proxy started on port ${p}`);
       console.log(`Policy mode: ${policy.mode}`);
+      // The active signing identity, PUBLIC key only. An operator needs it BEFORE any bundle
+      // exists: a verifier that reads the key out of the bundle it is checking proves nothing
+      // about issuance, so this line is what makes an honest out-of-band pin possible. It was
+      // added to GovernanceProxy in 3.5.0's tree as describeKey() and never called from here,
+      // which left the shipped binary silent about its own key.
+      console.log(`Signing ${proxy!.describeKey()}`);
+      if (proxy!.keyIsEphemeral) {
+        console.log('  This key is EPHEMERAL: it rotates on restart, so do not pin it. Set AGA_GATEWAY_KEY or AGA_GATEWAY_KEY_FILE to persist it (see DEPLOYMENT.md).');
+      }
       if (opts.upstream) console.log(`Upstream (stdio): ${opts.upstream}`);
       if (opts.upstreamUrl) console.log(`Upstream (HTTP): ${opts.upstreamUrl}`);
     });
@@ -164,6 +178,10 @@ program
   .option('--upstream-url <url>', 'Downstream MCP server URL (HTTP)')
   .option('--profile <name>', 'Policy profile', 'permissive')
   .option('--policy <path>', 'Custom policy JSON file')
+  // `run` and `start` share one action, so they must share one option set — a flag missing here is
+  // silently dropped by commander for `run` only, which is exactly the class of split this comment
+  // block already warns about above.
+  .option('--ephemeral', 'Deliberately use a throwaway signing key, ignoring AGA_GATEWAY_KEY / AGA_GATEWAY_KEY_FILE. Evidence stays integrity-verifiable but provenance cannot be pinned across restarts.')
   .action(startAction);
 
 // ── stop ─────────────────────────────────────────────────────
