@@ -7,7 +7,7 @@ Cryptographic runtime governance for AI agents and autonomous systems.
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/attestedintelligence/aga-mcp-server/blob/main/LICENSE)
 [![npm provenance](https://img.shields.io/badge/npm-SLSA%20provenance-brightgreen)](https://www.npmjs.com/package/@attested-intelligence/aga-mcp-server)
 
-> **Status: published to npm; this release carries SLSA build provenance (check it: `npm audit signatures`).** The server tools and the `aga-proxy` emit the **canonical SEP evidence bundle**, verifiable offline by the published `@attested-intelligence/aga-verify` and the reference verifier `aga-receipt-spec/verify/verify-sep.mjs`. **Since 3.2.0 the verifier is algorithm-agile and ships a post-quantum profile:** v1 `Ed25519-SHA256-JCS` (the default the gateway emits) and v2 `ML-DSA-65+Ed25519-SHA256-JCS` (a NIST FIPS-204 ML-DSA-65 + RFC-8032 Ed25519 **composite**, both must verify), selected per-bundle by the `algorithm` field with a `VERIFIED / FAILED / UNSUPPORTED_PROFILE` trichotomy. Pre-3.0 releases (a legacy continuity-chain bundle that does *not* verify under the SEP verifier) are deprecated; use `^3.0.0`. Claim scope and residual attack surface are documented honestly in `THREAT_BOUNDARY.md`. **3.5.0 (2026-08-29) changes one behavior:** an artifact's TTL now *fails closed* — on expiry the portal terminates and a further measurement is refused, where earlier releases degraded and kept measuring. If you depend on the old post-expiry behavior, pin `3.3.3`. See `CHANGELOG.md`.
+> **Status: published to npm; this release carries SLSA build provenance (check it: `npm audit signatures`).** The server tools and the `aga-proxy` emit the **canonical SEP evidence bundle**, verifiable offline by the published `@attested-intelligence/aga-verify` and the reference verifier `aga-receipt-spec/verify/verify-sep.mjs`. **Since 3.2.0 the verifier is algorithm-agile and ships a post-quantum profile:** v1 `Ed25519-SHA256-JCS` (the default the gateway emits) and v2 `ML-DSA-65+Ed25519-SHA256-JCS` (a NIST FIPS-204 ML-DSA-65 + RFC-8032 Ed25519 **composite**, both must verify), selected per-bundle by the `algorithm` field with a `VERIFIED / FAILED / UNSUPPORTED_PROFILE` trichotomy. Pre-3.0 releases (a legacy continuity-chain bundle that does *not* verify under the SEP verifier) are deprecated; use `^3.0.0`. Claim scope and residual attack surface are documented honestly in `THREAT_BOUNDARY.md`. **3.5.0 (2026-08-29) changes one behavior:** an artifact's TTL now *fails closed* — on expiry the portal terminates and a further measurement is refused, where earlier releases degraded and kept measuring. If you depend on the old post-expiry behavior, pin `3.3.3`. **3.6.0 (2026-09-18) changes no existing behavior:** it makes `aga-proxy` honour `AGA_GATEWAY_KEY` / `AGA_GATEWAY_KEY_FILE`, which it had silently ignored. See `CHANGELOG.md`.
 
 ```bash
 # This package IS the AGA MCP server (TypeScript, runs over stdio). Use it from any MCP client:
@@ -59,7 +59,7 @@ Claude can then seal artifacts, measure integrity, generate evidence bundles, an
 
 By default the gateway signs with an **ephemeral** key that rotates on every restart. That is fine for a first look, but evidence-bundle provenance cannot be pinned across restarts (and the server warns about it on stderr). Set one stable 64-hex Ed25519 seed so provenance stays pinnable:
 
-> This applies to the **`aga-mcp-server`** stdio server (below, as a Claude Desktop MCP server). **`aga-proxy` ignores `AGA_GATEWAY_KEY` / `AGA_GATEWAY_KEY_FILE`** and always uses an ephemeral key — its bundles are integrity-verifiable but not provenance-pinnable across restarts. See `DEPLOYMENT.md` §2.
+> **Since 3.6.0 this applies to both binaries.** `aga-proxy` reads the same two variables through the same resolver and prints the active public key at startup so you can pin it out of band; `--ephemeral` makes a throwaway key a stated choice. **In 3.5.0 and earlier `aga-proxy` ignored both variables silently** — a key you set had no effect and no warning was printed, so evidence from such a proxy is integrity-verifiable but not provenance-pinnable across restarts. See `DEPLOYMENT.md` §2.
 
 ```bash
 # generate a seed once (32 random bytes, hex)
@@ -245,7 +245,7 @@ with AgentSession(gateway_id="my-gateway") as session:
 
 Automated tests across TypeScript and Python, plus a conformance corpus:
 
-- **TypeScript MCP server:** 404 automated tests (vitest), including provable-denial and behavioral-monitor regressions
+- **TypeScript MCP server:** 428 automated tests (vitest), including provable-denial and behavioral-monitor regressions
 - **SEP conformance corpus:** `npm run test:conformance` (valid → VERIFIED, negatives → FAILED)
 - **Python companion SDK:** the separately-published `aga-governance` PyPI package (install + smoke-checked here; its full pytest suite runs from the source tree)
 
@@ -270,7 +270,7 @@ src/
   middleware/          # Governance PEP wrapper (records a signed PERMITTED/DENIED receipt per governed call)
 independent-verifier/  # @attested-intelligence/aga-verify: standalone SEP verifier, zero AGA imports
 scenarios/             # Demo scenarios (SCADA, autonomous vehicle, AI agent) that emit SEP bundles
-tests/                 # TypeScript test suite (404 automated tests)
+tests/                 # TypeScript test suite (428 automated tests)
 ```
 
 ## Links

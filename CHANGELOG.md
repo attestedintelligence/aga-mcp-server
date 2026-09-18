@@ -2,6 +2,79 @@
 
 All notable changes to `@attested-intelligence/aga-mcp-server` are recorded here, newest first. This package follows [Semantic Versioning](https://semver.org). The signed receipt and evidence-bundle wire format is the canonical SEP profile; any format-affecting change is called out explicitly.
 
+## 3.6.0 — 2026-09-18
+
+### `aga-proxy` now honours `AGA_GATEWAY_KEY` / `AGA_GATEWAY_KEY_FILE`
+
+This package ships two binaries and only one of them read the operator's key contract. `aga-mcp-server`
+honoured both variables; `GovernanceProxy` called `generateSigner()` unconditionally in its
+constructor, read neither variable, and printed no warning. An operator who set `AGA_GATEWAY_KEY`
+correctly and started the proxy was **silently ignored**: no effect, no notice, and evidence bundles
+whose issuing key rotated on every restart. That is worse than an unsupported feature — silence
+defeats a correct configuration. It is checkable in the published 3.5.0 tarball, where `dist/proxy/`
+contains zero references to either variable while `dist/server.js` contains seven.
+
+**What changes for you:** if you already set `AGA_GATEWAY_KEY` or `AGA_GATEWAY_KEY_FILE` and ran
+`aga-proxy`, that variable now actually takes effect, so the proxy's `gateway_public_key` stops
+rotating and becomes the key your seed derives. Nothing breaks: a proxy with neither variable set
+behaves exactly as before except that it now says so. If you *want* the old throwaway-key behaviour
+with a variable set, pass the new `--ephemeral` flag.
+
+- **One resolver, both binaries** (`src/sep/gateway-key.ts`). Order: `AGA_GATEWAY_KEY`, then
+  `AGA_GATEWAY_KEY_FILE`, then an ephemeral key. An invalid or unreadable key **warns and falls
+  back** rather than exiting — deliberately matching what `aga-mcp-server` has always done, because
+  refusing to start would take a governed boundary offline over a key that only affects whether
+  provenance is *pinnable*. Integrity, chaining and the deny path do not depend on which key signs.
+  A second variable name for the proxy was rejected: one installable must not carry two key
+  contracts.
+- **The proxy prints its active PUBLIC key at startup**, with its source:
+  `Signing gateway key <64-hex> (persisted via AGA_GATEWAY_KEY_FILE)`. This is the line that makes an
+  honest pin possible. A verifier handed a key lifted out of the bundle it is checking will print
+  `provenance verified` and has proved nothing about issuance — the check is circular. A key printed
+  before any bundle exists is a key you can obtain **out of band**.
+- **`--ephemeral`** turns the old silent default into a stated choice, on both `start` and `run`.
+- **Never logs key material.** Only the variable name that was tried and the derived public key.
+- `aga-mcp-server` is behaviourally unchanged. It passes its portal keypair's secret as the fallback
+  seed, so its unconfigured case stays byte-identical to previous releases; extracting the resolver
+  must not silently rotate either binary's key, and a test now holds that.
+
+**Not a turnkey guarantee, stated plainly.** Persisting the key makes provenance *pinnable*; it does
+not make it *pinned*. The default on both binaries is still an ephemeral key, an unconfigured
+deployment carries the old risk in full, and nothing in the package detects a deployment that skipped
+the configuration. `THREAT_BOUNDARY.md` item 4 now says exactly that.
+
+### Two halves of the above that were written but never shipped
+
+`describeKey()` and the `--ephemeral` option both existed in the 3.5.0 tree and **neither was reachable
+from the entry point**: `dist/proxy/index.js` never called `describeKey()`, so the shipped binary
+printed no key line at all, and `new GovernanceProxy({...})` never passed `ephemeral`, so the flag was
+parsed and discarded. Both are now wired, and the integration test below drives the built artifact
+rather than the source, which is what catches this class of defect. A declared flag the entry point
+does not read is not a feature.
+
+### Tests
+
+- `tests/sep/gateway-key.test.ts` (17): env key, key file, precedence when both are set, an invalid
+  value, an unreadable file, malformed file contents, the unconfigured case, `forceEphemeral`,
+  `fallbackSeed` identity across all three ephemeral paths, the default warning sink being
+  `console.error` and never `console.log`, the log prefix, and that no path emits key material.
+- `tests/integration/proxy-gateway-key.test.ts` (7): drives the **built** `dist/proxy/index.js` as a
+  real child process. One key file, two processes, identical public key on the banner and zero
+  warnings; the env var and the key file agree; unconfigured rotates between runs and says so;
+  `--ephemeral` overrides a configured key; an invalid key warns, falls back, and still announces what
+  it signs with; the seed appears in neither stream; the key line is on stdout and the warning on
+  stderr.
+- Suite: **404 → 428** tests across 45 → 47 files. SEP conformance 6/6. `check:pack` clean.
+
+### Documentation corrected in the same release
+
+`DEPLOYMENT.md` §2 and `THREAT_BOUNDARY.md` item 4 ship inside this tarball and described the *old*
+proxy behaviour in the same breath as the new. The §2 comparison table had been updated in one cell
+while the two paragraphs under it still told operators the proxy ignores both variables; `README.md`
+still said so outright. All three are now consistent and **version-scoped**, so a reader running 3.5.0
+or earlier still gets the truth for the version they are running rather than a claim that only holds
+after upgrading. README test counts updated to the recomputed figure.
+
 ## 3.5.0 — 2026-08-29
 
 **Version ruled 2026-08-29.** `3.4.0` was claimed by two different trees ~93 commits apart, so

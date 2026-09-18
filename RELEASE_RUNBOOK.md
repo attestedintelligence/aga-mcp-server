@@ -6,7 +6,7 @@ runs **only** through GitHub Actions OIDC trusted publishing (no stored token, n
 
 ## Pre-publish gates (must be green)
 
-- `npm run check` → build + lint + **404 tests** + SEP conformance (6/6) + **`check:pack`**
+- `npm run check` → build + lint + **428 tests** (3.6.0; recompute per release, never cite a remembered number) + SEP conformance (6/6) + **`check:pack`**
   (positive-allowlist + IP-rail content scan: exactly `dist/` + the 5 docs + `package.json`, no
   forbidden artifacts, none of the four IP-rail markers in any shippable file).
 - `npm run conformance:cross-stack` → **6 verifiers agree on the 54 object-level cases (5 on the 7 raw-byte cases; 61 total)**.
@@ -21,9 +21,12 @@ runs **only** through GitHub Actions OIDC trusted publishing (no stored token, n
    (or `gh workflow run release.yml -R attestedintelligence/aga-mcp-server -f ...`):
    - **dry run first:** `dist_tag=rc`, `provenance=true`, `dry_run=true` → confirms gates + pack, publishes nothing.
    - **soak on rc:** `dist_tag=rc`, `provenance=true`, `dry_run=false` → publishes under the `rc` tag.
-   - **promote to latest** once vetted: `npm dist-tag add "@attested-intelligence/aga-mcp-server@<ver>" latest`
-     (a tag move — NO republish, the published artifact + its provenance are unchanged). `latest`
-     requires provenance (the workflow enforces it for a public repo).
+   - **promote to latest** once vetted: re-run the SAME workflow with `promote_only=true`,
+     `dist_tag=latest`, `dry_run=false`. That runs `npm dist-tag add` for both packages — a tag move,
+     NO republish, so the published artifact and its provenance are unchanged. A second `npm publish`
+     of an already-published version fails with `EPUBLISHCONFLICT`, which is exactly what the 3.5.0
+     `latest` run hit before `promote_only` existed. `latest` requires provenance (the workflow
+     enforces it for a public repo).
 3. Deprecate superseded lines if needed: `npm deprecate "@attested-intelligence/aga-mcp-server@<range>" "<reason>"`.
 4. Verify: `npm view "@attested-intelligence/aga-mcp-server" version dist-tags` and `npm audit signatures`.
 
