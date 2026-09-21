@@ -1,6 +1,6 @@
 # AGA - Attested Governance Artifacts
 
-Cryptographic runtime governance for AI agents and autonomous systems.
+Verifiable decision records for AI agents. Cryptographic runtime governance is the architecture term of art for how it works.
 
 [![npm](https://img.shields.io/npm/v/@attested-intelligence/aga-mcp-server)](https://www.npmjs.com/package/@attested-intelligence/aga-mcp-server)
 [![PyPI](https://img.shields.io/pypi/v/aga-governance)](https://pypi.org/project/aga-governance/)
