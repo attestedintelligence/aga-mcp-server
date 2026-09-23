@@ -91,8 +91,10 @@ An implementation conforms iff, for every vector in `aga-receipt-spec/vectors/`,
 vector to VERIFIED with a byte-identical `merkle_root` and returns FAILED on each negative mutation
 (tampered field, dropped trailing receipt, re-pointed proof, wrong pinned key, malformed key/signature,
 non-canonical timestamp, uppercase Merkle-sibling hex). `npm run conformance:cross-stack` demonstrates
-six independent verifiers (the JS reference, the in-server engine, `aga-verify`, Go, and two Python
-implementations) return byte-identical verdicts on all **61** cross-stack cases.
+that six verifier configurations (the JS reference, the in-server engine, `aga-verify`, Go, and two Python
+implementations) agree on the **54** object-level cases, and the five file-parsing verifiers agree on the
+**7** raw-byte/file-parse cases (**61** total). The in-server engine receives parsed objects, never raw
+file bytes, so it does not run the file-parse cases.
 
 **The SEP conformance oracle is `aga-receipt-spec/vectors/aga_evidence_bundle_vectors.json` plus
 `fixtures/cross-stack/vectors.json`.** The legacy `aga-receipt-spec/vectors/aga_test_vectors.json` in

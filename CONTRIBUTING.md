@@ -5,8 +5,8 @@ Thank you for your interest in contributing to Attested Governance Artifacts.
 ## Development Setup
 
 ```bash
-git clone https://github.com/attestedintelligence/AGA.git
-cd AGA
+git clone https://github.com/attestedintelligence/aga-mcp-server.git
+cd aga-mcp-server
 npm install
 npm test
 ```
@@ -20,7 +20,7 @@ npm test
 
 ```bash
 npm test                    # Run all tests
-npm run test:coverage       # Coverage report
+npm run test:conformance    # Cross-language conformance vectors
 npm run test:watch          # Watch mode
 ```
 
@@ -30,7 +30,7 @@ npm run test:watch          # Watch mode
 src/               # Core AGA implementation
 independent-verifier/  # Standalone verification tool
 scenarios/         # Deployment scenario implementations
-tests/             # Test suite (404 tests)
+tests/             # Test suite
 scripts/           # Utility scripts
 ```
 
@@ -48,7 +48,7 @@ scripts/           # Utility scripts
 Use clear, descriptive commit messages:
 
 ```
-Add Merkle checkpoint anchoring for continuity chain
+Add a signed Merkle checkpoint to the receipt chain
 Fix sealed hash computation for empty claim arrays
 Update Evidence Bundle schema to v1.1
 ```

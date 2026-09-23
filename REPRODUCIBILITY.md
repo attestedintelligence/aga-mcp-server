@@ -59,14 +59,17 @@ commands run and the diff result are recorded in the F0 report / commit for item
   source template literal into `dist/storage/sqlite.js`, breaking the per-file manifest match on
   Windows only. The published artifact was always the LF build; the `.gitattributes` makes every
   fresh checkout reproduce it.)
-- **Dependency surface (honest count).** 4 *direct* production dependencies; ~128 *transitive* (the
-  bulk pulled by `@modelcontextprotocol/sdk`, which carries an Express-5 HTTP stack used only by the
-  optional HTTP transport). The crypto-critical path is `@noble/hashes` + `node:crypto` (zero
-  transitive deps), and the offline reference verifier `aga-receipt-spec/verify/verify-sep.mjs` has
-  **zero** dependencies (Node `node:crypto` only) — that is the true trust-minimized verification path.
+- **Dependency surface (counted from `package.json` and `package-lock.json`).** 6 *direct* production
+  dependencies (`@modelcontextprotocol/sdk`, `@noble/ed25519`, `@noble/hashes`, `@noble/post-quantum`,
+  `commander`, `zod`) plus the optional `better-sqlite3`; about 100 packages installed in total, about
+  135 with the optional storage driver (the bulk pulled by `@modelcontextprotocol/sdk`, which carries an
+  Express-5 HTTP stack used only by the optional HTTP transport). The crypto path is `@noble/hashes`,
+  `@noble/ed25519`, `@noble/post-quantum` (the v2 composite profile only) and `node:crypto`. The offline
+  reference verifier `aga-receipt-spec/verify/verify-sep.mjs` has **zero** dependencies (Node
+  `node:crypto` only): that is the trust-minimized verification path.
 - **`npm ci` advisory banner.** A fresh install reports dev-toolchain advisories (vitest/vite/esbuild);
-  **none ship** — `npm audit --omit=dev` is clean, and the published `dist/` contains only the 4 direct
-  prod deps. The `canonicalize` package is a dev-dependency (RFC 8785 reference for the JCS conformance
+  **none ship** — `npm audit --omit=dev` is clean, and the published package depends only on the 6 direct
+  production dependencies above (and the optional `better-sqlite3`). The `canonicalize` package is a dev-dependency (RFC 8785 reference for the JCS conformance
   test) and likewise does not ship.
 - **Provenance → commit.** `npm audit signatures` verifies the SLSA provenance; decode the attestation
   to read `subject` (the published tarball digest) and `resolvedDependencies[].digest.gitCommit` (the

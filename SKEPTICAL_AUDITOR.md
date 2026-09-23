@@ -1,5 +1,10 @@
 # SKEPTICAL_AUDITOR — the 30-minute test
 
+> **Historical (added 2026-09-23).** Written for 3.0.0-rc in June 2026 and kept as that release's audit
+> script. It has not been re-run step by step against 3.6.0. `aga-verify` has been on npm since 2.0.0
+> (2026-06-08), so the "not yet published" condition near the end no longer holds. Four internal files
+> it once cited are not part of this repository and the citations were removed.
+
 **One question:** what objective evidence, reproducible by a hostile outsider in
 about thirty minutes with no privileged access and no trust in us, proves that
 3.0.0-rc *materially* differs from the published 2.2.2 — rather than being a
@@ -27,8 +32,7 @@ npm i @attested-intelligence/aga-mcp-server@2.2.2
 **Expected:** the forgery *passes* 2.2.2's offline check, because that check
 verifies receipts against the bundle's own embedded key. **If it passes, the
 auditor has independently reproduced the keystone defect** — the 2.2.2 verifier
-proves self-consistency, not authenticity. (Repro notes:
-`_validation/CRITICAL_FINDINGS_REPRO.md`.)
+proves self-consistency, not authenticity.
 
 ### Step 2 — The same forgery fails the 3.0.0 verifier when the key is pinned (≈7 min)
 
@@ -85,7 +89,7 @@ ls src/core/bundle.ts src/core/checkpoint.ts src/crypto/merkle.ts
 
 **Expected:** no executable references in `src/` (only removal-note comments); the
 three files do not exist. **If the forgeable verifier is still present and
-reachable, the deletion claim is false.** (`P4_DELETION_REPORT.md`.) Also confirm
+reachable, the deletion claim is false.** Also confirm
 the *tarball* is clean — `npm run build && node scripts/check-pack.mjs` must report
 no `dist/core/bundle.*`, `dist/core/checkpoint.*`, or `dist/proxy/verify.*`.
 
@@ -171,5 +175,4 @@ the sibling verifiers) and **all were fixed and are pinned by the tests above** 
 Steps 6–8 are exactly those reproductions. The one thing the auditor cannot yet do
 from the public registry is Step 2/7's published-`aga-verify` leg: `2.0.0` (now
 carrying the small-order fix) is built and tested in-repo but not yet published —
-that, and pushing the reference-verifier fix, are the release's open conditions
-(`RELEASE_RECOMMENDATION.md`, `PUBLISH_PLAN.md`).
+that, and pushing the reference-verifier fix, are the release's open conditions.

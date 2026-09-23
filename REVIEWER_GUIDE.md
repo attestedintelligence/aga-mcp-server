@@ -14,17 +14,29 @@ node aga-receipt-spec/verify/verify-sep.mjs fixtures/valid_minimal.json   # OVER
 node aga-receipt-spec/verify/verify-sep.mjs fixtures/tampered.json        # OVERALL: FAILED
 ```
 
-No `npm install`, no network, no service. A one-byte change to the bundle flips it to FAILED.
+No `npm install`, no network, no service. Changing one byte of any signed field flips it to FAILED (insignificant whitespace and the unsigned envelope fields listed in KNOWN_LIMITATIONS.md do not).
 
 ## 1. Provenance: the published package binds to this source
 
 ```bash
 npm view @attested-intelligence/aga-mcp-server version dist-tags
+
+# 1. Registry signatures and attestations, checked on an installed copy:
+mkdir aga-check && cd aga-check && npm init -y >/dev/null
+npm install @attested-intelligence/aga-mcp-server@3.6.0
 npm audit signatures                         # "verified registry signatures" + "verified attestations"
-# decode the SLSA attestation to read the published-tarball digest (subject) and the exact source commit:
-npm view @attested-intelligence/aga-mcp-server dist.integrity
-gh attestation verify --owner attestedintelligence \
-  $(npm pack @attested-intelligence/aga-mcp-server >/dev/null 2>&1; ls *.tgz)   # or inspect via the npm provenance UI
+
+# 2. The SLSA provenance, checked against the published tarball. The attestation is stored by npm,
+#    not in GitHub's attestation store, so fetch npm's bundle and pass it with --bundle (without it,
+#    `gh attestation verify` finds nothing and exits 1):
+npm pack @attested-intelligence/aga-mcp-server@3.6.0
+curl -s https://registry.npmjs.org/-/npm/v1/attestations/@attested-intelligence%2faga-mcp-server@3.6.0 \
+  | node -e 'let d="";process.stdin.on("data",c=>d+=c).on("end",()=>{const a=JSON.parse(d).attestations.find(x=>x.predicateType==="https://slsa.dev/provenance/v1");process.stdout.write(JSON.stringify(a.bundle))})' \
+  > slsa.bundle.json
+gh attestation verify attested-intelligence-aga-mcp-server-3.6.0.tgz \
+  --owner attestedintelligence --bundle slsa.bundle.json --digest-alg sha512
+# The same two steps work for @attested-intelligence/aga-verify@2.2.0 with its own bundle.
+# A tarball other than the one the bundle names fails verification.
 ```
 
 The SLSA v1 provenance binds the GitHub repo + the exact release commit + the published artifact digest,

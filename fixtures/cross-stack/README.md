@@ -41,8 +41,9 @@ bundle differently, they can render different verdicts on it. A conformant verif
 
 ## Status — all six verifiers conformant (last verified 2026-06-09)
 
-`run-all-stacks.mjs` proves all six render **identical verdicts on all 61 cases** (7 canonical + valid +
-valid-variants + adversarial + 4 raw-byte/file-parse). This was hardened across six rounds of independent
+`run-all-stacks.mjs` shows the six verifier configurations agree on the **54 object-level cases**, and the
+five file-parsing verifiers agree on the **7 raw-byte/file-parse cases** (**61 total**). The in-server engine
+is library-only and receives parsed objects, so it does not run the file-parse cases. This was hardened across six rounds of independent
 **blind** differential re-audit, which found and closed these cross-stack divergence classes (none were
 forgery-accepts — all were verdict disagreements on malformed input):
 

@@ -128,7 +128,7 @@ The JS reference verifier and the Python SDK (`aga-governance`) decompose the sa
 | `envelope_consistency` | `envelope_consistent` | envelope metadata vs signed content |
 | `gateway_key_match` (with `--pubkey`) | `gateway_key_match` / `provenance` | pinned issuer key |
 
-Known decomposition difference: the JS reference recomputes every Merkle leaf from full receipt content, so a receipt-signature tamper also fails `merkle_and_bijection`; the Python verifier surfaces the same tamper in `receipt_signatures_valid`, `chain_integrity_valid`, and `bundle_consistent` while its `merkle_proofs_valid` can remain true. Neither is looser: the bundle fails in both stacks, exit 1. One input-handling difference is deliberate: a malformed `--pubkey` pin is a usage error (exit 2) in the Python SDK, while the JS reference treats a malformed pin as unpinned; the Python behavior is strictly tighter.
+Known decomposition difference: the JS reference recomputes every Merkle leaf from full receipt content, so a receipt-signature tamper also fails `merkle_and_bijection`; the Python verifier surfaces the same tamper in `receipt_signatures_valid`, `chain_integrity_valid`, and `bundle_consistent` while its `merkle_proofs_valid` can remain true. Neither is looser: the bundle fails in both stacks, exit 1. Input handling of the pin is the same in all three: a `--pubkey` that is not 64 hex characters is a usage error (exit 2) in the JS reference, `aga-verify` and the Python SDK, and a 64-hex pin that is not a valid curve point is honored, fails to match, and fails the bundle (exit 1).
 
 ## How It Works
 
@@ -225,7 +225,7 @@ curl https://aga-mcp-gateway.attested-intelligence.workers.dev/bundle -o evidenc
 ## Python SDK
 
 ```bash
-pip install aga-governance   # installs 0.3.1, which fails closed on hostile input (0.3.0 is yanked)
+pip install aga-governance   # installs 0.3.1, which fails closed on hostile input; 0.3.0 is yanked and 0.2.6 has the same defect and is not yet yanked, so pin aga-governance>=0.3.1
 ```
 
 ```python

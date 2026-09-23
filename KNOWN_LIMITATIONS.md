@@ -28,7 +28,7 @@ The proxy evaluates policy on `tools/call`. Other JSON-RPC methods are forwarded
 
 ## What `policy_reference` binds — and does not
 
-The governing policy **is** captured and cryptographically verified inside **every signed receipt** (`policy_reference` is one of the signed fields). The bundle *envelope* also carries an **unsigned** `policy_reference` (plus `bundle_id`, `schema_version`, `offline_capable`) as a convenience mirror — these four envelope fields have no signed counterpart and must not be trusted as security-identity values. The security-identity fields `gateway_id` / `merkle_root` / `generated_at` **are** bound (envelope-consistency check). Binding the envelope `policy_reference` is a recommended near-term (3.1) format revision. A relying party must trust only signed/verified values and pin the gateway key. (`THREAT_BOUNDARY.md` §3.8.)
+`policy_reference` is one of the signed receipt fields, and what it holds depends on the binary: **aga-proxy** signs the SHA-256 of its policy file into every receipt, while **aga-mcp-server 3.6.0** signs an empty `policy_reference`, so its receipts do not identify a policy. The bundle *envelope* also carries an **unsigned** `policy_reference` (plus `bundle_id`, `schema_version`, `offline_capable`) as a convenience mirror — these four envelope fields have no signed counterpart and must not be trusted as security-identity values. The security-identity fields `gateway_id` / `merkle_root` / `generated_at` **are** bound (envelope-consistency check). Binding the envelope `policy_reference` is a recommended near-term (3.1) format revision. A relying party must trust only signed/verified values and pin the gateway key. (`THREAT_BOUNDARY.md` §3.8.)
 
 ## Verify with a pinned key, or it is integrity-only
 
