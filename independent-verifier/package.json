@@ -1,6 +1,6 @@
 {
   "name": "@attested-intelligence/aga-verify",
-  "version": "2.2.0",
+  "version": "2.2.1",
   "description": "Standalone offline verifier for canonical AGA SEP Evidence Bundles (Ed25519 + SHA-256 via Node's built-in crypto; zero AGA imports, zero third-party deps; producer-independent).",
   "type": "module",
   "license": "MIT",
@@ -36,6 +36,7 @@
     "example-bundle.json",
     "README.md",
     "CHANGELOG.md",
+    "SECURITY.md",
     "LICENSE"
   ],
   "publishConfig": {

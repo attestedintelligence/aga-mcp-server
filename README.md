@@ -34,7 +34,7 @@ The published `@attested-intelligence/aga-verify` CLI renders the identical verd
 
 This is built for teams shipping agentic-AI products into financial services and insurance, at the moment a customer's vendor-risk, model-risk, or internal-audit review asks what your agent did and how anyone would know.
 
-Tool calls routed through the AGA gateway are evaluated against the sealed policy, and each decision (PERMITTED or DENIED) is recorded as a signed, hash-linked governance receipt. Receipts are collected into evidence bundles that anyone holding the published format and the public key can verify offline, with no callback to us.
+Tool calls routed through the AGA gateway are evaluated against the operator's policy, and each decision (PERMITTED or DENIED) is recorded as a signed, hash-linked governance receipt. `aga-proxy` also signs the SHA-256 of its policy's canonical JSON into every receipt; see [KNOWN_LIMITATIONS.md](https://github.com/attestedintelligence/aga-mcp-server/blob/main/KNOWN_LIMITATIONS.md) for what that field binds. Receipts are collected into evidence bundles that anyone holding the published format and the public key can verify offline, with no callback to us.
 
 **Record. Prove. Verify.**
 
@@ -152,7 +152,7 @@ AI Agent                  AGA Gateway                    Verifier
 
 ## MCP Governance Proxy
 
-Run AGA as a transparent proxy between any MCP client and any MCP server. Every tool call gets evaluated against policy and produces a signed receipt.
+Run AGA as a proxy in front of an MCP server that it starts as a stdio child process (the hardened default), or one it reaches with a plain JSON-RPC POST (`--upstream-url`; no Streamable HTTP session or SSE handling). The proxy's agent port speaks newline-delimited JSON-RPC 2.0 over raw TCP, not stdio or Streamable HTTP. A stdio MCP client needs a relay you provide (a few lines that pipe stdin to the port and the port to stdout); none ships. A scripted client can speak that framing directly. Every tool call gets evaluated against policy and produces a signed receipt. Read the known issues below before you expose the port.
 
 ```bash
 # Start the proxy (the `aga-proxy` bin) in front of an upstream MCP server.
@@ -183,7 +183,7 @@ If no proxy is running, `aga-proxy export` prints `no running proxy found; start
 
 **In-memory ledger:** the exported bundle is the durable cryptographic record, but the live in-process chain does **not** survive a proxy restart. This flow makes the *live* ledger reachable from another process; it does **not** add cross-restart persistence, which needs the persistent (SQLite) backend and remains roadmap (see [`KNOWN_LIMITATIONS.md`](https://github.com/attestedintelligence/aga-mcp-server/blob/main/KNOWN_LIMITATIONS.md)).
 
-The proxy intercepts `tools/call` requests, evaluates them against a sealed policy, and generates a signed SEP receipt for **every** decision. Permitted calls are forwarded to the downstream server; denied calls return an MCP error and never reach it. Every decision is hash-linked and checkpoint-bound into a tamper-evident bundle. (Methods other than `tools/call` aren't policy-evaluated, but non-benign ones are recorded as signed *passthrough* receipts for auditability, and an optional denylist can reject them; see `THREAT_BOUNDARY.md` §3.2.)
+The proxy intercepts `tools/call` requests, evaluates them against the loaded policy (a JSON file or a built-in profile; the SHA-256 of its canonical JSON is signed into every receipt), and generates a signed SEP receipt for **every** decision. Permitted calls are forwarded to the downstream server; denied calls return an MCP error and never reach it. Every decision is hash-linked and checkpoint-bound into a tamper-evident bundle. (Methods other than `tools/call` aren't policy-evaluated, but non-benign ones are recorded as signed *passthrough* receipts for auditability, and an optional denylist can reject them; see `THREAT_BOUNDARY.md` §3.2.)
 
 Three built-in policy profiles:
 - **permissive** - log everything, block nothing (default)
@@ -224,8 +224,10 @@ curl https://aga-mcp-gateway.attested-intelligence.workers.dev/bundle -o evidenc
 
 ## Python SDK
 
+> **Status, rechecked against PyPI on 2026-09-23.** `aga-governance` 0.3.1 fixed the depth-bomb crash: on a deeply nested `receipts` payload the verifier returns a `FAILED` verdict instead of raising, and every later release carries the fix. 0.3.0 was yanked for that crash; 0.2.6 raises on the same input and is not yet yanked, so any version specifier that excludes 0.3.1 and later (`~=0.2.0` or `<0.3.1`, for example) still installs it. Install 0.3.1 or later before you verify untrusted bundles with the Python SDK. The JavaScript reference verifier and the `@attested-intelligence/aga-verify` CLI are unaffected.
+
 ```bash
-pip install aga-governance   # installs 0.3.1, which fails closed on hostile input; 0.3.0 is yanked and 0.2.6 has the same defect and is not yet yanked, so pin aga-governance>=0.3.1
+pip install "aga-governance>=0.3.1"
 ```
 
 ```python
@@ -287,6 +289,27 @@ tests/                 # TypeScript test suite (428 automated tests)
 - [Changelog](https://github.com/attestedintelligence/aga-mcp-server/blob/main/CHANGELOG.md)
 - [Threat boundary](https://github.com/attestedintelligence/aga-mcp-server/blob/main/THREAT_BOUNDARY.md)
 - [Deployment guide](https://github.com/attestedintelligence/aga-mcp-server/blob/main/DEPLOYMENT.md)
+
+## Known issues in 3.6.0 and 3.6.1
+
+3.6.1 changes only this README and the version number; the runtime is 3.6.0's. Each item below was
+reproduced on 2026-09-23 on `@attested-intelligence/aga-mcp-server` 3.6.0 installed from npm, and
+concerns the `aga-proxy` gateway. The same list is kept at <https://attestedintelligence.com/security>.
+
+1. **The agent port listens on every network interface, with no authentication.** Anyone who can
+   reach the host on that port can send governed calls through the proxy. Block inbound traffic to
+   the port in the host firewall, or admit only the agent with network policy. The control port is
+   loopback-only.
+2. **Two clients that reuse a JSON-RPC id through one proxy can receive each other's tool results.**
+   Workaround, measured on 3.6.0: give each client its own id range, or run one proxy per client.
+   With disjoint ids, every result reached the client that asked for it.
+3. **When the gateway key is supplied through `AGA_GATEWAY_KEY` (with or without `--ephemeral`) or
+   `AGA_GATEWAY_KEY_FILE`, the stdio upstream inherits that variable** (the seed, or the file's
+   path), so the upstream sits inside the key's trust domain. Workaround, measured on 3.6.0: run
+   without either variable. The upstream then sees neither, but the proxy signs with a per-process
+   key that cannot be pinned across restarts.
+
+No fixed version is named until one is published.
 
 ## Security
 

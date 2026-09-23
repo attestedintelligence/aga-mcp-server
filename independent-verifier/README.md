@@ -16,13 +16,15 @@ runs against a bundle you provide, offline.
 ## Quickstart
 
 ```bash
-# grab a real signed bundle from the public site, then verify it offline:
+# grab the signed sample bundle from the public site, then verify its integrity offline:
 curl -sO https://attestedintelligence.com/sample-bundle.json
 npx @attested-intelligence/aga-verify sample-bundle.json
 
-# integrity + PROVENANCE (proves it came from a gateway key you trust out of band;
-# the demo gateway key is published at attestedintelligence.com/verify):
-npx @attested-intelligence/aga-verify sample-bundle.json --pubkey <64-hex-gateway-key>
+# integrity + PROVENANCE: pin a key you trust, obtained out of band. For this sample, that is
+# the sample-bundle signing key printed on attestedintelligence.com/verify, a published fixture
+# that no gateway holds (the live demo gateway's key will not match it). For your own bundles,
+# pin your gateway's key:
+npx @attested-intelligence/aga-verify sample-bundle.json --pubkey <64-hex-key>
 
 # or verify the example shipped inside this package (labeled as the packaged sample):
 npx @attested-intelligence/aga-verify --sample \

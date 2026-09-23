@@ -2,11 +2,10 @@
 
 ## Reporting a Vulnerability
 
-If you discover a security vulnerability in AGA, please report it responsibly.
+If you discover a security vulnerability in AGA, please report it privately through either channel:
 
-**Email:** [admin@attestedintelligence.com](mailto:admin@attestedintelligence.com)
-
-**Subject line:** `[SECURITY] AGA Vulnerability Report`
+- **GitHub private vulnerability reporting:** on this repository, Security → Report a vulnerability (<https://github.com/attestedintelligence/aga-mcp-server/security/advisories/new>).
+- **Email:** [admin@attestedintelligence.com](mailto:admin@attestedintelligence.com), subject line `[SECURITY] AGA Vulnerability Report`.
 
 ### What to Include
 
@@ -26,7 +25,9 @@ If you discover a security vulnerability in AGA, please report it responsibly.
 This policy covers:
 
 - The AGA reference implementation (`src/`, `independent-verifier/`)
-- The MCP server (`@attested-intelligence/aga-mcp-server`)
+- The MCP server (`@attested-intelligence/aga-mcp-server` on npm)
+- The standalone verifier (`@attested-intelligence/aga-verify` on npm, built from `independent-verifier/`)
+- The Python SDK (`aga-governance` on PyPI). Its source is not in this repository, but its advisories are published here.
 - Cryptographic operations (signing, verification, hash computation, chain integrity)
 - Evidence Bundle generation and verification
 
@@ -46,7 +47,7 @@ Key areas of concern:
 - Receipt chain integrity (hash linking)
 - Merkle checkpoint verification
 - Key separation enforcement between Portal and agent
-- Evidence Bundle completeness and tamper detection
+- Evidence Bundle tamper detection (a bundle does not prove non-omission; see `KNOWN_LIMITATIONS.md`)
 
 ### Disclosure
 
