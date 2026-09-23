@@ -2,6 +2,18 @@
 
 All notable changes to `@attested-intelligence/aga-mcp-server` are recorded here, newest first. This package follows [Semantic Versioning](https://semver.org). The signed receipt and evidence-bundle wire format is the canonical SEP profile; any format-affecting change is called out explicitly.
 
+## 3.6.1 — unreleased
+
+README and version only; the runtime is 3.6.0's, file for file. The README:
+
+- no longer says `aga-governance` 0.3.0 is the latest release and not yanked. 0.3.1 is current and
+  fixes the depth-bomb crash; 0.3.0 was yanked for it;
+- lists three known issues in the `aga-proxy` gateway, each reproduced on 3.6.0 on 2026-09-23, with
+  the measured workaround where one exists: the agent port listens on every interface without
+  authentication; two clients reusing a JSON-RPC id can receive each other's results; a gateway key
+  supplied through the environment is inherited by the stdio upstream;
+- says how a client reaches the proxy's raw-TCP agent port, instead of "any MCP client".
+
 ## 3.6.0 — 2026-09-18
 
 ### `aga-proxy` now honours `AGA_GATEWAY_KEY` / `AGA_GATEWAY_KEY_FILE`

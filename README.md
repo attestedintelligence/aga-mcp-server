@@ -152,7 +152,7 @@ AI Agent                  AGA Gateway                    Verifier
 
 ## MCP Governance Proxy
 
-Run AGA as a transparent proxy between any MCP client and any MCP server. Every tool call gets evaluated against policy and produces a signed receipt.
+Run AGA as a transparent proxy between an MCP client and any MCP server. The proxy's agent port speaks newline-delimited JSON-RPC 2.0 over raw TCP, not stdio or Streamable HTTP, so a stdio MCP client reaches it through a stdio relay (a few lines that pipe stdin to the port and the port to stdout), and a scripted client can speak that framing directly. Every tool call gets evaluated against policy and produces a signed receipt. Read the known issues below before you expose the port.
 
 ```bash
 # Start the proxy (the `aga-proxy` bin) in front of an upstream MCP server.
@@ -224,10 +224,10 @@ curl https://aga-mcp-gateway.attested-intelligence.workers.dev/bundle -o evidenc
 
 ## Python SDK
 
-> **Advisory, recomputed against PyPI on 2026-09-18: do not use the published Python verifier on untrusted input.** The latest release on the registry is `0.3.0` (uploaded 2026-08-29, not yanked). Its bundle verifier has no depth guard: on a deeply nested `receipts` payload it raises instead of returning a `FAILED` verdict, so a caller that treats an exception as anything other than a rejection reads a hostile bundle as unverified rather than refused. A corrected release is built and staged. **It is not on PyPI, so `pip install aga-governance` installs the affected version today.** Until a newer version appears at <https://pypi.org/project/aga-governance/>, treat this SDK as a recording and export client only, and verify with the JavaScript reference verifier (`aga-receipt-spec/verify/verify-sep.mjs`) or the published `@attested-intelligence/aga-verify` CLI. Recheck the registry before you rely on any of this.
+> **Status, rechecked against PyPI on 2026-09-23.** `aga-governance` **0.3.1** is the current release and fixes the depth-bomb crash: on a deeply nested `receipts` payload the verifier now returns a `FAILED` verdict instead of raising. 0.3.0 was yanked for that crash. Earlier versions, 0.2.6 among them, raise on the same input, so install 0.3.1 or later before you verify untrusted bundles with the Python SDK. The JavaScript reference verifier and the `@attested-intelligence/aga-verify` CLI are unaffected.
 
 ```bash
-pip install aga-governance   # installs 0.3.0 today; see the advisory above
+pip install "aga-governance>=0.3.1"
 ```
 
 ```python
@@ -241,7 +241,7 @@ with AgentSession(gateway_id="my-gateway") as session:
         request_id="req-1",
     )
     bundle = session.export_bundle()
-    result = session.verify()          # see the advisory: not for untrusted input on 0.3.0
+    result = session.verify()          # 0.3.1+: a hostile bundle returns FAILED, never raises
     assert result["overall_valid"]
 ```
 
@@ -289,6 +289,27 @@ tests/                 # TypeScript test suite (428 automated tests)
 - [Changelog](https://github.com/attestedintelligence/aga-mcp-server/blob/main/CHANGELOG.md)
 - [Threat boundary](https://github.com/attestedintelligence/aga-mcp-server/blob/main/THREAT_BOUNDARY.md)
 - [Deployment guide](https://github.com/attestedintelligence/aga-mcp-server/blob/main/DEPLOYMENT.md)
+
+## Known issues in 3.6.0 and 3.6.1
+
+3.6.1 changes only this README and the version number; the runtime is 3.6.0's. Each item below was
+reproduced on 2026-09-23 on `@attested-intelligence/aga-mcp-server` 3.6.0 installed from npm, and
+concerns the `aga-proxy` gateway. The same list is kept at <https://attestedintelligence.com/security>.
+
+1. **The agent port listens on every network interface, with no authentication.** Anyone who can
+   reach the host on that port can send governed calls through the proxy. Block inbound traffic to
+   the port in the host firewall, or admit only the agent with network policy. The control port is
+   loopback-only.
+2. **Two clients that reuse a JSON-RPC id through one proxy can receive each other's tool results.**
+   Workaround, measured on 3.6.0: give each client its own id range, or run one proxy per client.
+   With disjoint ids, every result reached the client that asked for it.
+3. **When the gateway key is supplied through `AGA_GATEWAY_KEY` (with or without `--ephemeral`) or
+   `AGA_GATEWAY_KEY_FILE`, the stdio upstream inherits that variable** (the seed, or the file's
+   path), so the upstream sits inside the key's trust domain. Workaround, measured on 3.6.0: run
+   without either variable. The upstream then sees neither, but the proxy signs with a per-process
+   key that cannot be pinned across restarts.
+
+No fixed version is named until one is published.
 
 ## Security
 
