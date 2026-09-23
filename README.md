@@ -249,7 +249,7 @@ Automated tests across TypeScript and Python, plus a conformance corpus:
 
 - **TypeScript MCP server:** 428 automated tests (vitest), including provable-denial and behavioral-monitor regressions
 - **SEP conformance corpus:** `npm run test:conformance` (valid → VERIFIED, negatives → FAILED)
-- **Python companion SDK:** the separately-published `aga-governance` PyPI package (install + smoke-checked here; its full pytest suite runs from the source tree). The smoke check imports the package and prints its version. It does not exercise the verifier, which on the published 0.3.
+- **Python companion SDK:** the separately-published `aga-governance` PyPI package (install + smoke-checked here; its full pytest suite runs from the source tree). The smoke check imports the package and prints its version. It does not exercise the verifier.
 
 ```bash
 npm test                              # TypeScript tests (vitest)
