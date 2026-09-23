@@ -37,9 +37,11 @@ bundle differently, they can render different verdicts on it. A conformant verif
   full corpus through reference, `src/sep` engine, `aga-verify`, Go, Python-audited, and Python-stdlib and
   asserts identical verdicts. It also feeds a few **literal-byte files** to the file-parsing verifiers
   (trailing content, sub-ULP numeric literals) that the object path would otherwise mask. Requires `node`,
-  `go`, and `python` (with `cryptography`) on PATH + `npm run build`.
+  `go`, and `python` (with `cryptography`) on PATH, `npm run build`, and a one-time build of the published
+  verifier: `cd independent-verifier && npm ci && node build.mjs && cd ..`. Without that build the harness
+  stops on a missing module (`independent-verifier/dist/aga-verify.mjs`).
 
-## Status — all six verifiers conformant (last verified 2026-06-09)
+## Status — all six verifiers conformant (last verified 2026-09-23, at tag v3.6.0: 61 cases, exit 0)
 
 `run-all-stacks.mjs` shows the six verifier configurations agree on the **54 object-level cases**, and the
 five file-parsing verifiers agree on the **7 raw-byte/file-parse cases** (**61 total**). The in-server engine
