@@ -12,7 +12,11 @@ The governance guarantee holds for the path *through* AGA. If an agent can reach
 
 ## Only `tools/call` is policy-evaluated
 
-The proxy evaluates policy on `tools/call`. Other JSON-RPC methods are forwarded without policy evaluation, but a side-effecting non-`tools/call` method is **recorded as a signed passthrough receipt** in the bundle (so it is no longer invisible), and an optional `denyMethods` denylist can reject known dangerous methods. This is **visibility, not governance**: a forwarded method still executes unless explicitly denylisted. Full per-method policy evaluation is future work. (`THREAT_BOUNDARY.md` §3.2.)
+The proxy evaluates policy on `tools/call`. Other JSON-RPC methods are forwarded without policy evaluation, but a side-effecting non-`tools/call` method is **recorded as a signed passthrough receipt** in the bundle (so it is no longer invisible), and an optional `denyMethods` denylist can reject known dangerous methods. The denylist is a library option only (`new GovernanceProxy({ denyMethods })`); the `aga-proxy` CLI cannot set it. This is **visibility, not governance**: a forwarded method still executes unless explicitly denylisted. Full per-method policy evaluation is future work. (`THREAT_BOUNDARY.md` §3.2.)
+
+## `aga-proxy policy show` and `policy switch`
+
+Both subcommands act only on a proxy started in the same process. Run as a separate CLI invocation, each exits with `Proxy not running in this process.` and status 1. To change the policy of a running CLI proxy, restart it with the new `--policy` file; each receipt carries the SHA-256 of the policy it applied.
 
 ## Key lifecycle
 
