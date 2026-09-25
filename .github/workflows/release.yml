@@ -29,7 +29,7 @@ on:
         type: boolean
         default: true
       promote_only:
-        description: 'Promote the ALREADY-PUBLISHED version to dist_tag (npm dist-tag add). Use this to move an rc to latest — a second npm publish of the same version fails with EPUBLISHCONFLICT.'
+        description: 'CANNOT RUN IN CI — the job prints the exact local command and exits 1. OIDC trusted publishing scopes its credential to npm publish, and a dist-tag move is not a publish (E401). Move an rc to latest from a machine with npm login.'
         type: boolean
         default: false
       publish_server:
@@ -111,17 +111,29 @@ jobs:
           # existed as a real gap: the 3.5.0 latest run failed here because the rc run had already
           # published that exact version. Provenance is unaffected — the attestation is bound to the
           # published tarball, and moving a dist-tag only repoints a pointer at it.
+          # PROMOTION CANNOT RUN HERE, and pretending it could cost a release.
+          # This job authenticates with npm OIDC trusted publishing, which mints a
+          # short-lived credential scoped to 'npm publish'. A dist-tag move is a
+          # different registry write, so npm falls back to the .npmrc that setup-node
+          # wrote -- the empty placeholder that exists because this repo deliberately
+          # stores no NPM_TOKEN -- and the registry answers E401. Proven on run
+          # 35556989791 (2026-09-21) and on every promote attempt before it.
+          # So: print the exact command that does work, and fail honestly.
           if [ "$PROMOTE_ONLY" = "true" ]; then
+            echo "promote_only: moving a dist-tag is not a publish, and this job cannot authenticate it."
+            echo ""
+            echo "Run this from a machine that has done 'npm login':"
+            echo ""
+            echo "  npm dist-tag add @attested-intelligence/aga-mcp-server@$VERSION $DIST_TAG"
+            echo ""
+            echo "Provenance is unaffected. The attestation is bound to the published tarball;"
+            echo "a dist-tag only repoints a pointer at it."
             if [ "$DRY_RUN" = "true" ]; then
-              echo "DRY RUN — would promote: npm dist-tag add @attested-intelligence/aga-mcp-server@$VERSION $DIST_TAG"
-            else
-              # Refuse to promote something that was never published, rather than failing obscurely.
-              npm view "@attested-intelligence/aga-mcp-server@$VERSION" version > /dev/null 2>&1 \
-                || { echo "::error::@attested-intelligence/aga-mcp-server@$VERSION is not published; promote_only has nothing to point at"; exit 1; }
-              npm dist-tag add "@attested-intelligence/aga-mcp-server@$VERSION" "$DIST_TAG"
-              echo "promoted @attested-intelligence/aga-mcp-server@$VERSION to $DIST_TAG"
+              echo "DRY RUN -- reporting only, no failure."
+              exit 0
             fi
-            exit 0
+            echo "::error::promote_only cannot run in CI under OIDC (E401). Run the 'npm dist-tag add' line printed above, locally."
+            exit 1
           fi
           if [ "$DIST_TAG" = "latest" ] && [ "$PROVENANCE" != "true" ]; then
             echo "::error::provenance is REQUIRED for a latest publish (this repo is public)"; exit 1
@@ -141,16 +153,47 @@ jobs:
         run: |
           set -euo pipefail
           VERSION=$(node -p "require('./package.json').version")
-          for i in 1 2 3 4 5 6; do
-            if npm view "@attested-intelligence/aga-mcp-server@$VERSION" --json > /tmp/view.json 2>/dev/null \
-               && node -e "const d=JSON.parse(require('fs').readFileSync('/tmp/view.json'));if(!d.dist||!d.dist.attestations){console.error('NO ATTESTATION');process.exit(1)}"; then
-              echo "OK: @attested-intelligence/aga-mcp-server@$VERSION has dist.attestations"
-              exit 0
+          PKG="@attested-intelligence/aga-mcp-server"
+          ENC=$(printf '%s' "$PKG" | sed 's|/|%2F|')
+          DOC=$(mktemp)
+          # SIX MINUTES, not sixty seconds, and read the REGISTRY rather than `npm view`.
+          #
+          # Budget: npm publishes asynchronously. The CLI answers "your package is being
+          # processed and may take a few minutes to become available" and the version is
+          # unreadable until that finishes. On the 3.6.0 release the publish returned at
+          # 03:12:01 and the version became readable at 03:14:23 -- 64 seconds after a
+          # 6x10s budget had already given up. The job went red on a publish that had
+          # completely succeeded, provenance and all. That is the worst thing a gate can
+          # do: it teaches the operator to re-run, and a second publish of the same
+          # version is EPUBLISHCONFLICT.
+          #
+          # Source: `npm view` answers from npm's local metadata cache, so it can report a
+          # 404 for a version that is already live. The version document on the registry
+          # has no cache in front of it and is a clean 200-or-404, which is exactly the
+          # question being asked.
+          #
+          # Three outcomes, three messages. "Published without provenance" is NOT a
+          # waiting problem -- attestations are attached at publish time, so if the
+          # document exists and lacks them, retrying cannot help and the gate says so
+          # immediately instead of burning six minutes.
+          for i in $(seq 1 36); do
+            if curl -fsSL "https://registry.npmjs.org/$ENC/$VERSION" -o "$DOC" 2>/dev/null; then
+              if node -e "const j=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'));process.exit(j.dist&&j.dist.attestations?0:1)" "$DOC"; then
+                PUBLISHED=$(curl -fsSL "https://registry.npmjs.org/$ENC" 2>/dev/null \
+                  | node -pe "try{JSON.parse(require('fs').readFileSync(0,'utf8')).time['$VERSION']||'unknown'}catch(e){'unknown'}" 2>/dev/null || echo unknown)
+                ATT=$(node -pe "JSON.parse(require('fs').readFileSync(process.argv[1],'utf8')).dist.attestations.url" "$DOC" 2>/dev/null || echo unknown)
+                echo "OK: $PKG@$VERSION carries dist.attestations"
+                echo "    readable after ~$((i * 10))s; registry publish time $PUBLISHED"
+                echo "    attestations: $ATT"
+                exit 0
+              fi
+              echo "::error::$PKG@$VERSION IS PUBLISHED but carries no dist.attestations. The tarball went out without provenance, and provenance cannot be added after the fact. Do NOT move a dist-tag onto it: publish a patch version with --provenance instead."
+              exit 1
             fi
-            echo "attempt $i/6: attestation not visible yet; retrying in 10s"
+            echo "attempt $i/36: $PKG@$VERSION not on the registry yet (npm publishes asynchronously); retrying in 10s"
             sleep 10
           done
-          echo "::error::NO ATTESTATION on @attested-intelligence/aga-mcp-server@$VERSION — the publish carried no provenance; fix before it is trusted"
+          echo "::error::$PKG@$VERSION never became readable within 6 minutes. BEFORE RE-RUNNING, READ THE REGISTRY: curl https://registry.npmjs.org/$ENC/$VERSION -- if it returns 200 the publish SUCCEEDED and re-running will fail with EPUBLISHCONFLICT, so move the dist-tag locally instead; if it 404s the publish genuinely failed and a re-run is correct."
           exit 1
       - name: Publish aga-verify (or dry run)
         # Publishes the standalone verifier from independent-verifier/ with npm provenance via the
@@ -172,16 +215,29 @@ jobs:
           # PROMOTE path — see the equivalent block in the server step for why a tag move is not a
           # publish. Kept symmetrical deliberately: the two packages release together, so a promote
           # that covered only one of them would leave `latest` split across versions.
+          # PROMOTION CANNOT RUN HERE, and pretending it could cost a release.
+          # This job authenticates with npm OIDC trusted publishing, which mints a
+          # short-lived credential scoped to 'npm publish'. A dist-tag move is a
+          # different registry write, so npm falls back to the .npmrc that setup-node
+          # wrote -- the empty placeholder that exists because this repo deliberately
+          # stores no NPM_TOKEN -- and the registry answers E401. Proven on run
+          # 35556989791 (2026-09-21) and on every promote attempt before it.
+          # So: print the exact command that does work, and fail honestly.
           if [ "$PROMOTE_ONLY" = "true" ]; then
+            echo "promote_only: moving a dist-tag is not a publish, and this job cannot authenticate it."
+            echo ""
+            echo "Run this from a machine that has done 'npm login':"
+            echo ""
+            echo "  npm dist-tag add @attested-intelligence/aga-verify@$VERSION $DIST_TAG"
+            echo ""
+            echo "Provenance is unaffected. The attestation is bound to the published tarball;"
+            echo "a dist-tag only repoints a pointer at it."
             if [ "$DRY_RUN" = "true" ]; then
-              echo "DRY RUN — would promote: npm dist-tag add @attested-intelligence/aga-verify@$VERSION $DIST_TAG"
-            else
-              npm view "@attested-intelligence/aga-verify@$VERSION" version > /dev/null 2>&1 \
-                || { echo "::error::@attested-intelligence/aga-verify@$VERSION is not published; promote_only has nothing to point at"; exit 1; }
-              npm dist-tag add "@attested-intelligence/aga-verify@$VERSION" "$DIST_TAG"
-              echo "promoted @attested-intelligence/aga-verify@$VERSION to $DIST_TAG"
+              echo "DRY RUN -- reporting only, no failure."
+              exit 0
             fi
-            exit 0
+            echo "::error::promote_only cannot run in CI under OIDC (E401). Run the 'npm dist-tag add' line printed above, locally."
+            exit 1
           fi
           if [ "$DIST_TAG" = "latest" ] && [ "$PROVENANCE" != "true" ]; then
             echo "::error::provenance is REQUIRED for a latest publish (this repo is public)"; exit 1
@@ -200,14 +256,45 @@ jobs:
         run: |
           set -euo pipefail
           VERSION=$(node -p "require('./package.json').version")
-          for i in 1 2 3 4 5 6; do
-            if npm view "@attested-intelligence/aga-verify@$VERSION" --json > /tmp/view-verify.json 2>/dev/null \
-               && node -e "const d=JSON.parse(require('fs').readFileSync('/tmp/view-verify.json'));if(!d.dist||!d.dist.attestations){console.error('NO ATTESTATION');process.exit(1)}"; then
-              echo "OK: @attested-intelligence/aga-verify@$VERSION has dist.attestations"
-              exit 0
+          PKG="@attested-intelligence/aga-verify"
+          ENC=$(printf '%s' "$PKG" | sed 's|/|%2F|')
+          DOC=$(mktemp)
+          # SIX MINUTES, not sixty seconds, and read the REGISTRY rather than `npm view`.
+          #
+          # Budget: npm publishes asynchronously. The CLI answers "your package is being
+          # processed and may take a few minutes to become available" and the version is
+          # unreadable until that finishes. On the 3.6.0 release the publish returned at
+          # 03:12:01 and the version became readable at 03:14:23 -- 64 seconds after a
+          # 6x10s budget had already given up. The job went red on a publish that had
+          # completely succeeded, provenance and all. That is the worst thing a gate can
+          # do: it teaches the operator to re-run, and a second publish of the same
+          # version is EPUBLISHCONFLICT.
+          #
+          # Source: `npm view` answers from npm's local metadata cache, so it can report a
+          # 404 for a version that is already live. The version document on the registry
+          # has no cache in front of it and is a clean 200-or-404, which is exactly the
+          # question being asked.
+          #
+          # Three outcomes, three messages. "Published without provenance" is NOT a
+          # waiting problem -- attestations are attached at publish time, so if the
+          # document exists and lacks them, retrying cannot help and the gate says so
+          # immediately instead of burning six minutes.
+          for i in $(seq 1 36); do
+            if curl -fsSL "https://registry.npmjs.org/$ENC/$VERSION" -o "$DOC" 2>/dev/null; then
+              if node -e "const j=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'));process.exit(j.dist&&j.dist.attestations?0:1)" "$DOC"; then
+                PUBLISHED=$(curl -fsSL "https://registry.npmjs.org/$ENC" 2>/dev/null \
+                  | node -pe "try{JSON.parse(require('fs').readFileSync(0,'utf8')).time['$VERSION']||'unknown'}catch(e){'unknown'}" 2>/dev/null || echo unknown)
+                ATT=$(node -pe "JSON.parse(require('fs').readFileSync(process.argv[1],'utf8')).dist.attestations.url" "$DOC" 2>/dev/null || echo unknown)
+                echo "OK: $PKG@$VERSION carries dist.attestations"
+                echo "    readable after ~$((i * 10))s; registry publish time $PUBLISHED"
+                echo "    attestations: $ATT"
+                exit 0
+              fi
+              echo "::error::$PKG@$VERSION IS PUBLISHED but carries no dist.attestations. The tarball went out without provenance, and provenance cannot be added after the fact. Do NOT move a dist-tag onto it: publish a patch version with --provenance instead."
+              exit 1
             fi
-            echo "attempt $i/6: attestation not visible yet; retrying in 10s"
+            echo "attempt $i/36: $PKG@$VERSION not on the registry yet (npm publishes asynchronously); retrying in 10s"
             sleep 10
           done
-          echo "::error::NO ATTESTATION on @attested-intelligence/aga-verify@$VERSION — the publish carried no provenance; fix before it is trusted"
+          echo "::error::$PKG@$VERSION never became readable within 6 minutes. BEFORE RE-RUNNING, READ THE REGISTRY: curl https://registry.npmjs.org/$ENC/$VERSION -- if it returns 200 the publish SUCCEEDED and re-running will fail with EPUBLISHCONFLICT, so move the dist-tag locally instead; if it 404s the publish genuinely failed and a re-run is correct."
           exit 1
