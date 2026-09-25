@@ -294,7 +294,8 @@ tests/                 # TypeScript test suite (428 automated tests)
 
 3.6.1 and 3.6.2 change only the documentation and the version number; the runtime is 3.6.0's. Items 1 to 4 were reproduced on 2026-09-23 on `@attested-intelligence/aga-mcp-server` 3.6.0 installed from npm, and
 concern the `aga-proxy` gateway. Item 5, added 2026-09-26, concerns the verifiers and was reproduced on 2026-09-25
-on the current releases. The same list is kept at <https://attestedintelligence.com/security>.
+on the current releases. Item 6, also added 2026-09-26, concerns aga-proxy with an HTTP upstream and was
+reproduced on 2026-09-25 on 3.6.2. The same list is kept at <https://attestedintelligence.com/security>.
 
 1. **The agent port listens on every network interface, with no authentication.** Anyone who can
    reach the host on that port can send governed calls through the proxy. Block inbound traffic to
@@ -322,6 +323,18 @@ on the current releases. The same list is kept at <https://attestedintelligence.
    VERIFIED, and a real change of the checkpoint value fails. Workaround: treat the verifier's parsed output as the
    record's content, and reject or flag files with repeated field names before displaying them. A strict rejection of
    repeated field names is planned for the reviewed release.
+6. **A message can repeat the `"method"` member when aga-proxy has an HTTP upstream (`--upstream-url`).** With
+   `tools/call` first and another method last, aga-proxy reads the last copy, so it never checks the tool call against
+   the policy, and it forwards every method other than `tools/call` to the HTTP upstream as the exact bytes it
+   received. An upstream whose JSON parser keeps the first copy of a repeated name then runs the tool call, even one
+   the policy denies. The bundle holds no receipt for that call: nothing at all when the last method is one the proxy
+   passes through without a receipt (such as `ping`, `initialize`, a list method or a notification), and otherwise only
+   a passthrough receipt that names the last method. An upstream that keeps the last copy handles the message as the
+   method the proxy read. The stdio upstream, the default, is not affected: the proxy re-serializes each message
+   before writing it, so the upstream receives one method. Measured on 3.6.2 from npm on 2026-09-25, with the
+   restrictive profile and with the default permissive profile. Workaround: keep the stdio default, or have the HTTP
+   upstream reject any message that repeats a member name. A strict rejection of repeated member names in the proxy
+   is planned for the reviewed release.
 
 No fixed version is named until one is published.
 
