@@ -1,13 +1,13 @@
 {
   "_comment": "CA-05 freeze manifest for the vendored aga-receipt-spec/ tree. Regenerate ONLY via scripts/sync-spec-vendor.mjs; CI fails on any drift (scripts/check-spec-vendor.mjs). Hashes are sha256 over LF-normalized content.",
-  "synced_at": "2026-07-31",
+  "synced_at": "2026-09-25",
   "authority_repo": "aga-receipt-spec (private)",
-  "authority_commit": "0879be3f55d2fd23b6f5574e5112d172ec4df24e",
+  "authority_commit": "5436bba1a1c1e9b5077301a37e87389db653a10a",
   "note": "pinned from the current vendored bytes (freeze-what-ships); authority drift, if any, is recorded by --report, not resolved by this pin",
   "files": {
     "aga-receipt-spec/.gitignore": "5f9a14fe0b83d4693464d0ac4036fe7abcab8e573890b05df52d21be568bf510",
     "aga-receipt-spec/CANONICAL_CONSTRUCTION_v2.md": "cdcbbcba2010c7b1d92fef03fb08dc8194d8691341d771cb5e3d9b065e866858",
-    "aga-receipt-spec/LICENSE": "528fc7c0d9725aae145e2381d185ee3021eab0988deb7293902e7a52c0849db2",
+    "aga-receipt-spec/LICENSE": "44a5833859b46a88f39a11df29d60cfd261b196eb26e186c71bbfa4f15c8a7bd",
     "aga-receipt-spec/README.md": "35a33e2ff17d333d58cb68725e668083b9f7bf771082671b0d02664009042931",
     "aga-receipt-spec/examples/bundle.json": "6f9916eb0970393913fd1533cf12bd16aa4b3eeedf4b0c06f89e23b90d78364b",
     "aga-receipt-spec/examples/chain.json": "f2b7b6d9b77f40101596d4bc58741414275f82628e670301b067eca4d2428407",
