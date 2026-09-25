@@ -311,15 +311,17 @@ on the current releases. The same list is kept at <https://attestedintelligence.
 4. **The `--upstream-url` mode forwards raw JSON-RPC over HTTP POST with only a content-type header.** It does not
    implement the MCP Streamable HTTP transport (the Accept header, the request metadata headers and event-stream
    handling), so a spec-conformant HTTP MCP server rejects its requests. Workaround: bridge to the server over stdio.
-5. **A bundle file can repeat a field name inside a receipt**, for example a forged `"decision": "PERMITTED"` placed
-   ahead of the signed `"decision": "DENIED"`. The published verifiers (aga-verify 2.2.2, aga-governance 0.3.2, the
-   verifier in this package, and the reference verifiers in `aga-receipt-spec/verify/`) and the site's /verify page read
-   the last occurrence, which is the signed one, and report VERIFIED, with provenance when the key is pinned. They do
+5. **A bundle file can repeat a field name anywhere: in a receipt, in the checkpoint or in the envelope.** For example,
+   a forged `"decision": "PERMITTED"` can be placed ahead of the signed `"decision": "DENIED"`, or a forged checkpoint
+   `leaf_count` ahead of the signed one. The published verifiers (aga-verify 2.2.2, aga-governance 0.3.2, the verifier in
+   this package, and the reference verifiers in `aga-receipt-spec/verify/`) and the site's /verify page read the last
+   occurrence, and when it holds the genuine value they report VERIFIED, with provenance when the key is pinned. They do
    not reject the file, so a tool or a person reading the first occurrence can see a value that was never signed.
-   Measured on the public sample bundle: with the repeated field inserted, aga-verify 2.2.2 pinned to the sample key
-   reports VERIFIED (provenance verified), and a real change of the same value fails. Workaround: treat the verifier's
-   parsed output as the record's content, and reject or flag files with repeated field names before displaying them.
-   A strict rejection of repeated field names is planned for the reviewed release.
+   Measured on the public sample bundle, pinned to the sample key: with the repeated name inserted in a receipt, in the
+   checkpoint or in the envelope, aga-verify 2.2.2, aga-governance 0.3.2, the verifier in this package and /verify report
+   VERIFIED, and a real change of the checkpoint value fails. Workaround: treat the verifier's parsed output as the
+   record's content, and reject or flag files with repeated field names before displaying them. A strict rejection of
+   repeated field names is planned for the reviewed release.
 
 No fixed version is named until one is published.
 
