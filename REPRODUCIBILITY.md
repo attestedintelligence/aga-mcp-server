@@ -16,10 +16,19 @@ regenerate the published artifact from tagged source and how to verify it.
 ```bash
 git clone <repo-url> aga-mcp-server   # plain clone: aga-receipt-spec is VENDORED (regular files), not a submodule
 cd aga-mcp-server
-git checkout <tag>          # e.g. v3.0.1 (every published version is tagged; the source commit is also in the SLSA provenance)
+git checkout <commit>       # the commit the version's npm provenance names (see below); tags do not cover every version
 npm ci                      # install exactly the locked deps
 npm run build               # = rm -rf dist  &&  tsc   (clean build; no stale outputs)
 ```
+
+**Which commit.** The authority is the npm provenance attestation, not a tag. Every aga-mcp-server version from
+3.0.0 on carries one except 3.3.0, and so does every aga-verify version from 2.1.0 on; 3.0.0-rc.0 and earlier
+versions have none. Read the commit with
+`curl -s https://registry.npmjs.org/-/npm/v1/attestations/@attested-intelligence%2f<name>@<version>` and decode
+the SLSA statement's `resolvedDependencies[].digest.gitCommit`. Tags are a convenience and do not cover every
+version (`git ls-remote --tags` lists them). `v3.0.2` names a version that was never published to npm, and
+`v3.5.0` points one commit after the commit 3.5.0 was built from; the two differ only in
+`.github/workflows/release.yml`.
 
 ## Produce the publishable tarball
 
@@ -28,16 +37,19 @@ npm pack                    # writes attested-intelligence-aga-mcp-server-<versi
 # or, for a provenance-attested release, the CI workflow .github/workflows/release.yml
 ```
 
-## Determinism (and the one unavoidable nondeterminism)
+## Determinism
 
 `dist/*.js`, `dist/*.d.ts`, and the source maps are a **deterministic** function of `src/` +
 `tsconfig.json` + the pinned `typescript` version — two clean builds from the same source produce
 **byte-identical** files.
 
-The single nondeterminism is the **gzip wrapper of the `.tgz`**: `npm pack` stamps the archive
-with a build timestamp, so the `.tgz` *bytes* (and therefore its `shasum`) differ run-to-run. The
-**extracted contents** are byte-identical. Verify reproducibility by comparing per-file hashes of
-the extracted tarball, not the `.tgz` shasum:
+The **whole `.tgz`** reproduces too. `npm pack` writes fixed timestamps into the tar headers and the
+gzip header, so packing the same tree twice gives the same bytes, and the same `integrity` (sha512).
+An earlier version of this page said the gzip wrapper carried a build timestamp. That was wrong.
+Measured 2026-09-25: 3.6.0, 3.6.1 and aga-verify 2.2.0 and 2.2.1 were each rebuilt from the commit their
+provenance names, with Node 20 on Windows (CI builds on Ubuntu). Each rebuilt `.tgz` had the sha512 that
+the registry's `dist.integrity` and the attested digest give. When the whole-file hash does differ, the
+per-file manifest finds which file:
 
 ```bash
 # In each build, extract and hash every packed file:
@@ -48,8 +60,9 @@ tar -xzf *.tgz && find package -type f -print0 | sort -z | xargs -0 sha256sum > 
 ## Demonstrated
 
 A from-clean-clone build was compared against the working-tree build: the per-file SHA-256
-manifest of the packed contents is identical (only the `.tgz` gzip timestamp differs). The exact
-commands run and the diff result are recorded in the F0 report / commit for item 5.
+manifest of the packed contents is identical. The exact commands run and the diff result are recorded
+in the F0 report / commit for item 5. The 2026-09-25 rebuild (above) went further: whole-tarball equality
+with the published versions.
 
 ## Determinism + trust-surface notes (for a skeptic reproducing this)
 
