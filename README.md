@@ -290,9 +290,9 @@ tests/                 # TypeScript test suite (428 automated tests)
 - [Threat boundary](https://github.com/attestedintelligence/aga-mcp-server/blob/main/THREAT_BOUNDARY.md)
 - [Deployment guide](https://github.com/attestedintelligence/aga-mcp-server/blob/main/DEPLOYMENT.md)
 
-## Known issues in 3.6.0 and 3.6.1
+## Known issues in 3.6.0 to 3.6.2
 
-3.6.1 changes only this README and the version number; the runtime is 3.6.0's. Each item below was
+3.6.1 and 3.6.2 change only the documentation and the version number; the runtime is 3.6.0's. Each item below was
 reproduced on 2026-09-23 on `@attested-intelligence/aga-mcp-server` 3.6.0 installed from npm, and
 concerns the `aga-proxy` gateway. The same list is kept at <https://attestedintelligence.com/security>.
 

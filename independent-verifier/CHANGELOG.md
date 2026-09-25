@@ -2,6 +2,15 @@
 
 All notable changes to `@attested-intelligence/aga-verify` are recorded here, newest first. This package follows [Semantic Versioning](https://semver.org). Any change that can flip a verification verdict is called out explicitly, first.
 
+## 2.2.2 — 2026-09-25
+
+Documentation and version only; `dist/` and `verify.ts` are 2.2.1's, byte for byte.
+
+- Adds `SECURITY.md` to the package: how to report a vulnerability privately (GitHub private vulnerability reporting
+  or email).
+- The README's provenance example says which key to pin: for the site's sample bundle, the published sample-bundle
+  key (a fixture no gateway holds); for your own bundles, your gateway's key.
+
 ## 2.2.1 — 2026-09-23
 
 Documentation only; no code change. `dist/aga-verify.mjs`, `verify.ts`, `README.md`, `example-bundle.json` and

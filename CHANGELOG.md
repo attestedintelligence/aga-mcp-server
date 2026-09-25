@@ -2,6 +2,22 @@
 
 All notable changes to `@attested-intelligence/aga-mcp-server` are recorded here, newest first. This package follows [Semantic Versioning](https://semver.org). The signed receipt and evidence-bundle wire format is the canonical SEP profile; any format-affecting change is called out explicitly.
 
+## 3.6.2 — 2026-09-25
+
+Documentation and version only; the runtime is 3.6.0's, file for file (`dist/` is byte-identical to 3.6.0's and 3.6.1's). The shipped documents:
+
+- no longer say `aga-governance` 0.3.1 is the current release (PyPI serves a later version). They say 0.3.1 fixed the
+  depth-bomb crash and every later release carries the fix;
+- say the proxy evaluates each call against the operator's loaded policy (a JSON file or a built-in profile) and signs the
+  SHA-256 of its canonical JSON into every receipt, instead of calling it a sealed policy; the npm package description
+  says the same;
+- describe the proxy's upstream as a stdio child process or a plain JSON-RPC POST (`--upstream-url`), with no Streamable
+  HTTP session or SSE handling;
+- THREAT_BOUNDARY.md: `denyMethods` is a library option that the `aga-proxy` CLI cannot set;
+- SECURITY.md: adds GitHub private vulnerability reporting, names `@attested-intelligence/aga-verify` and `aga-governance`
+  in scope, and says an evidence bundle shows tampering, not non-omission;
+- the known issues are listed for 3.6.0 to 3.6.2.
+
 ## 3.6.1 — 2026-09-23
 
 README and version only; the runtime is 3.6.0's, file for file. The README:
