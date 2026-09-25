@@ -293,8 +293,8 @@ tests/                 # TypeScript test suite (428 automated tests)
 ## Known issues in 3.6.0 to 3.6.2 and the published verifiers
 
 3.6.1 and 3.6.2 change only the documentation and the version number; the runtime is 3.6.0's. Items 1 to 4 were reproduced on 2026-09-23 on `@attested-intelligence/aga-mcp-server` 3.6.0 installed from npm, and
-concern the `aga-proxy` gateway. Item 5, added 2026-09-26, concerns the verifiers and was reproduced on 2026-09-25
-on the current releases. Item 6, also added 2026-09-26, concerns aga-proxy with an HTTP upstream and was
+concern the `aga-proxy` gateway. Item 5, added 2026-09-25, concerns the verifiers and was reproduced on 2026-09-25
+on the current releases. Item 6, also added 2026-09-25, concerns aga-proxy with an HTTP upstream and was
 reproduced on 2026-09-25 on 3.6.2. The same list is kept at <https://attestedintelligence.com/security>.
 
 1. **The agent port listens on every network interface, with no authentication.** Anyone who can
