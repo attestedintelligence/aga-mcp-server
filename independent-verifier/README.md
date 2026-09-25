@@ -55,7 +55,11 @@ All steps are fully offline. No network calls, ever.
 
 A PASS proves every **present** receipt is authentic, correctly chained, Merkle-included
 under a signed checkpoint, and (with `--pubkey`) issued by the pinned gateway: nothing
-present was added, reordered, or truncated.
+present was added, reordered, or truncated. A field name repeated anywhere in the file (in a
+receipt, the checkpoint or the envelope) still verifies: the verifier reads the last copy, so read
+values from its parsed output, not from the raw file (known issue 5 in the repository README and on
+<https://attestedintelligence.com/security>). An earlier genuine export presented as the current one
+also verifies: the verifier has no freshness input.
 
 A PASS does **not** prove **non-omission**: it cannot establish that the signer recorded
 *every* action it took. Completeness is bounded by the tamper-evidence of the interception

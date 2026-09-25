@@ -55,7 +55,7 @@ Add to your Claude Desktop MCP config (`claude_desktop_config.json`):
 }
 ```
 
-Claude can then seal artifacts, measure integrity, generate evidence bundles, and verify compliance through natural language.
+Claude can then seal artifacts, measure integrity, generate evidence bundles, and verify them offline through natural language.
 
 ### Persist the signing key (do this first)
 
@@ -116,7 +116,7 @@ The reference §6 algorithm is implemented in **three languages**: JavaScript (`
 
 ### Check-name mapping across implementations
 
-The JS reference verifier and the Python SDK (`aga-governance`) decompose the same seven-check verification differently. Overall verdicts and exit codes agree on every conformance-corpus case (re-proven 2026-07-01: 10/10 cells across pristine/tampered bundles with unpinned, correct, and wrong keys); the sub-check that reports a given tamper can differ:
+The JS reference verifier and the Python SDK (`aga-governance`) decompose the same seven-check verification differently. Overall verdicts and exit codes agree on all 61 conformance-corpus cases as the cross-stack harness feeds them (object-level cases re-serialized, so float spellings arrive as integers; measured on aga-governance 0.3.2 on 2026-09-25) and on the 10 cells re-proven 2026-07-01 (pristine and tampered bundles with unpinned, correct and wrong keys). On the literal file bytes of the corpus's float-spelled `leaf_index` case (`0.0`), aga-governance 0.3.2 reports FAILED where the JS reference, `aga-verify`, Go and Python reference verifiers report VERIFIED; see <https://attestedintelligence.com/spec>. The sub-check that reports a given tamper can differ:
 
 | JS reference check | Python result field | What it covers |
 |---|---|---|
@@ -128,7 +128,7 @@ The JS reference verifier and the Python SDK (`aga-governance`) decompose the sa
 | `envelope_consistency` | `envelope_consistent` | envelope `gateway_id`, `generated_at`, `merkle_root` vs signed content (`bundle_id`, `schema_version`, the envelope `policy_reference` and `offline_capable` are unsigned and unchecked) |
 | `gateway_key_match` (with `--pubkey`) | `gateway_key_match` / `provenance` | pinned issuer key |
 
-Known decomposition difference: the JS reference recomputes every Merkle leaf from full receipt content, so a receipt-signature tamper also fails `merkle_and_bijection`; the Python verifier surfaces the same tamper in `receipt_signatures_valid`, `chain_integrity_valid`, and `bundle_consistent` while its `merkle_proofs_valid` can remain true. Neither is looser: the bundle fails in both stacks, exit 1. Input handling of the pin is the same in all three: a `--pubkey` that is not 64 hex characters is a usage error (exit 2) in the JS reference, `aga-verify` and the Python SDK, and a 64-hex pin that is not a valid curve point is honored, fails to match, and fails the bundle (exit 1). Two other verifiers differ. The in-server engine (the package's `./verify` export, which `verify_bundle_offline` calls) treats a pin that is not a well-formed key for the bundle's profile as no pin, and returns VERIFIED with `pinned: false`. The Go and Python reference verifiers in `aga-receipt-spec/verify/` treat a pin that is not 64 lowercase hex the same way and print `integrity only; no key pinned` (exit 0). Read `pinned` before taking a VERIFIED as provenance.
+Known decomposition difference: the JS reference recomputes every Merkle leaf from full receipt content, so a receipt-signature tamper also fails `merkle_and_bijection`; the Python verifier surfaces the same tamper in `receipt_signatures_valid`, `chain_integrity_valid`, and `bundle_consistent` while its `merkle_proofs_valid` can remain true. Neither is looser: the bundle fails in both stacks, exit 1. Input handling of the pin is the same in all three: a `--pubkey` that is not 64 hex characters is a usage error (exit 2) in the JS reference, `aga-verify` and the Python SDK, and a 64-hex pin that is not a valid curve point is honored, fails to match, and fails the bundle (exit 1). Two other verifiers differ. The in-server engine (the package's `./verify` export, which `verify_bundle_offline` calls) treats a pin that is not a well-formed key for the bundle's profile as no pin, and returns VERIFIED with `pinned: false`. The Go and Python reference verifiers in `aga-receipt-spec/verify/` treat a pin that is not 64 lowercase hex the same way and print `integrity only; no key pinned` (exit 0). Read `pinned` before taking a VERIFIED as provenance. A `--pubkey` given with no value is also treated as no pin (exit 0, integrity only) by `aga-verify`, `verify-sep.mjs`, `verify.py` and `verify.go`, and is a usage error in the Python SDK. Two differences concern the bundle rather than the pin; both lie outside the conformance corpus, and the failing side fails closed: a proof `leaf_index` spelled as an integral float (`1.0`) reports FAILED in aga-governance 0.3.2 and VERIFIED in the others, and object keys outside the Basic Multilingual Plane (possible only in a non-string field value, which no shipped producer emits) sort differently in `verify.py`, `verify.go` and aga-governance than in the JavaScript verifiers, so such a bundle reports VERIFIED in JavaScript and FAILED in Go and Python. These wait for the reviewed January release.
 
 ## How It Works
 
