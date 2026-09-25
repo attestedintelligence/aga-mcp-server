@@ -43,10 +43,10 @@ Implements the canonical construction in
 
 1. **Structural floor**: algorithm, well-formed (non-small-order) key, receipt/proof counts.
 2. **Receipt signatures**: Ed25519 over the canonical receipt bytes, for every receipt.
-3. **Chain + ordering**: each receipt links to the previous leaf; monotonic ids/timestamps.
+3. **Chain + ordering**: each receipt links to the previous leaf, and timestamps are canonical and non-decreasing. Receipt and request ids are not ordering fields and are not checked.
 4. **Merkle + bijection**: every leaf is **recomputed from receipt content**, walked to one root, and the proof set is the complete contiguous `0..N-1`.
 5. **Signed checkpoint (mandatory)**: a gateway-signed checkpoint binds the root, the receipt count, and the chain head, so adding/dropping/reordering receipts fails.
-6. **Envelope consistency**: the bundle's envelope metadata matches the signed content it wraps.
+6. **Envelope consistency**: the envelope's `gateway_id`, `generated_at` and `merkle_root`, and each receipt's `public_key` and `gateway_id`, match the signed content. `bundle_id`, `schema_version`, the envelope copy of `policy_reference` and `offline_capable` are unsigned and unchecked; read the signed per-receipt `policy_reference` instead.
 7. **Provenance (only with `--pubkey`)**: the bundle key equals the key you pinned.
 
 All steps are fully offline. No network calls, ever.

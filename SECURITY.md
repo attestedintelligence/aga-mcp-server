@@ -16,8 +16,8 @@ If you discover a security vulnerability in AGA, please report it privately thro
 
 ### Response Timeline
 
-- **Acknowledgment:** Within 48 hours of receipt
-- **Initial assessment:** Within 5 business days
+- **Acknowledgment:** We aim to acknowledge new reports within a few business days (the same commitment as <https://attestedintelligence.com/security>)
+- **Initial assessment:** A rough timeline once we understand the issue
 - **Resolution target:** Dependent on severity, typically within 30 days for critical issues
 
 ### Scope

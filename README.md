@@ -122,13 +122,13 @@ The JS reference verifier and the Python SDK (`aga-governance`) decompose the sa
 |---|---|---|
 | `structural` | `algorithm_valid` + parts of `bundle_consistent` | algorithm id, key well-formedness, receipt/proof counts |
 | `receipt_signatures` | `receipt_signatures_valid` | Ed25519 over canonical receipt bytes |
-| `chain_and_ordering` | `chain_integrity_valid` | prev-leaf linkage, monotonic ids and timestamps |
+| `chain_and_ordering` | `chain_integrity_valid` | prev-leaf linkage, canonical non-decreasing timestamps (ids are not ordering fields and are not checked) |
 | `merkle_and_bijection` | `merkle_proofs_valid` | leaf recompute, single-root walk, index bijection |
 | `signed_checkpoint` | `checkpoint_valid` | gateway-signed root + count + chain-head binding |
-| `envelope_consistency` | `envelope_consistent` | envelope metadata vs signed content |
+| `envelope_consistency` | `envelope_consistent` | envelope `gateway_id`, `generated_at`, `merkle_root` vs signed content (`bundle_id`, `schema_version`, the envelope `policy_reference` and `offline_capable` are unsigned and unchecked) |
 | `gateway_key_match` (with `--pubkey`) | `gateway_key_match` / `provenance` | pinned issuer key |
 
-Known decomposition difference: the JS reference recomputes every Merkle leaf from full receipt content, so a receipt-signature tamper also fails `merkle_and_bijection`; the Python verifier surfaces the same tamper in `receipt_signatures_valid`, `chain_integrity_valid`, and `bundle_consistent` while its `merkle_proofs_valid` can remain true. Neither is looser: the bundle fails in both stacks, exit 1. Input handling of the pin is the same in all three: a `--pubkey` that is not 64 hex characters is a usage error (exit 2) in the JS reference, `aga-verify` and the Python SDK, and a 64-hex pin that is not a valid curve point is honored, fails to match, and fails the bundle (exit 1).
+Known decomposition difference: the JS reference recomputes every Merkle leaf from full receipt content, so a receipt-signature tamper also fails `merkle_and_bijection`; the Python verifier surfaces the same tamper in `receipt_signatures_valid`, `chain_integrity_valid`, and `bundle_consistent` while its `merkle_proofs_valid` can remain true. Neither is looser: the bundle fails in both stacks, exit 1. Input handling of the pin is the same in all three: a `--pubkey` that is not 64 hex characters is a usage error (exit 2) in the JS reference, `aga-verify` and the Python SDK, and a 64-hex pin that is not a valid curve point is honored, fails to match, and fails the bundle (exit 1). Two other verifiers differ. The in-server engine (the package's `./verify` export, which `verify_bundle_offline` calls) treats a pin that is not a well-formed key for the bundle's profile as no pin, and returns VERIFIED with `pinned: false`. The Go and Python reference verifiers in `aga-receipt-spec/verify/` treat a pin that is not 64 lowercase hex the same way and print `integrity only; no key pinned` (exit 0). Read `pinned` before taking a VERIFIED as provenance.
 
 ## How It Works
 
@@ -290,11 +290,11 @@ tests/                 # TypeScript test suite (428 automated tests)
 - [Threat boundary](https://github.com/attestedintelligence/aga-mcp-server/blob/main/THREAT_BOUNDARY.md)
 - [Deployment guide](https://github.com/attestedintelligence/aga-mcp-server/blob/main/DEPLOYMENT.md)
 
-## Known issues in 3.6.0 to 3.6.2
+## Known issues in 3.6.0 to 3.6.2 and the published verifiers
 
-3.6.1 and 3.6.2 change only the documentation and the version number; the runtime is 3.6.0's. Each item below was
-reproduced on 2026-09-23 on `@attested-intelligence/aga-mcp-server` 3.6.0 installed from npm, and
-concerns the `aga-proxy` gateway. The same list is kept at <https://attestedintelligence.com/security>.
+3.6.1 and 3.6.2 change only the documentation and the version number; the runtime is 3.6.0's. Items 1 to 4 were reproduced on 2026-09-23 on `@attested-intelligence/aga-mcp-server` 3.6.0 installed from npm, and
+concern the `aga-proxy` gateway. Item 5, added 2026-09-26, concerns the verifiers and was reproduced on 2026-09-25
+on the current releases. The same list is kept at <https://attestedintelligence.com/security>.
 
 1. **The agent port listens on every network interface, with no authentication.** Anyone who can
    reach the host on that port can send governed calls through the proxy. Block inbound traffic to
@@ -308,6 +308,18 @@ concerns the `aga-proxy` gateway. The same list is kept at <https://attestedinte
    path), so the upstream sits inside the key's trust domain. Workaround, measured on 3.6.0: run
    without either variable. The upstream then sees neither, but the proxy signs with a per-process
    key that cannot be pinned across restarts.
+4. **The `--upstream-url` mode forwards raw JSON-RPC over HTTP POST with only a content-type header.** It does not
+   implement the MCP Streamable HTTP transport (the Accept header, the request metadata headers and event-stream
+   handling), so a spec-conformant HTTP MCP server rejects its requests. Workaround: bridge to the server over stdio.
+5. **A bundle file can repeat a field name inside a receipt**, for example a forged `"decision": "PERMITTED"` placed
+   ahead of the signed `"decision": "DENIED"`. The published verifiers (aga-verify 2.2.2, aga-governance 0.3.2, the
+   verifier in this package, and the reference verifiers in `aga-receipt-spec/verify/`) and the site's /verify page read
+   the last occurrence, which is the signed one, and report VERIFIED, with provenance when the key is pinned. They do
+   not reject the file, so a tool or a person reading the first occurrence can see a value that was never signed.
+   Measured on the public sample bundle: with the repeated field inserted, aga-verify 2.2.2 pinned to the sample key
+   reports VERIFIED (provenance verified), and a real change of the same value fails. Workaround: treat the verifier's
+   parsed output as the record's content, and reject or flag files with repeated field names before displaying them.
+   A strict rejection of repeated field names is planned for the reviewed release.
 
 No fixed version is named until one is published.
 
