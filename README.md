@@ -365,7 +365,8 @@ list is kept at <https://attestedintelligence.com/security>.
    tool's `path_prefix` is neither a string nor false, 0 or null. The proxy starts with such a policy file, and it reports
    each refusal listed above only on its own stderr. A message sent as a JSON-RPC batch array or without
    `"jsonrpc": "2.0"` is refused differently: the client gets an error, and there is no receipt. A message of 8,388,608
-   characters or more, not counting its newline (UTF-16 code units, about 8.4 million), also gets an error and no receipt, and the proxy then closes
+   characters or more, not counting the newline that ends it (a carriage return before it does count; UTF-16 code units,
+   about 8.4 million), also gets an error and no receipt, and the proxy then closes
    the connection, dropping any reply still due on it. The limit counts input not yet split into messages, so a message
    just under the limit can be refused the same way when the read that completes it also carries enough of the next
    message to pass the limit; whether that happens depends on where the reads fall. On 3.6.2, when a 100-character
@@ -423,11 +424,11 @@ list is kept at <https://attestedintelligence.com/security>.
     Checks that fail closed on these inputs, and a check of the policy file at startup, are planned for the reviewed
     release.
 11. **A stdio upstream's response whose JSON line is 8,388,608 characters or more (UTF-16 code units, counting JSON
-    escaping but not its newline) is dropped.** The call already
+    escaping but not the newline that ends it; a carriage return before it does count) is dropped.** The call already
     has a PERMITTED receipt, and the agent gets a timeout error after 30 seconds, so an agent that retries can run the tool
     twice; the proxy reports the drop only on its own stderr. The limit counts upstream output not yet split into lines, so
     a response just under it can be dropped when the read that completes it also carries enough of the next response to
-    pass the limit, and that next response, possibly to another client's call, is dropped with it; whether that happens
+    pass the limit, and every response after it in that read, possibly to other clients' calls, is dropped with it; whether that happens
     depends on where the reads fall. Measured on 3.6.2 from npm on 2026-09-26: a
     9,000,000-character result was dropped and the agent got the timeout after 30.0 seconds, while a 1,000,000-character
     result came back in 31 milliseconds. Through a running proxy, a response line of 8,388,607 characters was returned and
