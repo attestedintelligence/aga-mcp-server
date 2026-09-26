@@ -368,8 +368,7 @@ list is kept at <https://attestedintelligence.com/security>.
    characters or more (UTF-16 code units, about 8.4 million), not counting the newline that ends it but counting a carriage
    return before that newline, also gets an error and no receipt, and the proxy then closes
    the connection, dropping any reply still due on it. The limit counts input not yet split into messages, so a message
-   just under the limit can be refused the same way when the read that completes it also carries enough of the next
-   message to pass the limit; whether that happens depends on where the reads fall. On 3.6.2, when a 100-character
+   just under the limit can be refused the same way when the read that completes it also carries enough input after it to pass the limit; whether that happens depends on where the reads fall. On 3.6.2, when a 100-character
    message, a message 58 characters under the limit and a 100,000-character message were sent in one write, the first
    was answered, the second got the error and the connection closed; sent without the 100,000-character message, or
    without the 100-character one, every message was forwarded. These are
