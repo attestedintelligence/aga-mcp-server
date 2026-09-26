@@ -152,14 +152,18 @@ AI Agent                  AGA Gateway                    Verifier
 
 ## MCP Governance Proxy
 
-Run AGA as a proxy in front of an MCP server that it starts as a stdio child process (the hardened default), or one it reaches with a plain JSON-RPC POST (`--upstream-url`; no Streamable HTTP session or SSE handling). The proxy's agent port speaks newline-delimited JSON-RPC 2.0 over raw TCP, not stdio or Streamable HTTP. A stdio MCP client needs a relay you provide (a few lines that pipe stdin to the port and the port to stdout); none ships. A scripted client can speak that framing directly. Every `tools/call` request with a string tool name is evaluated against the policy and produces a signed receipt; in 3.6.0 through 3.6.2 a `tools/call` whose name is a number, an array or an object is refused without a receipt or a response. Other methods that are not benign are forwarded with a signed passthrough receipt and are not policy-evaluated, and benign protocol methods (`initialize`, `initialized`, `ping`, the `*/list` methods, `logging/setLevel`, `completion/complete` and `notifications/*`) produce no receipt (THREAT_BOUNDARY.md section 3 item 2). Read the known issues below before you expose the port.
+Run AGA as a proxy in front of an MCP server that it starts as a stdio child process (the hardened default), or one it reaches with a plain JSON-RPC POST (`--upstream-url`; no Streamable HTTP session or SSE handling). The proxy's agent port speaks newline-delimited JSON-RPC 2.0 over raw TCP, not stdio or Streamable HTTP. A stdio MCP client needs a relay you provide (a few lines that pipe stdin to the port and the port to stdout); none ships. A scripted client can speak that framing directly. Every `tools/call` request with a non-empty string tool name and arguments the proxy can canonicalize is evaluated against the policy and produces a signed receipt, except the calls that known issue 7 below describes as refused without one. Other methods that are not benign are forwarded with a signed passthrough receipt and are not policy-evaluated, and benign protocol methods (`initialize`, `initialized`, `ping`, `tools/list`, `prompts/list`, `resources/list`, `resources/templates/list`, `logging/setLevel`, `completion/complete` and `notifications/*`) produce no receipt (THREAT_BOUNDARY.md section 3 item 2). Read the known issues below before you expose the port.
 
 ```bash
 # Start the proxy (the `aga-proxy` bin) in front of an upstream MCP server.
 # stdio upstream = the hardened default (the upstream is a child process, not network-reachable).
 npx -p @attested-intelligence/aga-mcp-server aga-proxy start \
-  --upstream "npx -y @modelcontextprotocol/server-filesystem /tmp/test" --profile standard
+  --upstream "npx -y @modelcontextprotocol/server-filesystem /tmp/test" --profile permissive
 ```
+
+`permissive` records each `tools/call` it evaluates (known issue 7 describes the exceptions) and denies nothing on policy
+grounds. `standard` and `restrictive` allow only generic example tool names, so they deny every tool this example server
+exposes; to permit some of your server's tools and deny the rest, pass a `--policy` file that names them.
 
 ### Exporting the evidence bundle from a running proxy
 
@@ -170,7 +174,7 @@ A **separate** `aga-proxy export` invocation reads that file and fetches the sam
 ```bash
 # Terminal A — start the proxy in front of an upstream MCP server
 npx -p @attested-intelligence/aga-mcp-server aga-proxy start \
-  --upstream "npx -y @modelcontextprotocol/server-filesystem /tmp/test" --profile standard
+  --upstream "npx -y @modelcontextprotocol/server-filesystem /tmp/test" --profile permissive
 
 # (First, drive at least one tools/call through the proxy from your MCP client — an empty
 #  ledger has no receipts to checkpoint, and the export reports there is nothing to export.)
@@ -183,14 +187,14 @@ If no proxy is running, `aga-proxy export` prints `no running proxy found; start
 
 **In-memory ledger:** the exported bundle is the durable cryptographic record, but the live in-process chain does **not** survive a proxy restart. This flow makes the *live* ledger reachable from another process; it does **not** add cross-restart persistence, which needs the persistent (SQLite) backend and remains roadmap (see [`KNOWN_LIMITATIONS.md`](https://github.com/attestedintelligence/aga-mcp-server/blob/main/KNOWN_LIMITATIONS.md)).
 
-The proxy intercepts `tools/call` requests, evaluates them against the loaded policy (a JSON file or a built-in profile; the SHA-256 of its canonical JSON is signed into every receipt), and generates a signed SEP receipt for **every** decision (except the refusal of a `tools/call` whose name is a number, an array or an object, which gets none in 3.6.0 through 3.6.2). Permitted calls are forwarded to the downstream server; denied calls return an MCP error and never reach it. Every decision is hash-linked and checkpoint-bound into a tamper-evident bundle. (Methods other than `tools/call` aren't policy-evaluated, but non-benign ones are recorded as signed *passthrough* receipts for auditability, and a library caller can pass a method denylist (`denyMethods`) to reject them; the `aga-proxy` CLI has no flag for it; see `THREAT_BOUNDARY.md` §3.2.)
+The proxy intercepts `tools/call` requests, evaluates them against the loaded policy (a JSON file or a built-in profile; the SHA-256 of its canonical JSON is signed into every receipt), and generates a signed SEP receipt for **every** decision (except the calls that known issue 7 below describes as refused without one). Permitted calls are forwarded to the downstream server; denied calls return an MCP error and never reach it. Every decision is hash-linked and checkpoint-bound into a tamper-evident bundle. (Methods other than `tools/call` aren't policy-evaluated, but non-benign ones are recorded as signed *passthrough* receipts for auditability, and a library caller can pass a method denylist (`denyMethods`) to reject them; the `aga-proxy` CLI has no flag for it; see `THREAT_BOUNDARY.md` §3.2.)
 
 Three built-in policy profiles:
-- **permissive** - log everything, block nothing (default)
-- **standard** - rate limits + blocks destructive operations
-- **restrictive** - explicit tool allowlist, all unknown tools denied
+- **permissive** - `audit_only`: denies nothing on policy grounds and records each `tools/call` it evaluates (default); the fail-closed refusals below and known issue 7 still apply
+- **standard** - an allowlist of ten generic example tool names (`filesystem_read`, `shell_execute`, `web_search` and others) with rate limits, and substring denials on two of them; every other tool is denied, so a real server's tools need a `--policy` file
+- **restrictive** - an allowlist of three generic example tool names with lower rate limits and a path prefix on one; every other tool is denied
 
-Because the default (`permissive`) is audit-only, starting with an `audit_only` policy prints a loud stderr banner stating that every call is permitted and recorded and **no call is denied** in that mode — denial happens only under an allowlist-mode policy (`standard`, `restrictive`, or a custom `--policy` file). An unrecognized `--profile` value is a hard error (exit 2 listing the valid names), never a silent fallback to `permissive`.
+Because the default (`permissive`) is audit-only, starting with an `audit_only` policy prints a loud stderr banner stating that every call is permitted and recorded and no call is denied in that mode. No call is denied on policy grounds, but the proxy still refuses, fail-closed, a `tools/call` with no tool name or with arguments it cannot canonicalize (nested past 100 levels, for example), and signs a DENIED receipt for each; a name of `0`, `false`, `null` or an empty string counts as no name. Policy denial needs `--profile standard` or `restrictive`, or a `--policy` file in `allowlist` or `denylist` mode. In `denylist` mode a policy denies each tool it lists without `allowed: true` (in 3.6.0 through 3.6.2 also an unlisted tool named like a built-in object property, such as `constructor`), and applies the rate limits of the listed tools it allows; path and pattern rules apply in `allowlist` mode only. A `--policy` file in `audit_only` mode permits every call; one with any other mode, or none, denies every `tools/call`, and in 3.6.0 through 3.6.2 one in `allowlist` or `denylist` mode whose `constraints` member is missing or null refuses, with no receipt and no response, every `tools/call` that has a tool name and arguments the proxy can canonicalize (known issue 7). An unrecognized `--profile` value is a hard error (exit 2 listing the valid names), never a silent fallback to `permissive`.
 
 ## Verification _(canonical SEP 3.0; normative §6 algorithm in `aga-receipt-spec/verify/verify-sep.mjs`)_
 
@@ -295,7 +299,8 @@ tests/                 # TypeScript test suite (428 automated tests)
 3.6.1 and 3.6.2 change only the documentation and the version number; the runtime is 3.6.0's. Items 1 to 4 were reproduced on 2026-09-23 on `@attested-intelligence/aga-mcp-server` 3.6.0 installed from npm, and
 concern the `aga-proxy` gateway. Item 5, added 2026-09-25, concerns the verifiers and was reproduced on 2026-09-25
 on the current releases. Item 6, also added 2026-09-25, concerns aga-proxy with an HTTP upstream and was
-reproduced on 2026-09-25 on 3.6.2. The same list is kept at <https://attestedintelligence.com/security>.
+reproduced on 2026-09-25 on 3.6.2. Item 7, also added 2026-09-25, concerns `tools/call` messages that aga-proxy refuses
+without a receipt and was reproduced on 2026-09-25 on 3.6.2. The same list is kept at <https://attestedintelligence.com/security>.
 
 1. **The agent port listens on every network interface, with no authentication.** Anyone who can
    reach the host on that port can send governed calls through the proxy. Block inbound traffic to
@@ -335,6 +340,21 @@ reproduced on 2026-09-25 on 3.6.2. The same list is kept at <https://attestedint
    restrictive profile and with the default permissive profile. Workaround: keep the stdio default, or have the HTTP
    upstream reject any message that repeats a member name. A strict rejection of repeated member names in the proxy
    is planned for the reviewed release.
+7. **aga-proxy does not record every `tools/call` it refuses.** It signs a `tools/call`'s receipt before it forwards the
+   call, so with a stdio upstream a call it cannot record never reaches the tool (for an HTTP upstream, see item 6), but
+   such a call leaves no receipt. These cases were measured on 3.6.2 from npm on 2026-09-25, each with no receipt and no
+   response to the client: a `tools/call` whose tool name is a non-zero number, an array or an object (a name of `0`, `false`,
+   `null` or an empty string counts as no name and gets a DENIED receipt and an error); one whose tool name or string id
+   holds an unpaired surrogate (the JSON escape `\ud800`, for example); under a `--policy` file in `allowlist` or
+   `denylist` mode whose `constraints` member is missing or null, every `tools/call` with a tool name and arguments the
+   proxy can canonicalize; and, under an allowlist file, a call it would otherwise permit that carries a string path when that
+   tool's `path_prefix` is neither a string nor false, 0 or null. The proxy starts with such a policy file, and it reports
+   each refusal listed above only on its own stderr. A message sent as a JSON-RPC batch array, or without
+   `"jsonrpc": "2.0"`, is refused differently: the client gets an error, and there is no receipt. These are
+   the cases measured, not a proof that no other input does the same. Workaround: give every policy file a `constraints`
+   object whose `path_prefix` values are strings, and have the client time out a call that gets no reply. A DENIED
+   receipt and an error for a malformed tool name, and a check of the policy file at startup, are planned for the
+   reviewed release.
 
 No fixed version is named until one is published.
 
