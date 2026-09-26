@@ -359,7 +359,9 @@ list is kept at <https://attestedintelligence.com/security>.
    each refusal listed above only on its own stderr. A message sent as a JSON-RPC batch array or without
    `"jsonrpc": "2.0"` is refused differently: the client gets an error, and there is no receipt. A message longer than
    8,388,608 characters (UTF-16 code units, about 8.4 million) also gets an error and no receipt, and the proxy then closes
-   the connection, dropping any reply still due on it. These are
+   the connection, dropping any reply still due on it. The limit counts input not yet split into messages, so a shorter
+   message can be refused the same way when the next one arrives with it: on 3.6.2, a message 58 characters under the
+   limit, sent with a 100,000-character message behind it, got the error, and sent alone it was forwarded. These are
    the cases measured, not a proof that no other input does the same. Workaround: give every policy file a `constraints`
    object whose `path_prefix` values are strings, and have the client time out a call that gets no reply. A DENIED
    receipt and an error for a malformed tool name, and a check of the policy file at startup, are planned for the
@@ -399,11 +401,13 @@ list is kept at <https://attestedintelligence.com/security>.
     `allowed: "false"`, a string, allows the tool; in denylist mode a tool listed as `false`, `null` or `0` instead of an
     object is allowed; and a non-empty `path_keys` string instead of an array makes the check read each character as a key
     name, so the intended key goes unchecked. Rate limits count per tool name across the whole
-    proxy, shared by every client. Measured on 3.6.2 from npm on 2026-09-26 with allowlist and denylist policy files: a
+    proxy, shared by every client, and in allowlist mode the limit is checked before the path and pattern rules, so a
+    call those rules deny still uses up a slot. Measured on 3.6.2 from npm on 2026-09-26 with allowlist and denylist policy files: a
     `path_prefix` of `/home` denied `"/etc/passwd"` and forwarded `["/etc/passwd"]`; a denied pattern of `rm -rf` denied
     `rm -rf /` and forwarded `RM -RF /` and the same command inside an array; a rule spelled `denied_pattern` denied
     nothing; `allowed: "false"` forwarded the call in both modes; a denylist entry of `false` forwarded the call; and
-    `path_keys: "path"` forwarded `/etc/passwd` past a `/home` prefix. Workaround: treat path and pattern rules as a convenience rather than a boundary, restrict paths in the
+    `path_keys: "path"` forwarded `/etc/passwd` past a `/home` prefix; and under a limit of 2 a minute, two calls denied by a
+    `/home` prefix left the next call inside it denied for the rate limit, while after one such denial it was forwarded. Workaround: treat path and pattern rules as a convenience rather than a boundary, restrict paths in the
     upstream server itself, and check a policy file's keys against the constraint names in `dist/proxy/types.d.ts`.
     Checks that fail closed on these inputs, and a check of the policy file at startup, are planned for the reviewed
     release.
