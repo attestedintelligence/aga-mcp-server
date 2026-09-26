@@ -34,7 +34,7 @@ The published `@attested-intelligence/aga-verify` CLI renders the identical verd
 
 This is built for teams shipping agentic-AI products into financial services and insurance, at the moment a customer's vendor-risk, model-risk, or internal-audit review asks what your agent did and how anyone would know.
 
-Tool calls routed through the AGA gateway are evaluated against the operator's policy, and each decision (PERMITTED or DENIED) is recorded as a signed, hash-linked governance receipt. `aga-proxy` also signs the SHA-256 of its policy's canonical JSON into every receipt; see [KNOWN_LIMITATIONS.md](https://github.com/attestedintelligence/aga-mcp-server/blob/main/KNOWN_LIMITATIONS.md) for what that field binds. Receipts are collected into evidence bundles that anyone holding the published format and the public key can verify offline, with no callback to us.
+Tool calls routed through the AGA gateway are evaluated against the operator's policy, and each decision (PERMITTED or DENIED) is recorded as a signed, hash-linked governance receipt, except the calls known issue 7 below describes as refused without one. `aga-proxy` also signs the SHA-256 of its policy's canonical JSON into every receipt; see [KNOWN_LIMITATIONS.md](https://github.com/attestedintelligence/aga-mcp-server/blob/main/KNOWN_LIMITATIONS.md) for what that field binds. Receipts are collected into evidence bundles that anyone holding the published format and the public key can verify offline, with no callback to us.
 
 **Record. Prove. Verify.**
 

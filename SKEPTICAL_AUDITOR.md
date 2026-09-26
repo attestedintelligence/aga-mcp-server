@@ -96,7 +96,8 @@ no `dist/core/bundle.*`, `dist/core/checkpoint.*`, or `dist/proxy/verify.*`.
 ### Step 6 — A denial cannot be erased by crashing the recorder (≈4 min)
 
 Every governed decision must yield a receipt; an attacker who can only send tool
-calls should not be able to make one *vanish*. Drive the real proxy with a
+calls should not be able to make one *vanish*. (Known issue 7 in the README lists the malformed tool calls 3.6.x
+refuses without a receipt; this step tests the depth-bomb case, which does get one.) Drive the real proxy with a
 deeply-nested-arguments "depth bomb":
 
 ```
