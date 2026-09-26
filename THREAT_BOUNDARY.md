@@ -22,7 +22,7 @@ A denial **cannot be silently erased by the agent**:
 
 > **Scope note (2026-09-26).** The depth-bomb row holds for arguments that cannot be canonicalized: they are DENIED and
 > recorded. A tool name or id that cannot be canonicalized (an unpaired surrogate), and the other cases in the README's
-> known issue 7, are refused with no receipt, the malformed-name cases with no response either; with a stdio upstream they
+> known issue 7, are refused with no receipt, and all but the batch, missing-jsonrpc and oversized messages with no response either; with a stdio upstream they
 > are never forwarded.
 
 Claim scope is **integrity-of-present-receipts, NOT non-omission**: a PASS proves every *present* receipt is authentic and complete-as-a-set under the checkpoint; it does **not** prove the gateway logged every action it took. Completeness is bounded by the tamper-evidence of the interception point, which is outside the bundle.

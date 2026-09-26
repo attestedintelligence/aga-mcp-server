@@ -374,17 +374,21 @@ list is kept at <https://attestedintelligence.com/security>.
    as `\uXXXX` escapes, so every byte the proxy reads from the agent is ASCII, and have a stdio upstream do the same; a
    forced split of the escaped message then arrived intact. A fix is planned for the reviewed release.
 9. **Exporting the evidence bundle takes time that grows with the square of the number of receipts, and aga-proxy
-   handles nothing else while it runs**: every governed call waits until the export ends. A call already forwarded to a
-   stdio upstream when an export longer than 30 seconds starts then gets a timeout error, although the upstream ran it
-   and its receipt says PERMITTED, so an agent that retries runs the tool twice. Measured on 3.6.2 from npm on
+   handles nothing else while it runs**: every governed call waits until the export ends. A call forwarded to a stdio
+   upstream that has not answered when an export starts gets a timeout error if the export ends more than 30 seconds
+   after the call was forwarded, although the upstream ran it and its receipt says PERMITTED, so an agent that retries
+   can run the tool twice. Measured on 3.6.2 from npm on
    2026-09-26 through the control channel's `GET /export`: 2.8 seconds at 1,000 receipts and 17.4 seconds at 2,500, with
    a `tools/call` sent during the export waiting as long; at 4,000 receipts an export took 43.8 seconds, and a call
-   forwarded just before it, which the upstream answered in 2 seconds, got the timeout error. A compact bundle takes about
-   1.7 to 1.9 KB per receipt, rising with the count. An audit the same day measured 88 to 113 seconds at 5,000 receipts.
+   forwarded just before it, which the upstream answered in 2 seconds, got the timeout error. At 1,000 to 4,000
+   receipts a compact bundle took about 1.7 to 1.9 KB per receipt, rising with the count. An audit the same day measured 88 to 113 seconds at 5,000 receipts.
    Verification time grows close to linearly. Workaround: each export covers every receipt since the proxy started and
-   does not shorten the chain, so bound the chain by exporting, verifying and restarting the proxy on a schedule (a
-   restart begins a new chain, and with a per-process key a new key to pin); export outside busy periods; and export and
-   verify before any stop, because the live chain is kept in memory and a stop loses receipts not yet exported. A fix
+   does not shorten the chain, so bound the chain by restarting the proxy on a schedule: pause the agents, export and
+   verify, then restart. A restart begins a new chain that is not linked to the last one and resets the rate-limit counts;
+   with a per-process key (`--ephemeral`, or neither `AGA_GATEWAY_KEY` nor `AGA_GATEWAY_KEY_FILE` set) it also begins a
+   new signing key, printed at startup, that cannot be pinned across restarts (item 3). Export outside busy periods, and
+   export and verify before any stop, because the live chain is kept in memory and a stop loses receipts not yet
+   exported. A fix
    that leaves the bundle's bytes unchanged is planned for the reviewed release.
 10. **Policy constraints check less than their names suggest.** A `path_prefix` is checked only when the value under the
     checked key (`path`, or the keys a rule lists in `path_keys`) is a string, so the same path sent inside an array or an
@@ -394,7 +398,7 @@ list is kept at <https://attestedintelligence.com/security>.
     proxy, shared by every client. Measured on 3.6.2 from npm on 2026-09-26 with an allowlist policy file: a
     `path_prefix` of `/home` denied `"/etc/passwd"` and forwarded `["/etc/passwd"]`; a denied pattern of `rm -rf` denied
     `rm -rf /` and forwarded `RM -RF /` and the same command inside an array; a rule spelled `denied_pattern` denied
-    nothing. Workaround: treat path and pattern rules as a convenience rather than a boundary, enforce paths in the
+    nothing. Workaround: treat path and pattern rules as a convenience rather than a boundary, restrict paths in the
     upstream server itself, and check a policy file's keys against the constraint names in `dist/proxy/types.d.ts`.
     Checks that fail closed on these inputs, and a check of the policy file at startup, are planned for the reviewed
     release.

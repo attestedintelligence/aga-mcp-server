@@ -17,7 +17,8 @@ npx -p @attested-intelligence/aga-mcp-server aga-proxy start \
 ```
 `policy.json` is an allowlist naming the tools this server exposes, for example
 `{"mode":"allowlist","constraints":{"read_text_file":{"name":"read_text_file","allowed":true},"list_directory":{"name":"list_directory","allowed":true}}}`.
-A file without a `constraints` object, or with a misspelled key, fails as the README's known issues 7 and 10 describe. The
+A file whose `constraints` member is missing or null refuses every call without a receipt (the README's known issue 7), a
+constraint key the proxy does not recognise is ignored (known issue 10), and a missing or misspelled `mode` denies every call. The
 built-in `standard` and `restrictive` profiles use generic example tool names, so they deny every tool of this server.
 The upstream is a **child process** the proxy spawns and talks to over stdio. It is **not network-reachable**, so the agent has no route to the tools except through the proxy. This closes the direct-reach bypass (`THREAT_BOUNDARY.md` §3.1) by construction. **Prefer this mode.**
 
