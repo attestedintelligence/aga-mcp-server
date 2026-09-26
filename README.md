@@ -167,7 +167,7 @@ exposes; to permit some of your server's tools and deny the rest, pass a `--poli
 
 ### Exporting the evidence bundle from a running proxy
 
-The proxy records receipts in its own process and keeps the SEP ledger **in memory**. To make that live ledger reachable from a separate shell, `aga-proxy start` opens a **loopback-only control channel** — an HTTP listener bound to `127.0.0.1` (never a routable interface), on its own port (default `18801`, override with `--control-port`), distinct from the agent-facing proxy port (`18800`). It exposes only read routes (`/export`, `/status`, `/receipts`); nothing on it mutates policy or state, and it is unreachable off-host by construction (the loopback bind is the guarantee). The proxy writes the chosen control port to `~/.aga-proxy/control.json` alongside `proxy.pid`.
+The proxy records receipts in its own process and keeps the SEP ledger **in memory**. To make that live ledger reachable from a separate shell, `aga-proxy start` opens a **loopback-only control channel** — an HTTP listener bound to `127.0.0.1` (never a routable interface), on its own port (default `18801`, override with `--control-port`), distinct from the agent-facing proxy port (`18800`). It exposes only read routes (`/export`, `/status`, `/receipts`); nothing on it mutates policy or state, and it is bound to loopback only. It does not check a request's Host or Origin header, so a web page in a browser on the same host can reach it through DNS rebinding unless the browser blocks it (known issue 12). The proxy writes the chosen control port to `~/.aga-proxy/control.json` alongside `proxy.pid`.
 
 A **separate** `aga-proxy export` invocation reads that file and fetches the same signed bundle the running proxy would emit:
 
@@ -304,15 +304,21 @@ concern the `aga-proxy` gateway. Item 5, added 2026-09-25, concerns the verifier
 on the current releases. Item 6, also added 2026-09-25, concerns aga-proxy with an HTTP upstream and was
 reproduced on 2026-09-25 on 3.6.2. Item 7, also added 2026-09-25, concerns `tools/call` messages that aga-proxy refuses
 without a receipt and was reproduced on 2026-09-25 on 3.6.2 (its oversized-message case was added and reproduced on
-2026-09-26). Items 8 to 11, added 2026-09-26, concern non-ASCII text,
-the cost of exporting evidence, what policy constraints check and oversized tool results; each was reproduced on
-2026-09-26 on 3.6.2. The same
+2026-09-26). Items 8 to 12, added 2026-09-26, concern non-ASCII text,
+the cost of exporting evidence, what policy constraints check, oversized tool results and the control channel; each
+was reproduced on 2026-09-26 on 3.6.2, as were the memory and Windows port cases added to item 1 that day. The same
 list is kept at <https://attestedintelligence.com/security>.
 
 1. **The agent port listens on every network interface, with no authentication.** Anyone who can
-   reach the host on that port can send governed calls through the proxy. Block inbound traffic to
-   the port in the host firewall, or admit only the agent with network policy. The control port is
-   loopback-only.
+   reach the host on that port can send governed calls through the proxy. The port also sets no bound on
+   connections or on the memory they hold: on 3.6.2, ten connections that each sent 7.5 MiB without ending a
+   message raised the proxy's working set from 68 MB to 392 MB, which was not released two seconds after they
+   closed, while a governed call on another connection was still answered. On Windows, another process can bind
+   127.0.0.1 on the same port while the proxy listens, and a local client that connects to 127.0.0.1 then reaches
+   that process instead of the proxy, with no policy check and no receipt (measured on 3.6.2). Block inbound
+   traffic to the port in the host firewall, or admit only the agent with network policy, and on a shared Windows
+   host check that the proxy's process is the only listener on the port. The control port is bound to loopback;
+   see item 12.
 2. **Two clients that reuse a JSON-RPC id through one proxy can receive each other's tool results.**
    Workaround, measured on 3.6.0: give each client its own id range, or run one proxy per client.
    With disjoint ids, every result reached the client that asked for it.
@@ -418,6 +424,14 @@ list is kept at <https://attestedintelligence.com/security>.
     9,000,000-character result was dropped and the agent got the timeout after 30.0 seconds, while a 1,000,000-character
     result came back in 31 milliseconds. An HTTP upstream's result is read whole and is not bounded this way. Workaround: keep tool results under the bound, for example by reading large files
     in parts. An error returned at once is planned for the reviewed release.
+12. **The control channel does not check a request's Host or Origin header.** It listens on 127.0.0.1 (port 18801 by
+    default) for out-of-process export and status. Measured on 3.6.2 from npm on 2026-09-26: `GET /receipts` and
+    `GET /export` sent with the Host and Origin of another site returned 200, and both carried a denied call's argument
+    path in its denial reason. A web page open in a browser on the same host can therefore read the live receipts and
+    the evidence bundle through DNS rebinding, unless the browser blocks a public site's requests to the loopback
+    address; any local user on the host can read them as well. The CLI has no option that turns the channel off.
+    Workaround: do not browse the web on the host while the proxy runs, or run the proxy on a host where no one does.
+    A Host and Origin check is planned for the reviewed release.
 
 No fixed version is named until one is published.
 
