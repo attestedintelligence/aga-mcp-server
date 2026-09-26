@@ -364,8 +364,8 @@ list is kept at <https://attestedintelligence.com/security>.
    proxy can canonicalize; and, under an allowlist file, a call it would otherwise permit that carries a string path when that
    tool's `path_prefix` is neither a string nor false, 0 or null. The proxy starts with such a policy file, and it reports
    each refusal listed above only on its own stderr. A message sent as a JSON-RPC batch array or without
-   `"jsonrpc": "2.0"` is refused differently: the client gets an error, and there is no receipt. A message longer than
-   8,388,608 characters (UTF-16 code units, about 8.4 million) also gets an error and no receipt, and the proxy then closes
+   `"jsonrpc": "2.0"` is refused differently: the client gets an error, and there is no receipt. A message of 8,388,608
+   characters or more (UTF-16 code units, about 8.4 million, its newline counting) also gets an error and no receipt, and the proxy then closes
    the connection, dropping any reply still due on it. The limit counts input not yet split into messages, so a message
    just under the limit can be refused the same way when the read that completes it also carries enough of the next
    message to pass the limit; whether that happens depends on where the reads fall. On 3.6.2, when a 100-character
@@ -422,13 +422,20 @@ list is kept at <https://attestedintelligence.com/security>.
     upstream server itself, and check a policy file's keys against the constraint names in `dist/proxy/types.d.ts`.
     Checks that fail closed on these inputs, and a check of the policy file at startup, are planned for the reviewed
     release.
-11. **A stdio upstream's response whose JSON line is longer than 8,388,608 characters (UTF-16 code units, counting JSON
-    escaping) is dropped.** The call already
+11. **A stdio upstream's response whose JSON line is 8,388,608 characters or more (UTF-16 code units, counting JSON
+    escaping and its newline) is dropped.** The call already
     has a PERMITTED receipt, and the agent gets a timeout error after 30 seconds, so an agent that retries can run the tool
-    twice; the proxy reports the drop only on its own stderr. Measured on 3.6.2 from npm on 2026-09-26: a
+    twice; the proxy reports the drop only on its own stderr. The limit counts upstream output not yet split into lines, so
+    a response just under it, and a response to another call, possibly another client's, that arrives in the same read,
+    can be dropped the same way; whether that happens depends on where the reads fall. Measured on 3.6.2 from npm on 2026-09-26: a
     9,000,000-character result was dropped and the agent got the timeout after 30.0 seconds, while a 1,000,000-character
-    result came back in 31 milliseconds. An HTTP upstream's result is read whole and is not bounded this way. Workaround: keep tool results under the bound, for example by reading large files
-    in parts. An error returned at once is planned for the reviewed release.
+    result came back in 31 milliseconds. Through a running proxy, a response line of 8,388,607 characters was returned and
+    one of 8,388,608 was dropped; and when the upstream answered three calls, two from one client and one from another, in
+    one write (100 characters, 58 under the limit, 100), the first was answered and the other two timed out, while the same
+    answers without the leading 100 characters were both returned. These are the cases measured. An HTTP upstream's
+    result is read whole and is not bounded this way. Workaround: keep tool results well under the bound, for example by
+    reading large files in parts, and where results are large run one proxy per client. An error returned at once is
+    planned for the reviewed release.
 12. **The control channel does not check a request's Host or Origin header.** It listens on 127.0.0.1 (port 18801 by
     default) so that a separate `aga-proxy export` can fetch the live bundle (routes `/export`, `/status` and
     `/receipts`). Measured on 3.6.2 from npm on 2026-09-26: `GET /receipts` and
