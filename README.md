@@ -183,6 +183,9 @@ npx -p @attested-intelligence/aga-mcp-server aga-proxy export -o evidence.json
 npx -y @attested-intelligence/aga-verify evidence.json --pubkey <gateway-public-key>
 ```
 
+Export and verify before you stop the proxy: `aga-proxy stop` ends the process without exporting, and the in-memory chain
+goes with it (known issue 9 covers export time).
+
 If no proxy is running, `aga-proxy export` prints `no running proxy found; start it first, or export from within the session` and exits non-zero — it never emits an empty or placeholder bundle. Within the MCP **server** session you can also call the `generate_evidence_bundle` tool and save the returned JSON.
 
 **In-memory ledger:** the exported bundle is the durable cryptographic record, but the live in-process chain does **not** survive a proxy restart. This flow makes the *live* ledger reachable from another process; it does **not** add cross-restart persistence, which needs the persistent (SQLite) backend and remains roadmap (see [`KNOWN_LIMITATIONS.md`](https://github.com/attestedintelligence/aga-mcp-server/blob/main/KNOWN_LIMITATIONS.md)).
@@ -300,7 +303,9 @@ tests/                 # TypeScript test suite (428 automated tests)
 concern the `aga-proxy` gateway. Item 5, added 2026-09-25, concerns the verifiers and was reproduced on 2026-09-25
 on the current releases. Item 6, also added 2026-09-25, concerns aga-proxy with an HTTP upstream and was
 reproduced on 2026-09-25 on 3.6.2. Item 7, also added 2026-09-25, concerns `tools/call` messages that aga-proxy refuses
-without a receipt and was reproduced on 2026-09-25 on 3.6.2. The same list is kept at <https://attestedintelligence.com/security>.
+without a receipt and was reproduced on 2026-09-25 on 3.6.2. Items 8 to 10, added 2026-09-26, concern non-ASCII text,
+the cost of exporting evidence and what policy constraints check; each was reproduced on 2026-09-26 on 3.6.2. The same
+list is kept at <https://attestedintelligence.com/security>.
 
 1. **The agent port listens on every network interface, with no authentication.** Anyone who can
    reach the host on that port can send governed calls through the proxy. Block inbound traffic to
@@ -349,12 +354,43 @@ without a receipt and was reproduced on 2026-09-25 on 3.6.2. The same list is ke
    `denylist` mode whose `constraints` member is missing or null, every `tools/call` with a tool name and arguments the
    proxy can canonicalize; and, under an allowlist file, a call it would otherwise permit that carries a string path when that
    tool's `path_prefix` is neither a string nor false, 0 or null. The proxy starts with such a policy file, and it reports
-   each refusal listed above only on its own stderr. A message sent as a JSON-RPC batch array, or without
-   `"jsonrpc": "2.0"`, is refused differently: the client gets an error, and there is no receipt. These are
+   each refusal listed above only on its own stderr. A message sent as a JSON-RPC batch array, without
+   `"jsonrpc": "2.0"`, or longer than about 8 million characters is refused differently: the client gets an error, and
+   there is no receipt. These are
    the cases measured, not a proof that no other input does the same. Workaround: give every policy file a `constraints`
    object whose `path_prefix` values are strings, and have the client time out a call that gets no reply. A DENIED
    receipt and an error for a malformed tool name, and a check of the policy file at startup, are planned for the
    reviewed release.
+8. **aga-proxy can alter non-ASCII text whose bytes are split between two reads.** It decodes each chunk it reads from
+   the agent's connection, and from a stdio upstream's output, on its own, so a character split between two chunks
+   becomes the replacement character (U+FFFD). A tool call's arguments can then reach the upstream altered, and the
+   receipt records the altered arguments; a large non-ASCII result from a stdio upstream can reach the agent altered. An
+   HTTP upstream's result is decoded whole. Whether a split happens depends on how the bytes arrive, so any message with
+   non-ASCII text can be affected, and large ones more often. Measured on 3.6.2 from npm on 2026-09-26: a forced split
+   inside "é" reached the upstream as two replacement characters, and a result of 200,000 "€" reached the client with
+   15. Workaround: send JSON whose non-ASCII characters are written as `\uXXXX` escapes, so every byte on the wire is
+   ASCII, and have the upstream do the same; the same forced split then arrived intact. A fix is planned for the reviewed
+   release.
+9. **Exporting the evidence bundle takes time that grows with the square of the number of receipts, and aga-proxy
+   handles nothing else while it runs**: every governed call waits until the export ends. Measured on 3.6.2 from npm on
+   2026-09-26 through the control channel's `GET /export`: 2.8 seconds at 1,000 receipts and 17.4 seconds at 2,500, with
+   a `tools/call` sent during the export waiting as long; about 1.7 to 1.9 KB per receipt, rising with the count. An
+   audit the same day measured 88 to 113 seconds at 5,000 receipts. Verification time grows close to linearly.
+   Workaround: export while the chain is short and outside busy periods, and export and verify before any stop, because
+   the live chain is kept in memory and a stop loses receipts not yet exported. A fix that leaves the bundle's bytes
+   unchanged is planned for the reviewed release.
+10. **Policy constraints check less than their names suggest.** A `path_prefix` is checked only when the value under the
+    checked key (`path`, or the keys a rule lists in `path_keys`) is a string, so the same path sent inside an array or an
+    object is not checked. `denied_patterns` match case-sensitively and only in top-level string arguments, so an
+    uppercased command, or one inside an array or a nested object, is not matched. A constraint key the proxy does not
+    recognise, such as a misspelling, is ignored without a warning. Rate limits count per tool name across the whole
+    proxy, shared by every client. Measured on 3.6.2 from npm on 2026-09-26 with an allowlist policy file: a
+    `path_prefix` of `/home` denied `"/etc/passwd"` and forwarded `["/etc/passwd"]`; a denied pattern of `rm -rf` denied
+    `rm -rf /` and forwarded `RM -RF /` and the same command inside an array; a rule spelled `denied_pattern` denied
+    nothing. Workaround: treat path and pattern rules as a convenience rather than a boundary, enforce paths in the
+    upstream server itself, and check a policy file's keys against the constraint names in `dist/proxy/types.d.ts`.
+    Checks that fail closed on these inputs, and a check of the policy file at startup, are planned for the reviewed
+    release.
 
 No fixed version is named until one is published.
 
@@ -368,7 +404,8 @@ See [CONTRIBUTING.md](https://github.com/attestedintelligence/aga-mcp-server/blo
 
 ## License
 
-[MIT](https://github.com/attestedintelligence/aga-mcp-server/blob/main/LICENSE)
+[MIT](https://github.com/attestedintelligence/aga-mcp-server/blob/main/LICENSE). The `aga-receipt-spec/` directory carries its own
+Apache-2.0 license (see `aga-receipt-spec/LICENSE`).
 
 ---
 

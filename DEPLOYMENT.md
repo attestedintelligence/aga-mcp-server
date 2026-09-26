@@ -13,14 +13,16 @@ The governance proxy (`aga-proxy`) sits between an MCP client and an upstream MC
 ### ✅ stdio upstream — the hardened default
 ```bash
 npx -p @attested-intelligence/aga-mcp-server aga-proxy start \
-  --upstream "npx -y @modelcontextprotocol/server-filesystem /tmp/data" --profile standard
+  --upstream "npx -y @modelcontextprotocol/server-filesystem /tmp/data" --policy ./policy.json
 ```
+`policy.json` is an allowlist naming the tools this server exposes (`read_text_file`, `list_directory` and so on). The
+built-in `standard` and `restrictive` profiles use generic example tool names, so they deny every tool of this server.
 The upstream is a **child process** the proxy spawns and talks to over stdio. It is **not network-reachable**, so the agent has no route to the tools except through the proxy. This closes the direct-reach bypass (`THREAT_BOUNDARY.md` §3.1) by construction. **Prefer this mode.**
 
 ### ⚠️ HTTP upstream — only behind strict network isolation
 ```bash
 # Bypassable unless the agent CANNOT reach the upstream URL directly.
-aga-proxy start --upstream-url "http://127.0.0.1:9000" --profile standard
+aga-proxy start --upstream-url "http://127.0.0.1:9000" --policy ./policy.json
 ```
 With an HTTP upstream, **anything that can reach the upstream URL bypasses governance entirely** (no receipt). This is a deployment property the server cannot enforce in code. If you must use HTTP upstream:
 - Bind the upstream to `127.0.0.1` / a private network the agent cannot reach.
@@ -122,7 +124,8 @@ Checklist:
 - [ ] The agent's **only** route to tools is through the proxy (network isolation).
 - [ ] Verifiers **pin** `gateway_public_key`; an unpinned PASS is treated as integrity-only, not provenance.
 - [ ] Export evidence bundles regularly — default storage is in-memory and the live chain is lost on restart; the **exported, signed bundle is the durable record** (`THREAT_BOUNDARY.md` §3.5).
-- [ ] Choose the `restrictive` profile (allowlist, default-deny) for high-stakes upstreams.
+- [ ] Write an allowlist `--policy` file naming your upstream's tools (default-deny); the built-in `standard` and `restrictive` profiles use generic example names. Read the README's known issue 10 for what its path and pattern rules check.
+- [ ] Export and verify before any stop or restart (the live chain is in memory; known issue 9 covers export time).
 
 ---
 
