@@ -128,7 +128,7 @@ The JS reference verifier and the Python SDK (`aga-governance`) decompose the sa
 | `envelope_consistency` | `envelope_consistent` | envelope `gateway_id`, `generated_at`, `merkle_root` vs signed content (`bundle_id`, `schema_version`, the envelope `policy_reference` and `offline_capable` are unsigned and unchecked) |
 | `gateway_key_match` (with `--pubkey`) | `gateway_key_match` / `provenance` | pinned issuer key |
 
-Known decomposition difference: the JS reference recomputes every Merkle leaf from full receipt content, so a receipt-signature tamper also fails `merkle_and_bijection`; the Python verifier surfaces the same tamper in `receipt_signatures_valid`, `chain_integrity_valid`, and `bundle_consistent` while its `merkle_proofs_valid` can remain true. Neither is looser: the bundle fails in both stacks, exit 1. A `--pubkey KEY` that is not 64 lowercase hex characters is a usage error (exit 2) in the JS reference, `aga-verify` and the Python SDK, and a 64-hex pin that is not a valid curve point is honored, fails to match, and fails the bundle (exit 1). Written as `--pubkey=KEY`, the pin is ignored by the JS reference, `aga-verify` and `verify.go`, and by `verify.py` when it follows the bundle path (integrity only, exit 0), and read by the Python SDK. Other verifiers differ as well. The in-server engine (the package's `./verify` export, which `verify_bundle_offline` calls) treats a pin that is not a well-formed key for the bundle's profile as no pin, and returns VERIFIED with `pinned: false`. The Go and Python reference verifiers in `aga-receipt-spec/verify/` treat a pin that is not 64 lowercase hex the same way and print `integrity only; no key pinned` (exit 0). Read `pinned` before taking a VERIFIED as provenance; in CI, pass the key after a space and check that the output says provenance verified. A `--pubkey` given with no value is also treated as no pin (exit 0, integrity only) by `aga-verify`, `verify-sep.mjs`, `verify.py` and `verify.go`, and is a usage error in the Python SDK. Other differences concern the bundle rather than the pin, and <https://attestedintelligence.com/security> lists the ones measured, including which algorithm labels each verifier leaves unchecked; outside the conformance corpus the verifiers differ in both directions. Two examples, where the failing side fails closed: a proof `leaf_index` spelled as an integral float (`1.0`) reports FAILED in aga-governance 0.3.2 and VERIFIED in the others, and object keys outside the Basic Multilingual Plane (possible only in a non-string field value, which no shipped producer emits) sort differently in `verify.py`, `verify.go` and aga-governance than in the JavaScript verifiers, so such a bundle reports VERIFIED in JavaScript and FAILED in Go and Python. These wait for the next reviewed release.
+Known decomposition difference: the JS reference recomputes every Merkle leaf from full receipt content, so a receipt-signature tamper also fails `merkle_and_bijection`; the Python verifier surfaces the same tamper in `receipt_signatures_valid`, `chain_integrity_valid`, and `bundle_consistent` while its `merkle_proofs_valid` can remain true. Neither is looser: the bundle fails in both stacks, exit 1. A `--pubkey KEY` that is not 64 lowercase hex characters is a usage error (exit 2) in the JS reference, `aga-verify` and the Python SDK, and a 64-hex pin that is not a valid curve point is honored, fails to match, and fails the bundle (exit 1). Written as `--pubkey=KEY`, the pin is ignored by the JS reference, `aga-verify`, `verify.go` and `v2/verify-v2.go`, and by `verify.py` when it follows the bundle path (integrity only, exit 0), and read by the Python SDK. Other verifiers differ as well. The in-server engine (the package's `./verify` export, which `verify_bundle_offline` calls) treats a pin that is not a well-formed key for the bundle's profile as no pin, and returns VERIFIED with `pinned: false`. The Go and Python reference verifiers in `aga-receipt-spec/verify/` treat a pin that is not 64 lowercase hex the same way and print `integrity only; no key pinned` (exit 0). Read `pinned` before taking a VERIFIED as provenance; in CI, pass the key after a space and check that the output says provenance verified. A `--pubkey` given with no value is also treated as no pin (exit 0, integrity only) by `aga-verify`, `verify-sep.mjs`, `verify.py` and `verify.go`, and is a usage error in the Python SDK. Other differences concern the bundle rather than the pin, and <https://attestedintelligence.com/security> lists the ones measured, including which algorithm labels each verifier leaves unchecked; outside the conformance corpus the verifiers differ in both directions. Two examples, where the failing side fails closed: a proof `leaf_index` spelled as an integral float (`1.0`) reports FAILED in aga-governance 0.3.2 and VERIFIED in the others, and object keys outside the Basic Multilingual Plane (possible only in a non-string field value, which no shipped producer emits) sort differently in `verify.py`, `verify.go` and aga-governance than in the JavaScript verifiers, so such a bundle reports VERIFIED in JavaScript and FAILED in Go and Python. These wait for the next reviewed release.
 
 ## How It Works
 
@@ -167,7 +167,7 @@ exposes; to permit some of your server's tools and deny the rest, pass a `--poli
 
 ### Exporting the evidence bundle from a running proxy
 
-The proxy records receipts in its own process and keeps the SEP ledger **in memory**. To make that live ledger reachable from a separate shell, `aga-proxy start` opens a **loopback-only control channel** — an HTTP listener bound to `127.0.0.1` (never a routable interface), on its own port (default `18801`, override with `--control-port`), distinct from the agent-facing proxy port (`18800`). It exposes only read routes (`/export`, `/status`, `/receipts`); nothing on it mutates policy or state, and it is bound to loopback only. It does not check a request's Host or Origin header, so a web page in a browser on the same host can reach it through DNS rebinding unless the browser blocks it (known issue 12). The proxy writes the chosen control port to `~/.aga-proxy/control.json` alongside `proxy.pid`.
+The proxy records receipts in its own process and keeps the SEP ledger **in memory**. To make that live ledger reachable from a separate shell, `aga-proxy start` opens a **loopback-only control channel** — an HTTP listener bound to `127.0.0.1` (never a routable interface), on its own port (default `18801`, override with `--control-port`), distinct from the agent-facing proxy port (`18800`). It exposes only read routes (`/export`, `/status`, `/receipts`); nothing on it mutates policy or state. It does not check a request's Host or Origin header, so a web page in a browser on the same host can read its responses through DNS rebinding unless the browser blocks it (known issue 12). The proxy writes the chosen control port to `~/.aga-proxy/control.json` alongside `proxy.pid`.
 
 A **separate** `aga-proxy export` invocation reads that file and fetches the same signed bundle the running proxy would emit:
 
@@ -310,15 +310,16 @@ was reproduced on 2026-09-26 on 3.6.2, as were the memory and Windows port cases
 list is kept at <https://attestedintelligence.com/security>.
 
 1. **The agent port listens on every network interface, with no authentication.** Anyone who can
-   reach the host on that port can send governed calls through the proxy. The port also sets no bound on
-   connections or on the memory they hold: on 3.6.2, ten connections that each sent 7.5 MiB without ending a
-   message raised the proxy's working set from 68 MB to 392 MB, which was not released two seconds after they
-   closed, while a governed call on another connection was still answered. On Windows, another process can bind
-   127.0.0.1 on the same port while the proxy listens, and a local client that connects to 127.0.0.1 then reaches
-   that process instead of the proxy, with no policy check and no receipt (measured on 3.6.2). Block inbound
-   traffic to the port in the host firewall, or admit only the agent with network policy, and on a shared Windows
-   host check that the proxy's process is the only listener on the port. The control port is bound to loopback;
-   see item 12.
+   reach the host on that port can send governed calls through the proxy. The proxy also sets no limit on the number
+   of connections, so although each connection's unfinished message is capped (item 7), the memory they hold together
+   is not: on 3.6.2, ten connections that each sent 7.5 MiB without ending a message raised the proxy's working set
+   from 68 MiB to 392 MiB while they stayed open, and a governed call on another connection was still answered. On
+   Windows, a process running under the same user account as the proxy can bind 127.0.0.1 on the same port while the
+   proxy listens, and a local client that connects to 127.0.0.1 then reaches that process instead of the proxy, with no
+   policy check and no receipt (measured on 3.6.2 with both processes under one account). Block inbound traffic to the
+   port in the host firewall, or admit only the agent with network policy; on Windows, run nothing untrusted under the
+   proxy's account, and check while the proxy runs that its process is the only listener on the port. The control
+   port is bound to loopback; see item 12.
 2. **Two clients that reuse a JSON-RPC id through one proxy can receive each other's tool results.**
    Workaround, measured on 3.6.0: give each client its own id range, or run one proxy per client.
    With disjoint ids, every result reached the client that asked for it.
@@ -365,9 +366,11 @@ list is kept at <https://attestedintelligence.com/security>.
    each refusal listed above only on its own stderr. A message sent as a JSON-RPC batch array or without
    `"jsonrpc": "2.0"` is refused differently: the client gets an error, and there is no receipt. A message longer than
    8,388,608 characters (UTF-16 code units, about 8.4 million) also gets an error and no receipt, and the proxy then closes
-   the connection, dropping any reply still due on it. The limit counts input not yet split into messages, so a shorter
-   message can be refused the same way when the next one arrives with it: on 3.6.2, a message 58 characters under the
-   limit, sent with a 100,000-character message behind it, got the error, and sent alone it was forwarded. These are
+   the connection, dropping any reply still due on it. The limit counts input not yet split into messages, so a message
+   just under the limit can be refused the same way when the read that completes it also carries enough of the next
+   message to pass the limit; whether that happens depends on where the reads fall. On 3.6.2, a 100-character message,
+   a message 58 characters under the limit and a 100,000-character message, sent in one write, got the error; sent
+   without the 100,000-character message, or without the 100-character one, every message was forwarded. These are
    the cases measured, not a proof that no other input does the same. Workaround: give every policy file a `constraints`
    object whose `path_prefix` values are strings, and have the client time out a call that gets no reply. A DENIED
    receipt and an error for a malformed tool name, and a check of the policy file at startup, are planned for the
@@ -411,9 +414,10 @@ list is kept at <https://attestedintelligence.com/security>.
     call those rules deny still uses up a slot. Measured on 3.6.2 from npm on 2026-09-26 with allowlist and denylist policy files: a
     `path_prefix` of `/home` denied `"/etc/passwd"` and forwarded `["/etc/passwd"]`; a denied pattern of `rm -rf` denied
     `rm -rf /` and forwarded `RM -RF /` and the same command inside an array; a rule spelled `denied_pattern` denied
-    nothing; `allowed: "false"` forwarded the call in both modes; a denylist entry of `false` forwarded the call; and
-    `path_keys: "path"` forwarded `/etc/passwd` past a `/home` prefix; and under a limit of 2 a minute, two calls denied by a
-    `/home` prefix left the next call inside it denied for the rate limit, while after one such denial it was forwarded. Workaround: treat path and pattern rules as a convenience rather than a boundary, restrict paths in the
+    nothing; `allowed: "false"` forwarded the call in both modes; a denylist entry of `false` forwarded the call;
+    `path_keys: "path"` forwarded `/etc/passwd` past a `/home` prefix; and, under a limit of 2 a minute, two calls denied by a
+    `/home` prefix left a third call, to a path under `/home`, denied for the rate limit, while after one such denial that
+    call was forwarded. Workaround: treat path and pattern rules as a convenience rather than a boundary, restrict paths in the
     upstream server itself, and check a policy file's keys against the constraint names in `dist/proxy/types.d.ts`.
     Checks that fail closed on these inputs, and a check of the policy file at startup, are planned for the reviewed
     release.
@@ -425,12 +429,17 @@ list is kept at <https://attestedintelligence.com/security>.
     result came back in 31 milliseconds. An HTTP upstream's result is read whole and is not bounded this way. Workaround: keep tool results under the bound, for example by reading large files
     in parts. An error returned at once is planned for the reviewed release.
 12. **The control channel does not check a request's Host or Origin header.** It listens on 127.0.0.1 (port 18801 by
-    default) for out-of-process export and status. Measured on 3.6.2 from npm on 2026-09-26: `GET /receipts` and
+    default) so that a separate `aga-proxy export` can fetch the live bundle (routes `/export`, `/status` and
+    `/receipts`). Measured on 3.6.2 from npm on 2026-09-26: `GET /receipts` and
     `GET /export` sent with the Host and Origin of another site returned 200, and both carried a denied call's argument
     path in its denial reason. A web page open in a browser on the same host can therefore read the live receipts and
     the evidence bundle through DNS rebinding, unless the browser blocks a public site's requests to the loopback
-    address; any local user on the host can read them as well. The CLI has no option that turns the channel off.
-    Workaround: do not browse the web on the host while the proxy runs, or run the proxy on a host where no one does.
+    address; any local user on the host can read them as well. A page can also start an export with a plain
+    `GET /export` without rebinding, unless the browser blocks it, and each export holds up governed calls while it
+    runs (item 9). The CLI has no option meant to turn the channel off; a `--control-port` value that is not a port
+    number from 0 to 65535 leaves it unstarted while governance runs, but then no command can export the running
+    proxy's receipts. Workaround: do not browse the web on the host while the proxy runs, or run the proxy on a host
+    where no one does, and on a host shared with other users treat the live receipts as readable by all of them.
     A Host and Origin check is planned for the reviewed release.
 
 No fixed version is named until one is published.
