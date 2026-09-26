@@ -15,7 +15,9 @@ The governance proxy (`aga-proxy`) sits between an MCP client and an upstream MC
 npx -p @attested-intelligence/aga-mcp-server aga-proxy start \
   --upstream "npx -y @modelcontextprotocol/server-filesystem /tmp/data" --policy ./policy.json
 ```
-`policy.json` is an allowlist naming the tools this server exposes (`read_text_file`, `list_directory` and so on). The
+`policy.json` is an allowlist naming the tools this server exposes, for example
+`{"mode":"allowlist","constraints":{"read_text_file":{"name":"read_text_file","allowed":true},"list_directory":{"name":"list_directory","allowed":true}}}`.
+A file without a `constraints` object, or with a misspelled key, fails as the README's known issues 7 and 10 describe. The
 built-in `standard` and `restrictive` profiles use generic example tool names, so they deny every tool of this server.
 The upstream is a **child process** the proxy spawns and talks to over stdio. It is **not network-reachable**, so the agent has no route to the tools except through the proxy. This closes the direct-reach bypass (`THREAT_BOUNDARY.md` §3.1) by construction. **Prefer this mode.**
 
@@ -125,7 +127,7 @@ Checklist:
 - [ ] Verifiers **pin** `gateway_public_key`; an unpinned PASS is treated as integrity-only, not provenance.
 - [ ] Export evidence bundles regularly — default storage is in-memory and the live chain is lost on restart; the **exported, signed bundle is the durable record** (`THREAT_BOUNDARY.md` §3.5).
 - [ ] Write an allowlist `--policy` file naming your upstream's tools (default-deny); the built-in `standard` and `restrictive` profiles use generic example names. Read the README's known issue 10 for what its path and pattern rules check.
-- [ ] Export and verify before any stop or restart (the live chain is in memory; known issue 9 covers export time).
+- [ ] Export and verify before any stop or restart (the live chain is in memory; the README's known issue 9 covers export time and bounding the chain).
 
 ---
 

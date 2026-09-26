@@ -22,7 +22,8 @@ A denial **cannot be silently erased by the agent**:
 
 > **Scope note (2026-09-26).** The depth-bomb row holds for arguments that cannot be canonicalized: they are DENIED and
 > recorded. A tool name or id that cannot be canonicalized (an unpaired surrogate), and the other cases in the README's
-> known issue 7, are refused with no receipt; with a stdio upstream they are never forwarded.
+> known issue 7, are refused with no receipt, the malformed-name cases with no response either; with a stdio upstream they
+> are never forwarded.
 
 Claim scope is **integrity-of-present-receipts, NOT non-omission**: a PASS proves every *present* receipt is authentic and complete-as-a-set under the checkpoint; it does **not** prove the gateway logged every action it took. Completeness is bounded by the tamper-evidence of the interception point, which is outside the bundle.
 
@@ -77,10 +78,12 @@ A focused adversarial workflow ran **7 independent red-team attacks** on the cor
 **Verdict: 0 guarantee-broken — 6 HELD, 1 RESIDUAL (out-of-claim, already documented).** The core claim — *denials cannot be silently erased by the agent through tampering, truncation, reordering, or re-attestation, and forgery is caught when the gateway key is pinned* — **holds under the tested adversarial pressure**, on both the reference verifier and the published-sound `aga-verify` CLI.
 
 > **Scope note (2026-09-26).** A7's "every governed `tools/call` gets a receipt" does not hold for the tool calls the
-> README's known issue 7 describes: they are refused, never forwarded with a stdio upstream, and leave no receipt.
+> README's known issue 7 describes: they are refused, never forwarded with a stdio upstream, and leave no receipt. Its two
+> bypasses are not the only ones: with an HTTP upstream, the README's known issue 6 carries a `tools/call` through the
+> proxy that is never evaluated and gets no receipt of its own.
 
 ---
 
 ## 5. Net boundary statement (for public copy)
 
-> Every governed decision produces a signed, chained, checkpoint-bound receipt, except the tool calls known issue 7 in the README describes (refused, never forwarded, and left without a receipt in 3.6.0 through 3.6.2); denials cannot be silently erased by the agent through tampering, truncation, reordering, or re-attestation, and can be verified offline against the published format, with provenance only when the gateway key is pinned out of band. The verifier to run for a verdict is the published `@attested-intelligence/aga-verify` CLI; the in-repo reference implementations that the cross-stack conformance suite exercises are described in the README. The behavioral monitor is detective-only by default. Mandatory mediation (network isolation) and cross-restart ledger durability are deployment/roadmap properties, documented above; cross-session key persistence is available on both binaries as of 3.6.0 but only takes effect once an operator configures it, and only helps a verifier who obtains the key out of band. AGA proves *what was governed*; it does not claim to prevent jailbreaks, key theft, or non-`tools/call` side channels.
+> Every governed decision produces a signed, chained, checkpoint-bound receipt, except the tool calls known issue 7 in the README describes (refused, never forwarded with a stdio upstream, and left without a receipt in 3.6.0 through 3.6.2); denials cannot be silently erased by the agent through tampering, truncation, reordering, or re-attestation, and can be verified offline against the published format, with provenance only when the gateway key is pinned out of band. The verifier to run for a verdict is the published `@attested-intelligence/aga-verify` CLI; the in-repo reference implementations that the cross-stack conformance suite exercises are described in the README. The behavioral monitor is detective-only by default. Mandatory mediation (network isolation) and cross-restart ledger durability are deployment/roadmap properties, documented above; cross-session key persistence is available on both binaries as of 3.6.0 but only takes effect once an operator configures it, and only helps a verifier who obtains the key out of band. AGA proves *what was governed*; it does not claim to prevent jailbreaks, key theft, or non-`tools/call` side channels.
