@@ -434,7 +434,8 @@ list is kept at <https://attestedintelligence.com/security>.
     one of 8,388,608 was dropped; and when the upstream answered three calls in one write (100 characters and 58 under the
     limit for one client, then 100 for the other), the first was answered and the other two, one of them the other client's,
     timed out, while the same answers without the leading 100-character answer were both returned. These are the cases measured. An HTTP upstream's
-    result is read whole and is not bounded this way. Workaround: keep tool results well under the bound, for example by
+    result is read whole and is not dropped this way; on Linux, one at the same bound closes the agent's connection
+    instead (item 13). Workaround: keep tool results well under the bound, for example by
     reading large files in parts, and where results are large run one proxy per client. An error returned at once is
     planned for the reviewed release.
 12. **The control channel does not check a request's Host or Origin header.** It listens on 127.0.0.1 (port 18801 by
@@ -450,6 +451,23 @@ list is kept at <https://attestedintelligence.com/security>.
     proxy's receipts. Workaround: do not browse the web on the host while the proxy runs, or run the proxy on a host
     where no one does, and on a host shared with other users treat the live receipts as readable by all of them.
     A Host and Origin check is planned for the reviewed release.
+13. **On Linux, an HTTP upstream's (`--upstream-url`) response whose JSON line, as the proxy serializes it, is 8,388,608
+    characters or more (UTF-16 code units, counting JSON escaping but not the newline) closes the agent's connection.**
+    The proxy writes the whole line to the agent's socket in one call. A Linux kernel with its default socket buffers
+    takes only part of a write that size; the rest goes out as the client reads, but the whole line counts as waiting
+    until it has all gone, so the proxy's guard against a client that does not read its responses sees more than
+    8,388,608 characters waiting, the newline included, and destroys the socket. The call already has a PERMITTED
+    receipt and the upstream has run the tool; the agent's connection closes part-way through the reply with no error
+    message, so an agent that reconnects and retries can run the tool twice; every other call in flight on that
+    connection is lost with it; and the proxy reports nothing. Measured on 3.6.2 from npm on 2026-09-26 on a Linux 6.18
+    host with Node 24 and the default socket buffers (`net.ipv4.tcp_wmem` 4096 16384 4194304): result lines of
+    4,000,000, 8,000,000, 8,388,606 and 8,388,607 characters were returned, and lines of 8,388,608, 8,388,609,
+    9,000,000, 10,000,000, 12,000,000, 16,000,000, 20,000,000 and 32,000,000 characters closed the connection after 2.6
+    to 5.0 MB of the reply had arrived; a client that read nothing for 4 seconds got a 4,000,000-character result and
+    lost a 9,000,000-character one. On Windows 11 the same proxy returned a 20,000,000-character result, and a
+    9,000,000-character one to a client that read nothing for 4 seconds, because that kernel took each write whole. A
+    stdio upstream's response of this size is dropped instead (item 11). Workaround: keep tool results under the bound,
+    for example by reading large files in parts. An error returned at once is planned for the reviewed release.
 
 No fixed version is named until one is published.
 
