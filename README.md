@@ -462,11 +462,11 @@ list is kept at <https://attestedintelligence.com/security>.
     connection is lost with it; and the proxy reports nothing. Measured on 3.6.2 from npm on 2026-09-26 on a Linux 6.18
     host with Node 24 and the default socket buffers (`net.ipv4.tcp_wmem` 4096 16384 4194304): result lines of
     4,000,000, 8,000,000, 8,388,606 and 8,388,607 characters were returned, and lines of 8,388,608, 8,388,609,
-    9,000,000, 10,000,000, 12,000,000, 16,000,000, 20,000,000 and 32,000,000 characters closed the connection after 2.6
+    9,000,000, 10,000,000, 12,000,000, 16,000,000, 20,000,000 and 32,000,000 characters closed the connection after 3.1
     to 5.0 MB of the reply had arrived; a client that read nothing for 4 seconds got a 4,000,000-character result and
-    lost a 9,000,000-character one. On Windows 11 the same proxy returned a 20,000,000-character result, and a
+    lost a 9,000,000-character one after 2.7 MB. On Windows 11 the same proxy returned a 20,000,000-character result, and a
     9,000,000-character one to a client that read nothing for 4 seconds, because that kernel took each write whole. A
-    stdio upstream's response of this size is dropped instead (item 11). Workaround: keep tool results under the bound,
+    stdio upstream's response of this size is dropped instead (item 11). Workaround: keep tool results well under the bound,
     for example by reading large files in parts. An error returned at once is planned for the reviewed release.
 
 No fixed version is named until one is published.
