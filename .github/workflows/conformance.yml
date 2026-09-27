@@ -1,4 +1,4 @@
-name: ci
+name: conformance
 # Full release gate: clean build + type-check + tests + SEP conformance (driven by the
 # normative reference verifier) + the pack-manifest guard (no forgeable/stale artifacts
 # can be published). `npm run check` = build && lint && test && test:conformance && check:pack.
