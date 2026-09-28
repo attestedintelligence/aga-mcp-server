@@ -1,18 +1,22 @@
 # AGA - Attested Governance Artifacts
 
-Verifiable decision records for AI agents: each governed tool-call decision becomes a signed, hash-chained receipt, exported in evidence bundles anyone can verify offline against the published format.
+Verifiable decision records for AI agents: each recorded tool-call decision is a signed, hash-chained receipt, exported in evidence bundles a reviewer can verify offline against the published format. Verification establishes the integrity of the receipts present, not that every action was recorded.
 
 [![npm](https://img.shields.io/npm/v/@attested-intelligence/aga-mcp-server)](https://www.npmjs.com/package/@attested-intelligence/aga-mcp-server)
 [![PyPI](https://img.shields.io/pypi/v/aga-governance)](https://pypi.org/project/aga-governance/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/attestedintelligence/aga-mcp-server/blob/main/LICENSE)
 [![npm provenance](https://img.shields.io/badge/npm-SLSA%20provenance-brightgreen)](https://www.npmjs.com/package/@attested-intelligence/aga-mcp-server)
 
-> **Status: published to npm; this release carries SLSA build provenance (check it: `npm audit signatures`).** The server tools and the `aga-proxy` emit the **canonical SEP evidence bundle**, verifiable offline by the published `@attested-intelligence/aga-verify` and the reference verifier `aga-receipt-spec/verify/verify-sep.mjs`. **Since 3.2.0 the verifier is algorithm-agile and ships a post-quantum profile:** v1 `Ed25519-SHA256-JCS` (the default the gateway emits) and v2 `ML-DSA-65+Ed25519-SHA256-JCS` (a NIST FIPS-204 ML-DSA-65 + RFC-8032 Ed25519 **composite**, both must verify), selected per-bundle by the `algorithm` field with a `VERIFIED / FAILED / UNSUPPORTED_PROFILE` trichotomy. Pre-3.0 releases (a legacy continuity-chain bundle that does *not* verify under the SEP verifier) are deprecated; use `^3.0.0`. Claim scope and residual attack surface are documented honestly in `THREAT_BOUNDARY.md`. **3.5.0 (2026-08-29) changes one behavior:** an artifact's TTL now *fails closed* — on expiry the portal terminates and a further measurement is refused, where earlier releases degraded and kept measuring. If you depend on the old post-expiry behavior, pin `3.3.3`. **3.6.0 (2026-09-18) changes no existing behavior:** it makes `aga-proxy` honour `AGA_GATEWAY_KEY` / `AGA_GATEWAY_KEY_FILE`, which it had silently ignored. See `CHANGELOG.md`.
+> **Status: published reference implementation, before independent pilot validation.** The gateway emits classical Ed25519-SHA256-JCS bundles. The published `@attested-intelligence/aga-verify@2.2.2` CLI checks that classical profile; on a v2/hybrid bundle it reports FAILED because it does not implement that profile. The package also exposes an ML-DSA-65 + Ed25519 composite as a library profile, and `aga-proxy verify` can check it. Reference verifiers have their own unsupported-profile behavior. These are different components, not one interchangeable verifier. Build provenance concerns the published build; it is not runtime correctness or an external security audit.
+
+> **Runtime status.** Since 3.5.0, a measurement requested after the active artifact's TTL expires moves it to TERMINATE; `delegate_to_subagent` also refuses after expiry. Nothing checks the TTL on a schedule, and the exported bundle does not record that transition. Do not downgrade to deprecated 3.3.3 as the evaluation path. Since 3.6.0, `aga-proxy` honors `AGA_GATEWAY_KEY` / `AGA_GATEWAY_KEY_FILE`; the stdio upstream can inherit those variables. Read the known issues and `THREAT_BOUNDARY.md` before any runtime evaluation.
 
 ```bash
 # This package IS the AGA MCP server (TypeScript, runs over stdio). Use it from any MCP client:
-npx -y @attested-intelligence/aga-mcp-server
+npx -y @attested-intelligence/aga-mcp-server@3.6.2
 ```
+
+Runtime examples below identify the observed 3.6.2 package, not a newly approved production deployment. Review the known issues first; an isolated synthetic evaluation is required before considering a pilot. Prefer the static verifier path for the first check.
 
 A Python companion SDK (`aga-governance`) is documented in the Python SDK section below.
 
@@ -28,13 +32,13 @@ node aga-receipt-spec/verify/verify-sep.mjs fixtures/valid_minimal.json   # OVER
 node aga-receipt-spec/verify/verify-sep.mjs fixtures/tampered.json        # OVERALL: FAILED
 ```
 
-The published `@attested-intelligence/aga-verify` CLI renders the identical verdict, and `npm run conformance:cross-stack` (first: `npm run build && npm --prefix independent-verifier run build`) proves **six v1 verifier configurations** — spanning **three independent toolchains (JavaScript, Go, and Python, including a pure-stdlib, no-third-party-crypto path)** — agree on the **54 object-level cases**, and the **five file-parsing verifiers** agree on the **7 raw-byte/file-parse cases** (**61 total**). The in-server engine is library-only, receiving parsed objects rather than raw file bytes, so it does not run the file-parse cases; six configurations do not agree on all 61 and this no longer claims they do. `npm run conformance:cross-stack-v2` proves **two genuinely independent-language oracles (@noble/JS and CIRCL/Go)** agree on the v2 composite corpus. For a full trust-free reproduction (build the package yourself, reproduce the published tarball byte-for-byte, re-run every gate), see the **[REVIEWER_GUIDE.md](https://github.com/attestedintelligence/aga-mcp-server/blob/main/REVIEWER_GUIDE.md)** (a command-by-command self-service path), **[REPRODUCIBILITY.md](https://github.com/attestedintelligence/aga-mcp-server/blob/main/REPRODUCIBILITY.md)**, and the step-by-step **[SKEPTICAL_AUDITOR.md](https://github.com/attestedintelligence/aga-mcp-server/blob/main/SKEPTICAL_AUDITOR.md)**. This release carries SLSA build provenance, checkable with `npm audit signatures`.
+The published `@attested-intelligence/aga-verify` CLI agrees on the tested classical corpus as the harness supplies it. `npm run conformance:cross-stack` (first: `npm run build && npm --prefix independent-verifier run build`) proves that **six v1 verifier configurations**, spanning **three independent toolchains (JavaScript, Go, and Python, including a pure-stdlib, no-third-party-crypto path)**, agree on the **54 object-level cases**. The **five file-parsing verifiers** also agree on the **7 raw-byte/file-parse cases** (**61 total**). The in-server engine is library-only, receiving parsed objects rather than raw file bytes, so it does not run the file-parse cases; six configurations do not agree on all 61 and this no longer claims they do. `npm run conformance:cross-stack-v2` proves **two genuinely independent-language oracles (@noble/JS and CIRCL/Go)** agree on the v2 composite corpus. For a source-and-build reproduction (build the package yourself, reproduce the published tarball byte-for-byte, re-run every gate), see the **[REVIEWER_GUIDE.md](https://github.com/attestedintelligence/aga-mcp-server/blob/main/REVIEWER_GUIDE.md)** (a command-by-command self-service path), **[REPRODUCIBILITY.md](https://github.com/attestedintelligence/aga-mcp-server/blob/main/REPRODUCIBILITY.md)**, and the step-by-step **[SKEPTICAL_AUDITOR.md](https://github.com/attestedintelligence/aga-mcp-server/blob/main/SKEPTICAL_AUDITOR.md)**. This release carries SLSA build provenance, checkable with `npm audit signatures`.
 
 ## What This Does
 
 This is built for teams shipping agentic-AI products into financial services and insurance, at the moment a customer's vendor-risk, model-risk, or internal-audit review asks what your agent did and how anyone would know.
 
-Tool calls routed through the AGA gateway are evaluated against the operator's policy, and each decision (PERMITTED or DENIED) is recorded as a signed, hash-linked governance receipt, except the calls known issue 7 below describes as refused without one. `aga-proxy` also signs the SHA-256 of its policy's canonical JSON into every receipt; see [KNOWN_LIMITATIONS.md](https://github.com/attestedintelligence/aga-mcp-server/blob/main/KNOWN_LIMITATIONS.md) for what that field binds. Receipts are collected into evidence bundles that anyone holding the published format and the public key can verify offline, with no callback to us.
+Covered tool calls routed through `aga-proxy` are evaluated against its configured policy. Each recorded decision (PERMITTED or DENIED) takes the form of a signed, hash-linked governance receipt; known issue 7 below describes calls refused without a receipt. `aga-proxy` also signs the SHA-256 of its policy's canonical JSON into every receipt; see [KNOWN_LIMITATIONS.md](https://github.com/attestedintelligence/aga-mcp-server/blob/main/KNOWN_LIMITATIONS.md) for what that field binds. Receipts are collected into evidence bundles that anyone holding the published format and the public key can verify offline, with no callback to us.
 
 **Record. Prove. Verify.**
 
@@ -49,7 +53,7 @@ Add to your Claude Desktop MCP config (`claude_desktop_config.json`):
   "mcpServers": {
     "aga": {
       "command": "npx",
-      "args": ["-y", "@attested-intelligence/aga-mcp-server"]
+      "args": ["-y", "@attested-intelligence/aga-mcp-server@3.6.2"]
     }
   }
 }
@@ -61,7 +65,7 @@ Claude can then seal artifacts, measure integrity, generate evidence bundles, an
 
 By default the gateway signs with an **ephemeral** key that rotates on every restart. That is fine for a first look, but evidence-bundle provenance cannot be pinned across restarts (and the server warns about it on stderr). Set one stable 64-hex Ed25519 seed so provenance stays pinnable:
 
-> **Since 3.6.0 this applies to both binaries.** `aga-proxy` reads the same two variables through the same resolver and prints the active public key at startup so you can pin it out of band; `--ephemeral` makes a throwaway key a stated choice. **In 3.5.0 and earlier `aga-proxy` ignored both variables silently** — a key you set had no effect and no warning was printed, so evidence from such a proxy is integrity-verifiable but not provenance-pinnable across restarts. See `DEPLOYMENT.md` §2.
+> **Since 3.6.0 this applies to both binaries.** `aga-proxy` reads the same two variables through the same resolver and prints the active public key at startup so you can pin it out of band; `--ephemeral` makes a throwaway key a stated choice. **In 3.5.0 and earlier `aga-proxy` ignored both variables silently**; a key you set had no effect and no warning was printed, so evidence from such a proxy is integrity-verifiable but not provenance-pinnable across restarts. See `DEPLOYMENT.md` §2.
 
 ```bash
 # generate a seed once (32 random bytes, hex)
@@ -75,14 +79,14 @@ Provide it via `AGA_GATEWAY_KEY`, or `AGA_GATEWAY_KEY_FILE` (a path to the seed)
   "mcpServers": {
     "aga": {
       "command": "npx",
-      "args": ["-y", "@attested-intelligence/aga-mcp-server"],
+      "args": ["-y", "@attested-intelligence/aga-mcp-server@3.6.2"],
       "env": { "AGA_GATEWAY_KEY": "<your-64-hex-seed>" }
     }
   }
 }
 ```
 
-Keep the seed secret and out of version control; see `DEPLOYMENT.md` for key handling.
+Keep the seed secret and out of version control; see `DEPLOYMENT.md` for key handling. A seed in an agent client's environment is not a separate trust domain, and the stdio upstream can inherit the key-related variables (known issue 3). Same-key restarts do not preserve the in-memory ledger: export and verify before stopping.
 
 ## MCP Tools (15)
 
@@ -103,16 +107,16 @@ Keep the seed secret and out of version control; see `DEPLOYMENT.md` for key han
 A bundle this package emits (via the `generate_evidence_bundle` MCP tool) is a **canonical SEP bundle**. Verify it offline, with no network and no callback to us:
 
 ```bash
-# Published verifier CLI — ships on npm, nothing to clone. Pin the gateway key (from get_server_info) to prove provenance.
-npx -y @attested-intelligence/aga-verify evidence-bundle.json --pubkey <gateway-public-key>
+# Published verifier CLI. Obtain and authenticate the expected key outside the bundle before running.
+npx -y @attested-intelligence/aga-verify@2.2.2 evidence-bundle.json --pubkey <gateway-public-key>
 
-# Or, from a clone of this repo, the zero-dep reference verifier (Node 18+) renders the identical verdict:
+# Or, from a clone of this repo, the zero-dependency reference verifier (Node 18+) checks its supported profile; parser/pin behavior can differ:
 node aga-receipt-spec/verify/verify-sep.mjs evidence-bundle.json --pubkey <gateway-public-key>
 ```
 
-The published `@attested-intelligence/aga-verify` CLI is the shipped path (the older forgeable 1.0.0 is deprecated); the reference `verify-sep.mjs` renders the identical verdict from a repo clone. Without `--pubkey` you get an **integrity-only** result (`issuerVerified=false`); pin the key to also prove *who* issued it. See `THREAT_BOUNDARY.md` §3.7. A hosted browser verifier is linked under [Links](#links).
+The published `@attested-intelligence/aga-verify` CLI is the shipped path (the older forgeable 1.0.0 is deprecated); the reference `verify-sep.mjs` provides another implementation from a repo clone; verdict agreement is scoped to tested cases, not all input bytes. Without `--pubkey` you get an **integrity-only** result (`issuerVerified=false`); supply a nonempty expected key from a separate trusted channel to authenticate that signing key; the mapping to an organization depends on that channel. A trailing `--pubkey` without a value falls back to integrity-only success in 2.2.2. See `THREAT_BOUNDARY.md` §3.7. A hosted browser verifier is linked under [Links](#links).
 
-The reference §6 algorithm is implemented in **three languages**: JavaScript (`aga-receipt-spec/verify/verify-sep.mjs`), Go (`verify.go`, stdlib `crypto/ed25519`), and Python (`verify.py`, pure-stdlib RFC-8032 Ed25519). A cross-stack harness (`npm run conformance:cross-stack`; first: `npm run build && npm --prefix independent-verifier run build`) proves all three, plus the in-server engine and `aga-verify`, render **identical verdicts** on the canonical vectors (valid, adversarial, and every small-order forgery). The **v2 composite** profile (`ML-DSA-65+Ed25519-SHA256-JCS`) is held to the same bar by a second harness (`npm run conformance:cross-stack-v2`): a `@noble`/JavaScript engine and a CIRCL/Go oracle, two genuinely independent toolchains, render identical verdicts on the pinned v2 corpus, and the **reference** v1 verifier (`verify-sep.mjs`/`verify.py`/`verify.go`) returns `UNSUPPORTED_PROFILE` (exit 3) on a v2 bundle, signalling "profile not implemented" rather than a misleading "invalid". *(The published `aga-verify` CLI does not implement this profile trichotomy: on a v2 bundle it returns FAILED (exit 1). Use exit 3 as the unsupported-profile signal only with the reference verifiers.)*
+The reference §6 algorithm is implemented in **three languages**: JavaScript (`aga-receipt-spec/verify/verify-sep.mjs`), Go (`verify.go`, stdlib `crypto/ed25519`), and Python (`verify.py`, pure-stdlib RFC-8032 Ed25519). A cross-stack harness (`npm run conformance:cross-stack`; first: `npm run build && npm --prefix independent-verifier run build`) proves all three, plus the in-server engine and `aga-verify`, agree on the published canonical cases as the harness feeds them (object cases are re-serialized; raw-byte cases are separate). Outside that corpus, the implementations differ, including some parser and pin semantics. The **v2 composite** profile (`ML-DSA-65+Ed25519-SHA256-JCS`) is held to the same bar by a second harness (`npm run conformance:cross-stack-v2`): a `@noble`/JavaScript engine and a CIRCL/Go oracle, two genuinely independent toolchains, render identical verdicts on the pinned v2 corpus, and the **reference** v1 verifier (`verify-sep.mjs`/`verify.py`/`verify.go`) returns `UNSUPPORTED_PROFILE` (exit 3) on a v2 bundle, signalling "profile not implemented" rather than a misleading "invalid". *(The published `aga-verify` CLI does not implement this profile trichotomy: on a v2 bundle it returns FAILED (exit 1). Use exit 3 as the unsupported-profile signal only with the reference verifiers.)*
 
 ### Check-name mapping across implementations
 
@@ -133,7 +137,7 @@ Known decomposition difference: the JS reference recomputes every Merkle leaf fr
 ## How It Works
 
 ```
-AI Agent                  AGA Gateway                    Verifier
+AI Agent                  AGA Proxy                      Verifier
    |                          |                              |
    |-- tools/call ----------->|                              |
    |                    [Evaluate Policy]                    |
@@ -152,12 +156,12 @@ AI Agent                  AGA Gateway                    Verifier
 
 ## MCP Governance Proxy
 
-Run AGA as a proxy in front of an MCP server that it starts as a stdio child process (the hardened default), or one it reaches with a plain JSON-RPC POST (`--upstream-url`; no Streamable HTTP session or SSE handling). The proxy's agent port speaks newline-delimited JSON-RPC 2.0 over raw TCP, not stdio or Streamable HTTP. A stdio MCP client needs a relay you provide (a few lines that pipe stdin to the port and the port to stdout); none ships. A scripted client can speak that framing directly. Every `tools/call` request with a non-empty string tool name and arguments the proxy can canonicalize is evaluated against the policy and produces a signed receipt, except the calls that known issue 7 below describes as refused without one. Other methods that are not benign are forwarded with a signed passthrough receipt and are not policy-evaluated, and benign protocol methods (`initialize`, `initialized`, `ping`, `tools/list`, `prompts/list`, `resources/list`, `resources/templates/list`, `logging/setLevel`, `completion/complete` and `notifications/*`) produce no receipt (THREAT_BOUNDARY.md section 3 item 2). Read the known issues below before you expose the port.
+Run AGA as a proxy in front of an MCP server that it starts as a stdio child process (the default stdio transport), or one it reaches with a plain JSON-RPC POST (`--upstream-url`; no Streamable HTTP session or SSE handling). The proxy's agent port speaks newline-delimited JSON-RPC 2.0 over raw TCP, not stdio or Streamable HTTP. A stdio MCP client needs a relay you provide (a few lines that pipe stdin to the port and the port to stdout); none ships. A scripted client can speak that framing directly. Every `tools/call` request with a non-empty string tool name and arguments the proxy can canonicalize is evaluated against the policy and produces a signed receipt, except the calls that known issue 7 below describes as refused without one. Other methods that are not benign are forwarded with a signed passthrough receipt and are not policy-evaluated, and benign protocol methods (`initialize`, `initialized`, `ping`, `tools/list`, `prompts/list`, `resources/list`, `resources/templates/list`, `logging/setLevel`, `completion/complete` and `notifications/*`) produce no receipt (THREAT_BOUNDARY.md section 3 item 2). Read the known issues below before you expose the port.
 
 ```bash
 # Start the proxy (the `aga-proxy` bin) in front of an upstream MCP server.
-# stdio upstream = the hardened default (the upstream is a child process, not network-reachable).
-npx -p @attested-intelligence/aga-mcp-server aga-proxy start \
+# stdio upstream = the default stdio transport (the upstream is a child process, not network-reachable).
+npx -p @attested-intelligence/aga-mcp-server@3.6.2 aga-proxy start \
   --upstream "npx -y @modelcontextprotocol/server-filesystem /tmp/test" --profile permissive
 ```
 
@@ -167,26 +171,26 @@ exposes; to permit some of your server's tools and deny the rest, pass a `--poli
 
 ### Exporting the evidence bundle from a running proxy
 
-The proxy records receipts in its own process and keeps the SEP ledger **in memory**. To make that live ledger reachable from a separate shell, `aga-proxy start` opens a **loopback-only control channel** — an HTTP listener bound to `127.0.0.1` (never a routable interface), on its own port (default `18801`, override with `--control-port`), distinct from the agent-facing proxy port (`18800`). It exposes only read routes (`/export`, `/status`, `/receipts`); nothing on it mutates policy or state. It does not check a request's Host or Origin header, so a web page in a browser on the same host can read its responses through DNS rebinding unless the browser blocks it (known issue 12). The proxy writes the chosen control port to `~/.aga-proxy/control.json` alongside `proxy.pid`.
+The proxy records receipts in its own process and keeps the SEP ledger **in memory**. To make that live ledger reachable from a separate shell, `aga-proxy start` opens a **loopback-only control channel**: an HTTP listener bound to `127.0.0.1` (never a routable interface), on its own port (default `18801`, override with `--control-port`), distinct from the agent-facing proxy port (`18800`). It exposes only read routes (`/export`, `/status`, `/receipts`); nothing on it mutates policy or state. It does not check a request's Host or Origin header, so a web page in a browser on the same host can read its responses through DNS rebinding unless the browser blocks it (known issue 12). The proxy writes the chosen control port to `~/.aga-proxy/control.json` alongside `proxy.pid`.
 
 A **separate** `aga-proxy export` invocation reads that file and fetches the same signed bundle the running proxy would emit:
 
 ```bash
-# Terminal A — start the proxy in front of an upstream MCP server
-npx -p @attested-intelligence/aga-mcp-server aga-proxy start \
+# Terminal A: start the proxy in front of an upstream MCP server
+npx -p @attested-intelligence/aga-mcp-server@3.6.2 aga-proxy start \
   --upstream "npx -y @modelcontextprotocol/server-filesystem /tmp/test" --profile permissive
 
-# (First, drive at least one tools/call through the proxy from your MCP client — an empty
+# (First, drive at least one tools/call through the proxy from your MCP client; an empty
 #  ledger has no receipts to checkpoint, and the export reports there is nothing to export.)
-# Terminal B — export the live ledger from a different shell, then verify it offline
-npx -p @attested-intelligence/aga-mcp-server aga-proxy export -o evidence.json
-npx -y @attested-intelligence/aga-verify evidence.json --pubkey <gateway-public-key>
+# Terminal B: export the live ledger from a different shell, then verify it offline
+npx -p @attested-intelligence/aga-mcp-server@3.6.2 aga-proxy export -o evidence.json
+npx -y @attested-intelligence/aga-verify@2.2.2 evidence.json --pubkey <gateway-public-key>
 ```
 
 Export and verify before you stop the proxy: `aga-proxy stop` ends the process without exporting, and the in-memory chain
 goes with it (known issue 9 covers export time and bounding the chain).
 
-If no proxy is running, `aga-proxy export` prints `no running proxy found; start it first, or export from within the session` and exits non-zero — it never emits an empty or placeholder bundle. Within the MCP **server** session you can also call the `generate_evidence_bundle` tool and save the returned JSON.
+If no proxy is running, `aga-proxy export` prints `no running proxy found; start it first, or export from within the session` and exits non-zero; it never emits an empty or placeholder bundle. Within the MCP **server** session you can also call the `generate_evidence_bundle` tool and save the returned JSON.
 
 **In-memory ledger:** the exported bundle is the durable cryptographic record, but the live in-process chain does **not** survive a proxy restart. This flow makes the *live* ledger reachable from another process; it does **not** add cross-restart persistence, which needs the persistent (SQLite) backend and remains roadmap (see [`KNOWN_LIMITATIONS.md`](https://github.com/attestedintelligence/aga-mcp-server/blob/main/KNOWN_LIMITATIONS.md)).
 
@@ -225,16 +229,17 @@ A demo gateway is deployed on Cloudflare Workers (a **separate deployment** that
 # Check status
 curl https://aga-mcp-gateway.attested-intelligence.workers.dev/health
 
-# Export evidence bundle
-curl https://aga-mcp-gateway.attested-intelligence.workers.dev/bundle -o evidence-bundle.json
+# Download a static demonstration bundle (not a live export)
+curl https://attestedintelligence.com/sample-bundle.json -o evidence-bundle.json
+# Static sample only. Use the separately published sample pin, not a key read from this file.
 ```
 
 ## Python SDK
 
-> **Status, rechecked against PyPI on 2026-09-23.** `aga-governance` 0.3.1 fixed the depth-bomb crash: on a deeply nested `receipts` payload the verifier returns a `FAILED` verdict instead of raising, and every later release carries the fix. 0.3.0 was yanked for that crash; 0.2.6 raises on the same input and is not yet yanked, so any version specifier that excludes 0.3.1 and later (`~=0.2.0` or `<0.3.1`, for example) still installs it. Install 0.3.1 or later before you verify untrusted bundles with the Python SDK. The JavaScript reference verifier and the `@attested-intelligence/aga-verify` CLI are unaffected.
+> **Status, checked against PyPI on 2026-09-28.** The current release is `aga-governance` 0.3.2. Version 0.3.1 fixed the depth-bomb crash; 0.3.0 was yanked for that crash. Both 0.2.6 files are now yanked as well, but that does not repair installed copies. Use the reviewed current version when evaluating untrusted bundles and retain its documented parser and verdict limitations. The JavaScript reference verifier and `aga-verify` do not have that Python depth-bomb crash.
 
 ```bash
-pip install "aga-governance>=0.3.1"
+pip install "aga-governance==0.3.2"
 ```
 
 ```python
@@ -263,12 +268,12 @@ Automated tests across TypeScript and Python, plus a conformance corpus:
 ```bash
 npm test                              # TypeScript tests (vitest)
 npm run test:conformance              # SEP conformance corpus
-pip install aga-governance && python -c "import aga; print(aga.__version__)"   # Python SDK smoke check
+pip install "aga-governance==0.3.2" && python -c "import aga; print(aga.__version__)"   # Python SDK smoke check
 ```
 
 ## Benchmarks
 
-Receipt-format determinism is reproducible here: `npm test` runs the cross-language vectors, and `npm run conformance:cross-stack` (first: `npm run build && npm --prefix independent-verifier run build`) shows the six v1 verifier configurations (across three independent toolchains: JS, Go, Python) agree on the 54 object-level cases of the canonical 61-case corpus — the remaining 7 are raw-byte/file-parse cases run by the five file-parsing verifiers, since the in-server engine never receives raw bytes — while `npm run conformance:cross-stack-v2` shows the two independent-language v2 oracles agree on the composite corpus.
+Receipt-format determinism is reproducible here: `npm test` runs the cross-language vectors, and `npm run conformance:cross-stack` (first: `npm run build && npm --prefix independent-verifier run build`) shows the six v1 verifier configurations (across three independent toolchains: JS, Go, Python) agree on the 54 object-level cases of the canonical 61-case corpus. The remaining 7 are raw-byte/file-parse cases run by the five file-parsing verifiers, since the in-server engine never receives raw bytes. `npm run conformance:cross-stack-v2` shows the two independent-language v2 oracles agree on the composite corpus.
 
 ## Project Structure
 
