@@ -96,6 +96,9 @@ jobs:
         # The Go oracle (aga-receipt-spec/verify/v2) fetches CIRCL via the default proxy and verifies it
         # against the committed go.sum. A gapped/divergent v2 verifier cannot be published.
         run: npm run conformance:cross-stack-v2
+      - name: Documentation release byte-identity gate
+        if: ${{ inputs.publish_server }}
+        run: node scripts/check-docs-release.mjs
       - name: Publish aga-mcp-server (or dry run)
         if: ${{ inputs.publish_server }}
         env:

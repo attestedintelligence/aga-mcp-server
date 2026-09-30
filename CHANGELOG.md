@@ -2,6 +2,14 @@
 
 All notable changes to `@attested-intelligence/aga-mcp-server` are recorded here, newest first. This package follows [Semantic Versioning](https://semver.org). The signed receipt and evidence-bundle wire format is the canonical SEP profile; any format-affecting change is called out explicitly.
 
+## 3.6.4 - 2026-09-30
+
+Documentation and release verification only. Runtime code, dependencies, signed formats and all known issues remain unchanged. The README removes an inherited SLSA badge and states the exact-version provenance boundary. The release workflow compares the packed runtime with 3.6.3 before publication; it permits changes only to README.md, CHANGELOG.md and package.json version/description. Build provenance still does not establish runtime safety or independent pilot validation.
+
+## 3.6.3 - 2026-09-30
+
+Documentation and version/description only. Static evaluation is the first step; runtime examples remain identified as observed 3.6.2 behavior. The published archive retained all 207 members, with 205 unchanged from 3.6.2. It was published manually without a SLSA build attestation. Its README incorrectly inherited a provenance claim; 3.6.4 corrects that text. Registry signatures are distinct from build provenance.
+
 ## 3.6.2 — 2026-09-25
 
 Documentation and version only; the runtime is 3.6.0's, file for file (`dist/` is byte-identical to 3.6.0's and 3.6.1's). The shipped documents:

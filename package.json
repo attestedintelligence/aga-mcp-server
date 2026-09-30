@@ -1,8 +1,8 @@
 {
   "name": "@attested-intelligence/aga-mcp-server",
-  "version": "3.6.2",
+  "version": "3.6.4",
   "mcpName": "io.github.attestedintelligence/aga-mcp-server",
-  "description": "MCP governance proxy and evidence engine for AI agent tool calls: evaluate each call against the operator's policy, permit or deny it at the proxy boundary, and record each decision as a signed receipt in offline-verifiable evidence bundles.",
+  "description": "Signed decision records for agent vendors facing customer evidence reviews. Public reference gateway and static verifier; pre-pilot, with documented limits.",
   "author": "Attested Intelligence Holdings LLC",
   "license": "MIT",
   "homepage": "https://attestedintelligence.com/technology",
