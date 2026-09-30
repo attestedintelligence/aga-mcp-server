@@ -22,8 +22,8 @@ npm run build               # = rm -rf dist  &&  tsc   (clean build; no stale ou
 ```
 
 **Which commit.** The authority is the npm provenance attestation, not a tag. Every aga-mcp-server version from
-3.0.0 through 3.6.2 carries one except 3.3.0, and so does every aga-verify version from 2.1.0 on; 3.0.0-rc.0 and earlier
-versions have none. Version 3.6.3 was published manually on September 30, 2026 and also has no SLSA build attestation; its registry signatures do not supply one. Its 207-member archive matches the reviewed documentation-only proposal, with 205 members unchanged from 3.6.2. Version 3.6.4 uses the provenance-required release workflow and a pre-publish byte comparison against 3.6.3. Confirm its actual registry attestation before relying on provenance; workflow configuration alone is not proof of successful publication. Read the commit with
+3.0.0 through 3.6.2 carries one except 3.3.0, and so do the checked aga-verify versions from 2.1.0 through 2.2.2; 3.0.0-rc.0 and earlier
+versions have none. Standalone verifier 2.2.3 was published manually on September 30, 2026, with registry signatures and no SLSA build attestation. Its source commit is 48ca8f4245e0147aea4a2586d3003ea2274b0792; its reviewed npm tarball SHA-256 is f7174a66426f236e483383798db27d87dbb582e5d6b49d6e65c6d46f6973e642. Version 3.6.3 was published manually on September 30, 2026 and also has no SLSA build attestation; its registry signatures do not supply one. Its 207-member archive matches the reviewed documentation-only proposal, with 205 members unchanged from 3.6.2. Version 3.6.4 uses the provenance-required release workflow and a pre-publish byte comparison against 3.6.3. Confirm its actual registry attestation before relying on provenance; workflow configuration alone is not proof of successful publication. Read the commit with
 `curl -s https://registry.npmjs.org/-/npm/v1/attestations/@attested-intelligence%2f<name>@<version>` and decode
 the SLSA statement's `resolvedDependencies[].digest.gitCommit`. Tags are a convenience and do not cover every
 version (`git ls-remote --tags` lists them). `v3.0.2` names a version that was never published to npm, and

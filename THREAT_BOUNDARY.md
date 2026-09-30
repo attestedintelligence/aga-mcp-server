@@ -44,7 +44,7 @@ Additional boundaries:
 - The default policy profile is permissive. Only covered `tools/call` traffic is policy-evaluated; other methods have passthrough or unrecorded paths. The CLI does not expose the library's `denyMethods` option.
 - In MCP server mode, the governed client can re-attest its baseline and lift a lifecycle block without that call appearing in the exported bundle. Measurement and lifecycle events are not interchangeable with exported tool-call receipts.
 - The live ledger is volatile. Retention, restart behavior, an independent witness, trusted time and freshness checks require separate arrangements.
-- A malformed expected-key value can fall back to integrity-only behavior in some implementations. Check the exact verifier and the issuer-match result.
+- Standalone aga-verify 2.2.3 refuses malformed supplied API keys and missing, malformed, repeated or unknown CLI options. Older standalone versions and other implementations can fall back to integrity-only behavior for some malformed trust inputs. The verifier embedded in runtime 3.6.4 is unchanged. Check the exact verifier and the issuer-match result.
 - The record does not prevent jailbreaks, infrastructure compromise, signing-key theft or actions outside the recorded boundary. It does not certify compliance or establish court, regulator or customer acceptance.
 
 ## 4. Historical test evidence
