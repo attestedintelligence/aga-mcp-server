@@ -6,7 +6,7 @@ import {execFileSync} from 'node:child_process';
 import assert from 'node:assert/strict';
 
 const digest=b=>crypto.createHash('sha256').update(b).digest('hex');
-const allowed=new Set(['package/README.md','package/CHANGELOG.md','package/package.json']);
+const allowed=new Set(['package/README.md','package/CHANGELOG.md','package/package.json','package/DEPLOYMENT.md','package/SECURITY.md','package/THREAT_BOUNDARY.md']);
 function unpack(bytes){
   const raw=zlib.gunzipSync(bytes,{maxOutputLength:16*1024*1024}),files=new Map();
   for(let offset=0;offset+512<=raw.length;){

@@ -1,89 +1,58 @@
-# AGA MCP Server — Threat Boundary & Bypass Surface (honest audit)
+# Threat boundary and current limitations
 
-**Scope:** `@attested-intelligence/aga-mcp-server` 3.x (the current release; see the version badge / `package.json`). Originally written for Sprint 3 CP3.
-**Stance:** defensibility through honesty. This documents what the package **does** guarantee, what it **does not**, and the **residual attack surface** that remains by design or is deferred. Per the project discipline: better a precisely-stated boundary than an overclaim.
+Updated September 30, 2026. This is the current scope statement for the published reference implementation. Documentation-only releases 3.6.3 and 3.6.4 do not repair the behavioral limitations observed in 3.6.0 through 3.6.2. The README retains the thirteen detailed known issues and their observed version scope.
 
----
+## 1. What verification establishes
 
-## 1. The core claim (what is proven + tested)
+A valid signature establishes that the signed bytes were produced by a holder of the corresponding private key. To establish an expected issuer, the reviewer must obtain and check the expected public key independently of the bundle. Cryptographic checks do not identify a person, authorize an action or prove the source claims are true.
 
-> Every **governed** decision (PERMITTED *and* DENIED) produces a signed, hash-chained, Merkle-included, **checkpoint-bound** SEP receipt that any third party can verify offline (`aga-verify` / `verify-sep.mjs`), with provenance when the gateway key is pinned.
+For the presented receipt set, verification checks signatures, hash links, Merkle commitments and the signed checkpoint. Altering, adding, reordering or truncating signed receipts relative to that checkpoint fails the applicable checks. An earlier genuine export may still pass, and a key holder can sign another history. Completeness of the presented signed set is different from completeness of activity capture.
 
-A denial **cannot be silently erased by the agent**:
+Each signed receipt's `policy_reference` is the policy value to inspect. `aga-proxy` records the SHA-256 of its canonical policy JSON; the separate `aga-mcp-server` path uses an empty value. Unsigned envelope fields, including `bundle_id`, `schema_version`, envelope `policy_reference` and `offline_capable`, are not authenticated policy or identity evidence.
 
-| Attack | Defense | Test |
-|---|---|---|
-| Tamper a receipt | Ed25519 signature + leaf-recompute fail | `acceptance.test.ts 9.3`, `fixtures/cross-stack` |
-| Drop the DENIED receipt (truncation) | signed checkpoint binds `leaf_count` + head | `fixtures/cross-stack` (SC4) |
-| Reorder to bury it | `previous_receipt_hash` chain + non-decreasing timestamp | `fixtures/cross-stack` (SC5) |
-| Re-attest to wipe history | SEP ledger is **not** reset on `attest_subject` | `tests/integration/provable-denial.test.ts` |
-| Forge under a different key | receipts checked vs **pinned** key; **all** small-order encodings (10 canonical + non-canonical `y≥p`) rejected | `fixtures/cross-stack` (SC6), `tests/sep/reaudit-fixes.test.ts` |
-| Crash the recorder to erase a decision (deeply-nested arg "depth bomb") | `canonicalize` is **depth-bounded**; the governance wrapper + proxy **fail closed** — an uncanonicalizable call is DENIED *and recorded*, never silently dropped or forwarded | `tests/proxy/dos-failclosed.test.ts`, `tests/sep/reaudit-fixes.test.ts` |
+The JavaScript CLI, Python SDK, library verifier and hybrid reference implementations have different supported profiles and edge-case behavior. The published `aga-verify` CLI checks the classical profile. Do not substitute one implementation for another without checking its profile, key-pin handling and result fields.
 
-> **Scope note (2026-09-26).** The depth-bomb row holds for arguments that cannot be canonicalized: they are DENIED and
-> recorded. A tool name or id that cannot be canonicalized (an unpaired surrogate), and the other cases in the README's
-> known issue 7, are refused with no receipt, and all but the batch, missing-jsonrpc and oversized messages with no response either; with a stdio upstream they
-> are never forwarded.
+## 2. Maintenance requirements
 
-Claim scope is **integrity-of-present-receipts, NOT non-omission**: a PASS proves every *present* receipt is authentic and complete-as-a-set under the checkpoint; it does **not** prove the gateway logged every action it took. Completeness is bounded by the tamper-evidence of the interception point, which is outside the bundle.
+Changes to signed fields, canonicalization, checkpoint rules, algorithms or verifier results need explicit format and cross-implementation review. A passing object-level unit test is not a raw-byte parser test. Preserve signed fixtures, test malformed inputs in an approved isolated environment and retain failures rather than relabeling them as unsupported tests.
 
----
+For new governed tools, verify the actual request path, policy decision, receipt and upstream effect. The presence of a governance wrapper or a signed PERMITTED decision does not establish execution or complete capture. Keep production credentials out of tests.
 
-## 2. Governed vs ungoverned tool surface
+## 3. Known residual risks
 
-**Governed (PEP-gated + SEP-recorded; PERMITTED/DENIED on every call):**
-`measure_integrity`, `revoke_artifact`, `request_claim`, `delegate_to_subagent` — the agent-action tools.
+| Issue | Current limitation |
+| --- | --- |
+| 1 | The agent listener has no authentication, binds broadly and has shared-host exposure. |
+| 2 | Clients reusing a JSON-RPC identifier can receive each other's results. |
+| 3 | A stdio upstream inherits signing-related environment variables. |
+| 4 | The HTTP upstream mode does not implement MCP Streamable HTTP. |
+| 5 | Duplicate JSON field names are interpreted using the last value. Other readers may display a different value. |
+| 6 | Duplicate HTTP method members can bypass policy evaluation and receipt creation. |
+| 7 | Some malformed calls are refused without a receipt or response. |
+| 8 | Non-ASCII bytes split across reads can be altered in transport. |
+| 9 | Export can block calls and contribute to timeouts after an upstream effect. |
+| 10 | Policy types, top-level path/pattern rules and shared rate limits have important constraints. |
+| 11 | Large stdio output can be dropped after a PERMITTED receipt, with later timeout. |
+| 12 | The loopback control channel lacks Host/Origin validation, leaving a DNS-rebinding risk where the browser permits it. |
+| 13 | Large HTTP responses can interrupt the agent connection and lose in-flight replies on Linux. |
 
-**Ungoverned (by design):**
-| Tool | Why ungoverned (safe) |
-|---|---|
-| `get_server_info`, `get_portal_state`, `get_receipts`, `get_chain_events`, `list_claims`, `verify_chain` | read-only; no side effects on the governed subject |
-| `init_chain`, `attest_subject` | **bootstrap** — they *establish* the governance relationship (chicken-and-egg: cannot be gated by a policy that doesn't exist yet). `attest_subject` sets policy, it does not perform an agent action, and re-attestation **cannot erase** the prior SEP ledger (§1). |
-| `generate_evidence_bundle`, `verify_bundle_offline` | **evidence operations** — must work *especially after* TERMINATION/quarantine (you need to export and verify the record once governance is revoked). Not agent actions; not SEP-recorded. (The legacy `create_checkpoint` continuity tool was removed in P4.) |
-| `measure_behavior` | **detective-only** monitor (§CP2); records a provable drift finding, does not block unless `enforce=true`. |
+Read the [complete cases and measured workarounds](https://attestedintelligence.com/security#known-issues) before relying on a mitigation. A workaround is not a claim that a defect has been fixed.
 
-**Maintenance invariant (must hold for the core claim):** any *new* tool that performs an agent **action** with side effects MUST be added to the governed set (i.e., NOT in `UNGOVERNED_TOOLS`), so it produces a PERMITTED/DENIED receipt. Read/bootstrap/evidence tools stay ungoverned. A CI check that flags new non-ungoverned-listed tools is recommended (future).
+Additional boundaries:
 
----
+- A direct route to the upstream bypasses the proxy. A stdio child is not automatically isolated from the agent, host or signing environment.
+- The default policy profile is permissive. Only covered `tools/call` traffic is policy-evaluated; other methods have passthrough or unrecorded paths. The CLI does not expose the library's `denyMethods` option.
+- In MCP server mode, the governed client can re-attest its baseline and lift a lifecycle block without that call appearing in the exported bundle. Measurement and lifecycle events are not interchangeable with exported tool-call receipts.
+- The live ledger is volatile. Retention, restart behavior, an independent witness, trusted time and freshness checks require separate arrangements.
+- A malformed expected-key value can fall back to integrity-only behavior in some implementations. Check the exact verifier and the issuer-match result.
+- The record does not prevent jailbreaks, infrastructure compromise, signing-key theft or actions outside the recorded boundary. It does not certify compliance or establish court, regulator or customer acceptance.
 
-## 3. Residual attack surface (honest, deferred, or deployment-dependent)
+## 4. Historical test evidence
 
-1. **Proxy — mandatory mediation is a deployment property.** `GovernanceProxy` governs the path *through it*; if the agent can reach the upstream MCP server **directly** (network), it bypasses governance entirely. `upstreamUrl` (HTTP) is directly reachable. → **Deployment requirement:** the agent must be network-isolated so the proxy is its *only* route to tools. Documented, not code-enforceable here. *(Empirically demonstrated in CP3 A7 — a direct POST to the upstream fired a side effect with no receipt; the red-team scripts are maintained in the private validation tree, not shipped in this package.)* **See `DEPLOYMENT.md` §1: stdio-upstream is the hardened default — the upstream is a non-network-reachable child process, closing this bypass by construction; HTTP-upstream mode now warns on stderr.**
-2. **Proxy — only `method === "tools/call"` is policy-evaluated; partially mitigated in 3.0.** Other JSON-RPC methods are still forwarded (not policy-evaluated), but they are now recorded as **signed passthrough receipts** in the evidence bundle for auditability — so a side-effecting non-`tools/call` method is no longer *invisible* (the CP3 A7 `admin/deleteAllData` would now appear as a `(passthrough)` receipt with `method` set and `reason: forwarded, not policy-evaluated`). Benign protocol methods (`initialize`, `initialized`, `ping`, `tools/list`, `prompts/list`, `resources/list`, `resources/templates/list`, `logging/setLevel`, `completion/complete` and `notifications/*`) are excluded by default; any other string method, `roots/list` included, gets a passthrough receipt unless it holds an unpaired surrogate; that one, like a method that is a number, gets no receipt and no response, and a message whose method is missing, empty or false is forwarded with no receipt; an optional `denyMethods` denylist rejects known side-effecting methods (a **DENIED** passthrough receipt, not forwarded). `denyMethods` is a `GovernanceProxy` constructor option in the library API only: the `aga-proxy` CLI has no flag or policy field that sets it, so a CLI-started proxy forwards every non-benign method. **What this closes:** invisibility — every forwarded non-benign method is now in the tamper-evident, checkpoint-bound bundle. **What it does NOT close:** the method is not policy-evaluated and still *executes* unless explicitly denylisted (this is *visibility, not governance*), and a direct-to-upstream call (§3.1) still bypasses the proxy entirely. Full per-method policy evaluation remains future work.
-3. **Proxy — denial is observable.** A DENIED call returns a distinctive `-32600` error, which an adversary can use as a policy-probing oracle. Low severity; structured denial metadata could be tightened later.
-4. **Key persistence — available on BOTH binaries as of 3.6.0, and mitigated only where an operator configures it.** The gateway signing key **can be** persisted via `AGA_GATEWAY_KEY` (64-hex seed) or `AGA_GATEWAY_KEY_FILE` (`DEPLOYMENT.md` §2), which makes `gateway_public_key` stable and **pinnable across restarts**. The default on both binaries is still an ephemeral key, so an unconfigured deployment carries this risk in full — availability of the control is not the same as the control being in effect, and nothing here detects a deployment that skipped it. Both binaries resolve the key through one shared function and warn identically on stderr when they fall back, and `aga-proxy --ephemeral` makes a throwaway key a stated choice rather than a silent one. The proxy also prints its active public key at startup, which is what makes an honest out-of-band pin possible. **Through 3.5.0 this was NOT true of `aga-proxy`:** it called `generateSigner()` unconditionally, read neither variable, and emitted no warning — so an operator who set the variable correctly was silently ignored and their proxy-issued bundles were not pinnable. If you are running 3.5.0 or earlier, treat proxy evidence as integrity-verifiable only. HSM/KMS backing remains future work. A verifier MUST still pin the key it expects — **and MUST obtain that key independently of the bundle**, since a key lifted from the bundle under test yields a circular `provenance verified` (see §3.7).
-5. **Storage durability (Sprint 5).** Default storage is in-memory → the live chain is lost on **process restart**. The cryptographic record survives via the **exported signed bundle**; durable cross-restart retention needs the SQLite/persistent backend (Sprint 5). The raw quarantine forensic buffer is in-memory by design (only the `arguments_hash` commitment is signed — privacy-preserving and sufficient to *prove* a capture).
-6. **Out of scope entirely (not what AGA does).** AGA does not prevent: model jailbreaks, model-weight theft, credential compromise, or infrastructure compromise. It provides *accountability and provenance* for governed decisions, not prevention of those classes. If an attacker holds the gateway signing key, they can author receipts — protect the key (Sprint 4).
-7. **Verifier-UX / unpinned consumers (NEW — CP3 A5).** A consumer that verifies a bundle **without pinning** the gateway key gets an integrity-only `VERIFIED` with `issuerVerified=false` — *even on a forged, attacker-signed, denial-free bundle*. This is correct (integrity-of-present-receipts ≠ provenance, and the result object/CLI say so explicitly), but a UI that shows a bare "VERIFIED" without prominently propagating `issuerVerified=false` could mislead a non-expert. → Downstream consumers (esp. the website demo) MUST pin the gateway key and never present an unpinned PASS as proof of *who* issued the bundle. **Mitigated in 3.0:** the verify result now carries a prominent `summary` — `VERIFIED (provenance verified …)` vs `VERIFIED (integrity only — NOT provenance …)` — surfaced by `verify_bundle_offline` and the reference/`aga-verify` CLIs; key-pinning ergonomics are in `DEPLOYMENT.md` §2. Consumers must still pin.
-8. **Cross-stack verifier conformance (CLOSED — 2026-06-07).** Earlier in the 3.0 hardening only `src/sep/verify.ts` carried the full strict floor; the reference `verify-sep.mjs`, the published `aga-verify`, Go, and Python lagged. **That asymmetry is now closed.** All six verifiers — engine (`src/sep`), reference (`verify-sep.mjs`), `aga-verify`, Go (`verify.go`), and Python (audited library + pure-stdlib) — apply the identical strict floor and return **byte-identical verdicts**. The shared floor: strict field allowlist; `envelope_consistency` (binds the unsigned `gateway_id`/`merkle_root`/`generated_at` to the signed/recomputed values); checkpoint-algorithm binding; lexicographic-string canonicalization with RFC-8785 integral-number normalization; complete small-order/non-canonical-key rejection; **one library-free canonical-timestamp rule** (exact `.sssZ` UTC form via an ASCII regex + integer-arithmetic calendar + lexicographic ordering — no native date parser); merkle-direction-token strictness (`left`/`right` only, length-matched); unpaired-UTF-16-surrogate rejection; depth-bounded never-throw; and whole-document parse (trailing content rejected). Verified by `npm run conformance:cross-stack` — six verifier configurations agree on the 54 object-level cases of the committed corpus, and the five file-parsing verifiers agree on its 7 raw-byte/file-parse cases (61 total, incl. an uppercase-Merkle-sibling cross-stack case). The agreement itself was confirmed across multiple rounds of independent blind differential re-audit. The engine is library-only and never receives raw file bytes, so it does not run the file-parse subset; the earlier phrasing here ("six verifiers agree on every case … 57 cases incl. raw-byte/file-parse") overclaimed by one verifier on those seven and carried a stale total. See `fixtures/cross-stack/README.md`. **Residual (by design, not a divergence):** the bundle envelope still carries four *unsigned* metadata fields with no signed counterpart — `bundle_id`, `schema_version`, `policy_reference`, `offline_capable`. They are informational and are **not** security-identity fields (the identity fields `gateway_id`/`merkle_root`/`generated_at` ARE bound); a relying party must still trust only signed/verified values and pin the gateway key (§3.7). Of the four, **`policy_reference` is the only identity-grade one** — but in `aga-proxy` receipts the governing policy IS captured and cryptographically verified inside **each signed receipt's own `policy_reference` field** (one of the 15 signed fields; `aga-mcp-server` 3.6.x signs an empty `policy_reference`, so its receipts do not name a policy), so the unsigned *envelope* `policy_reference` is only a convenience mirror, not the source of truth. Binding the envelope copy is a recommended near-term (3.1) format revision; a coordinated verifier-output flag that marks these four envelope fields as unsigned/not-verified is a recommended enhancement, deliberately deferred here to avoid adding an untested cross-language output surface immediately after the cross-stack-consistency campaign (the verdict surface already attests only the steps it runs, and never claims these fields). One further residual is **unreachable by construction:** SEP signed fields are strings plus the single integer `leaf_count` (the emit guard `assertSignedReceiptFieldsAreStrings` forbids any other number in a signed field), so a verifier's canonicalization of a *non-integer / exponential* number placed in a signed field — which no conformant gateway can emit — is intentionally left unspecified and MAY differ across language stdlibs; it cannot affect any bundle a conformant gateway produces. Reachable string content is fully cross-stack-consistent (an exhaustive 0..0x10FFFF code-point sweep confirms the only ever-divergent characters, `U+2028`/`U+2029`, are normalized identically by every verifier).
-   > **Scope note (2026-09-26).** The verifiers agree on the 61-case corpus as its harness feeds them. Outside it they
-   > differ, in both directions; <https://attestedintelligence.com/security> lists how.
+Earlier audit narratives and their corrections remain in [the September 30 pre-release source record](https://github.com/attestedintelligence/aga-mcp-server/blob/2475dd78d3439f1bd47c68115485bd24dba37add/THREAT_BOUNDARY.md). They are historical evidence, not current external certification. Later known issues narrow several earlier broad statements about capture, bypass and cross-stack agreement.
 
----
+The retained classical corpus has 54 object-level cases across six verifier configurations and seven raw-byte cases across five file-parsing implementations. The library-only engine does not parse those seven files. The hybrid corpus is separate. Agreement is scoped to the actual corpus and harness; it is not universal parser equivalence. Actual release workflow results must be read for the exact source commit, and they do not qualify an unrelated deployment or private evaluation kit.
 
-## 4. CP3 adversarial verification results (2026-06-06)
+## 5. Public boundary statement
 
-A focused adversarial workflow ran **7 independent red-team attacks** on the core claim. Each was attempted *concretely* against the real in-process MCP server / proxy and the **pinned** reference verifier (`verify-sep.mjs`) and the published-sound `aga-verify` CLI. A1–A5 were fully adjudicated + agreed in the original workflow. **A6 and A7 — whose original adjudication hit a session usage cap — were re-adjudicated first-hand on 2026-06-07 from the source:** **A6 HELD** — `src/middleware/governance.ts` shows `UNGOVERNED_TOOLS` contains only read/bootstrap/evidence/monitor tools (no mutating agent-action), a tool is GOVERNED iff absent from that set, and every GOVERNED call that is blocked emits a signed DENIED receipt via the `deny()` path (including the fail-closed branch for uncanonicalizable arguments); **A7 RESIDUAL** — the only upstream-reach bypasses are exactly the documented §3.1 (direct upstream HTTP, a deployment/network-isolation property) and §3.2 (non-`tools/call` methods, now recorded as signed passthrough receipts); no new bypass was found. (Red-team scripts are maintained in the private validation tree, not shipped in this package.)
-
-| # | Attack | Result | Why |
-|---|---|---|---|
-| A1 | Tamper a DENIED receipt (19 mutations) | **HELD** | every mutation FAILED; signature + leaf-recompute + signed checkpoint each reject |
-| A2 | Truncate (drop the DENIED receipt) | **HELD** | signed checkpoint binds `leaf_count`/head → truncated set fails `signed_checkpoint` |
-| A3 | Reorder to bury the denial | **HELD** | `previous_receipt_hash` chain + checkpoint fail |
-| A4 | Re-attest to erase | **HELD** | SEP ledger is not reset on `attest_subject`; the denial is still present in the export |
-| A5 | Key-forge (attacker re-signs a denial-free bundle) | **HELD** | pinned to the real key → FAIL `gateway_key_match` on **both** verifiers; unpinned → integrity-only PASS with `issuerVerified=false` (by design; see §3.7) |
-| A6 | PEP bypass (ungoverned mutating action) | **HELD** | all 15 tools censused; no ungoverned mutating agent-action; even blocked governed calls emit a DENIED receipt; `measure_behavior` enforcement is coupled to a signed receipt |
-| A7 | Proxy bypass | **RESIDUAL** | every governed `tools/call` gets a receipt (PERMITTED+DENIED; DENIED never reaches upstream); the two bypasses are the already-documented §3.1 (direct upstream reach) and §3.2 (non-`tools/call` methods) |
-
-**Verdict: 0 guarantee-broken — 6 HELD, 1 RESIDUAL (out-of-claim, already documented).** The core claim — *denials cannot be silently erased by the agent through tampering, truncation, reordering, or re-attestation, and forgery is caught when the gateway key is pinned* — **holds under the tested adversarial pressure**, on both the reference verifier and the published-sound `aga-verify` CLI.
-
-> **Scope note (2026-09-26).** A7's "every governed `tools/call` gets a receipt" does not hold for the tool calls the
-> README's known issue 7 describes: they are refused, never forwarded with a stdio upstream, and leave no receipt. Its two
-> bypasses are not the only ones: with an HTTP upstream, the README's known issue 6 carries a `tools/call` through the
-> proxy that is never evaluated and gets no receipt of its own.
-
----
-
-## 5. Net boundary statement (for public copy)
-
-> Every governed decision produces a signed, chained, checkpoint-bound receipt, except the tool calls known issue 7 in the README describes (refused, never forwarded with a stdio upstream, and left without a receipt in 3.6.0 through 3.6.2); denials cannot be silently erased by the agent through tampering, truncation, reordering, or re-attestation, and can be verified offline against the published format, with provenance only when the gateway key is pinned out of band. The verifier to run for a verdict is the published `@attested-intelligence/aga-verify` CLI; the in-repo reference implementations that the cross-stack conformance suite exercises are described in the README. The behavioral monitor is detective-only by default. Mandatory mediation (network isolation) and cross-restart ledger durability are deployment/roadmap properties, documented above; cross-session key persistence is available on both binaries as of 3.6.0 but only takes effect once an operator configures it, and only helps a verifier who obtains the key out of band. AGA proves *what was governed*; it does not claim to prevent jailbreaks, key theft, or non-`tools/call` side channels.
+AGA supplies signed decision records that a reviewer can check outside the producing service. A verified record establishes the checks performed on the receipts present, with issuer assurance only against an independently obtained expected key. Capture completeness, policy quality, execution, containment, freshness and operational readiness require separate evidence.

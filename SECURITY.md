@@ -18,7 +18,7 @@ If you discover a security vulnerability in AGA, please report it privately thro
 
 - **Acknowledgment:** We aim to acknowledge new reports within a few business days (the same commitment as <https://attestedintelligence.com/security>)
 - **Initial assessment:** A rough timeline once we understand the issue
-- **Resolution target:** Dependent on severity, typically within 30 days for critical issues
+- **Resolution:** We provide an update as scope and remediation become clear. No fixed resolution date or support SLA is promised.
 
 ### Scope
 
@@ -39,14 +39,14 @@ This policy covers:
 
 ### Cryptographic Considerations
 
-AGA relies on Ed25519 signatures, SHA-256 hashing, BLAKE2b-256 fingerprinting, and Merkle tree anchoring. If you identify a weakness in how these primitives are applied (not the primitives themselves), that is a valid report.
+AGA relies on Ed25519 signatures, SHA-256 hashing, BLAKE2b-256 fingerprinting, and Merkle tree commitments. If you identify a weakness in how these primitives are applied (not the primitives themselves), that is a valid report.
 
 Key areas of concern:
 
 - Sealed hash computation correctness
 - Receipt chain integrity (hash linking)
 - Merkle checkpoint verification
-- Key separation enforcement between Portal and agent
+- Signing-key handling and separation between the gateway, agent and upstream
 - Evidence Bundle tamper detection (a bundle does not prove non-omission; see `KNOWN_LIMITATIONS.md`)
 
 ### Disclosure
