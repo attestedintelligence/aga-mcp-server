@@ -11,18 +11,11 @@ Verifiable decision records for AI agents: each recorded tool-call decision is a
 
 > **Runtime status.** Since 3.5.0, a measurement requested after the active artifact's TTL expires moves it to TERMINATE; `delegate_to_subagent` also refuses after expiry. Nothing checks the TTL on a schedule, and the exported bundle does not record that transition. Do not downgrade to deprecated 3.3.3 as the evaluation path. Since 3.6.0, `aga-proxy` honors `AGA_GATEWAY_KEY` / `AGA_GATEWAY_KEY_FILE`; the stdio upstream can inherit those variables. Read the known issues and `THREAT_BOUNDARY.md` before any runtime evaluation.
 
-```bash
-# This package IS the AGA MCP server (TypeScript, runs over stdio). Use it from any MCP client:
-npx -y @attested-intelligence/aga-mcp-server@3.6.2
-```
-
-Runtime examples below identify the observed 3.6.2 package, not a newly approved production deployment. Review the known issues first; an isolated synthetic evaluation is required before considering a pilot. Prefer the static verifier path for the first check.
-
 A Python companion SDK (`aga-governance`) is documented in the Python SDK section below.
 
 ## Verify this yourself (don't take our word)
 
-You do not have to take any of this on faith. The repo ships the reference verifier, the canonical vectors, and sample bundles, so you can check one offline right now, with no network and no callback to us:
+Obtain the repository or the [website's static sample kit](https://attestedintelligence.com/verify#offline) while online. Once the verifier, sample and expected public key are local, the verification command itself needs no network or callback to us. Repository cloning and package installation require network access unless their inputs are already cached:
 
 ```bash
 git clone https://github.com/attestedintelligence/aga-mcp-server
@@ -44,9 +37,18 @@ Covered tool calls routed through `aga-proxy` are evaluated against its configur
 
 **Scope:** a verified bundle proves the *integrity of the receipts present*: each is authentic, correctly ordered, Merkle-included, and (when a key is pinned) provenance-bound. It does **not** prove non-omission (that every action the agent took was logged); completeness is bounded by the tamper-evidence of the interception point, which is outside the bundle. See **[KNOWN_LIMITATIONS.md](https://github.com/attestedintelligence/aga-mcp-server/blob/main/KNOWN_LIMITATIONS.md)** for the full honest boundary, and `THREAT_BOUNDARY.md` for the per-field detail.
 
-## Use with Claude Desktop
+## Optional runtime evaluation
 
-Add to your Claude Desktop MCP config (`claude_desktop_config.json`):
+Runtime examples identify the observed 3.6.2 package. They are not a production recommendation. Review all known issues and use approved isolation with synthetic inputs before starting a gateway. For a first check, use the static sample and verifier above. Do not start these examples on a workstation containing production credentials or customer data.
+
+```bash
+# Runtime example only, after the isolation and known-issue review.
+npx -y @attested-intelligence/aga-mcp-server@3.6.2
+```
+
+### Use with Claude Desktop in the approved evaluation environment
+
+Add to that environment's Claude Desktop MCP config (`claude_desktop_config.json`):
 
 ```json
 {
@@ -61,7 +63,7 @@ Add to your Claude Desktop MCP config (`claude_desktop_config.json`):
 
 Claude can then seal artifacts, measure integrity, generate evidence bundles, and verify them offline through natural language.
 
-### Persist the signing key (do this first)
+### Persist a synthetic evaluation key before testing restarts
 
 By default the gateway signs with an **ephemeral** key that rotates on every restart. That is fine for a first look, but evidence-bundle provenance cannot be pinned across restarts (and the server warns about it on stderr). Set one stable 64-hex Ed25519 seed so provenance stays pinnable:
 
@@ -104,7 +106,7 @@ Keep the seed secret and out of version control; see `DEPLOYMENT.md` for key han
 
 ## Quick Start: verify a bundle offline
 
-A bundle this package emits (via the `generate_evidence_bundle` MCP tool) is a **canonical SEP bundle**. Verify it offline, with no network and no callback to us:
+The MCP tool exports a canonical SEP bundle. Acquire the pinned verifier while online, then run the local verifier with a nonempty expected key obtained through a separate trusted channel. The npx command below may contact npm to obtain the package; it is not an air-gapped acquisition command. The [downloadable sample kit](https://attestedintelligence.com/verify#offline) provides a dependency-free local alternative after download, using Node.js:
 
 ```bash
 # Published verifier CLI. Obtain and authenticate the expected key outside the bundle before running.
@@ -194,7 +196,7 @@ If no proxy is running, `aga-proxy export` prints `no running proxy found; start
 
 **In-memory ledger:** the exported bundle is the durable cryptographic record, but the live in-process chain does **not** survive a proxy restart. This flow makes the *live* ledger reachable from another process; it does **not** add cross-restart persistence, which needs the persistent (SQLite) backend and remains roadmap (see [`KNOWN_LIMITATIONS.md`](https://github.com/attestedintelligence/aga-mcp-server/blob/main/KNOWN_LIMITATIONS.md)).
 
-The proxy intercepts `tools/call` requests, evaluates them against the loaded policy (a JSON file or a built-in profile; the SHA-256 of its canonical JSON is signed into every receipt), and generates a signed SEP receipt for **every** decision (except the calls that known issue 7 below describes as refused without one). Permitted calls are forwarded to the downstream server; denied calls return an MCP error and never reach it. Every decision is hash-linked and checkpoint-bound into a tamper-evident bundle. (Methods other than `tools/call` aren't policy-evaluated, but non-benign ones are recorded as signed *passthrough* receipts for auditability, and a library caller can pass a method denylist (`denyMethods`) to reject them; the `aga-proxy` CLI has no flag for it; see `THREAT_BOUNDARY.md` §3.2.)
+The proxy intercepts `tools/call` requests, evaluates them against the loaded policy (a JSON file or a built-in profile; the SHA-256 of its canonical JSON is signed into every receipt), and generates a signed SEP receipt for **every** decision (except the calls that known issue 7 below describes as refused without one). Permitted calls are forwarded to the downstream server; denied calls return an MCP error and never reach it. Each recorded decision is hash-linked and checkpoint-bound into a tamper-evident bundle. (Methods other than `tools/call` aren't policy-evaluated, but non-benign ones are recorded as signed *passthrough* receipts for auditability, and a library caller can pass a method denylist (`denyMethods`) to reject them; the `aga-proxy` CLI has no flag for it; see `THREAT_BOUNDARY.md` §3.2.)
 
 Three built-in policy profiles:
 - **permissive** - `audit_only`: denies nothing on policy grounds and records each `tools/call` it evaluates (default); the fail-closed refusals below and known issue 7 still apply
@@ -261,7 +263,7 @@ with AgentSession(gateway_id="my-gateway") as session:
 
 Automated tests across TypeScript and Python, plus a conformance corpus:
 
-- **TypeScript MCP server:** 428 automated tests (vitest), including provable-denial and behavioral-monitor regressions
+- **TypeScript MCP server:** historical 3.6.0 release CI reported 428 automated tests (vitest), including provable-denial and behavioral-monitor regressions. That evidence was reviewed September 21, 2026; these tests were not rerun during the September 28 website review.
 - **SEP conformance corpus:** `npm run test:conformance` (valid → VERIFIED, negatives → FAILED)
 - **Python companion SDK:** the separately-published `aga-governance` PyPI package (install + smoke-checked here; its full pytest suite runs from the source tree). The smoke check imports the package and prints its version. It does not exercise the verifier.
 
@@ -286,7 +288,7 @@ src/
   middleware/          # Governance PEP wrapper (records a signed PERMITTED/DENIED receipt per governed call)
 independent-verifier/  # @attested-intelligence/aga-verify: standalone SEP verifier, zero AGA imports
 scenarios/             # Demo scenarios (SCADA, autonomous vehicle, AI agent) that emit SEP bundles
-tests/                 # TypeScript test suite (428 automated tests)
+tests/                 # Historical 3.6.0 CI: 428 tests; reviewed 2026-09-21
 ```
 
 ## Links
