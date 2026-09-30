@@ -18,22 +18,22 @@ runs against a bundle you provide, offline.
 ```bash
 # grab the signed sample bundle from the public site, then verify its integrity offline:
 curl -sO https://attestedintelligence.com/sample-bundle.json
-npx @attested-intelligence/aga-verify sample-bundle.json
+npx @attested-intelligence/aga-verify@2.2.3 sample-bundle.json
 
 # integrity + PROVENANCE: pin a key you trust, obtained out of band. For this sample, that is
 # the sample-bundle signing key printed on attestedintelligence.com/verify, a published fixture
 # that no gateway holds (the live demo gateway's key will not match it). For your own bundles,
 # pin your gateway's key:
-npx @attested-intelligence/aga-verify sample-bundle.json --pubkey <64-hex-key>
+npx @attested-intelligence/aga-verify@2.2.3 sample-bundle.json --pubkey <64-hex-key>
 
 # or verify the example shipped inside this package (labeled as the packaged sample):
-npx @attested-intelligence/aga-verify --sample \
+npx @attested-intelligence/aga-verify@2.2.3 --sample \
   --pubkey ea4a6c63e29c520abef5507b132ec5f9954776aebebe7b92421eea691446d22c
 ```
 
 Exit codes: `0` on `VERIFIED`; `1` on `FAILED` (including an unreadable file, and
 v2/post-quantum bundles, which this CLI does not implement and reports as FAILED);
-`2` on usage error. `--version` prints the CLI version; `--help` prints the checks
+`2` on usage error, including a missing, malformed or repeated `--pubkey`, unknown flags or ambiguous input. `--version` prints the CLI version; `--help` prints the checks
 and exit codes. Usable directly in CI.
 
 ## What it verifies
@@ -49,13 +49,15 @@ Implements the canonical construction in
 6. **Envelope consistency**: the envelope's `gateway_id`, `generated_at` and `merkle_root`, and each receipt's `public_key` and `gateway_id`, match the signed content. `bundle_id`, `schema_version`, the envelope copy of `policy_reference` and `offline_capable` are unsigned and unchecked; read the signed per-receipt `policy_reference` instead.
 7. **Provenance (only with `--pubkey`)**: the bundle key equals the key you pinned.
 
-All steps are fully offline. No network calls, ever.
+Verification runs offline. Downloading or installing the package with npm requires a network connection.
 
 ## What a PASS proves, and what it does not
 
-A PASS proves every **present** receipt is authentic, correctly chained, Merkle-included
-under a signed checkpoint, and (with `--pubkey`) issued by the pinned gateway: nothing
-present was added, reordered, or truncated. A field name repeated anywhere in the file (in a
+A passing result validates signatures on the **present** receipts under the recorded key,
+checks their chain and Merkle inclusion, and verifies the signed checkpoint. With a valid
+`--pubkey`, it also checks that the recorded key matches your expected issuer key. That
+key identifies a gateway only to the extent that you established the key association
+independently. The result detects changes to the checkpoint-bound receipt set. A field name repeated anywhere in the file (in a
 receipt, the checkpoint or the envelope) still verifies: the verifier reads the last copy, so read
 values from its parsed output, not from the raw file (known issue 5 in the repository README and on
 <https://attestedintelligence.com/security>). An earlier genuine export presented as the current one

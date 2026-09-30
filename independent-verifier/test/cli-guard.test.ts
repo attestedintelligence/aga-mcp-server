@@ -1,6 +1,6 @@
 // REL-03 regression: the CLI must fire ONLY when verify.ts itself is the executed
 // entry script. The old guard (argv[1].includes('verify')) ran the CLI whenever the
-// ENTRY SCRIPT'S PATH merely contained the substring 'verify' — so a consumer app at
+// ENTRY SCRIPT'S PATH merely contained the substring 'verify'; so a consumer app at
 // e.g. C:\projects\verify-app\main.js that imported this library got the CLI's
 // stdout output and a process.exit() on import.
 import { describe, it, expect } from 'vitest';
@@ -30,7 +30,7 @@ function runNode(args: string[]): { status: number; stdout: string; stderr: stri
 
 describe('CLI entry guard (REL-03)', () => {
   it("importing the module from an entry script whose path contains 'verify' triggers ZERO CLI side effects", () => {
-    // Both the directory and the file name contain 'verify' — the exact shape the
+    // Both the directory and the file name contain 'verify'; the exact shape the
     // old substring guard misfired on.
     const dir = mkdtempSync(join(tmpdir(), 'aga-verify-guard-'));
     try {

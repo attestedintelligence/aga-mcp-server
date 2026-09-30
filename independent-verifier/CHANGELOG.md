@@ -2,7 +2,17 @@
 
 All notable changes to `@attested-intelligence/aga-verify` are recorded here, newest first. This package follows [Semantic Versioning](https://semver.org). Any change that can flip a verification verdict is called out explicitly, first.
 
-## 2.2.2 — 2026-09-25
+## 2.2.3 · 2026-09-30
+
+Malformed supplied expected keys now produce FAILED in the library API rather than an integrity-only VERIFIED result. This is an intentional verdict change for invalid trust inputs; the signed record construction is unchanged.
+
+- A trailing `--pubkey`, repeated options, unknown options and ambiguous file/sample selection are usage errors, exit 2.
+- Options consume their values, so a key before the bundle filename is handled correctly.
+- Correct keys, well-formed wrong keys and deliberately absent keys preserve their existing verification semantics.
+- Integrity-only output uses a semicolon in place of an em dash.
+- Added bounded expected-key and CLI controls. Runtime gateway code is outside this package release.
+
+## 2.2.2 · 2026-09-25
 
 Documentation and version only; `dist/` and `verify.ts` are 2.2.1's, byte for byte.
 
@@ -11,27 +21,27 @@ Documentation and version only; `dist/` and `verify.ts` are 2.2.1's, byte for by
 - The README's provenance example says which key to pin: for the site's sample bundle, the published sample-bundle
   key (a fixture no gateway holds); for your own bundles, your gateway's key.
 
-## 2.2.1 — 2026-09-23
+## 2.2.1 · 2026-09-23
 
 Documentation only; no code change. `dist/aga-verify.mjs`, `verify.ts`, `README.md`, `example-bundle.json` and
 `LICENSE` are byte-identical to 2.2.0. The CHANGELOG shipped inside the 2.2.0 package called 2.2.0 unreleased and
 filed the malformed-pin guard under "Unreleased". Both shipped in 2.2.0 on 2026-08-29, and this file now says so.
 
-## 2.2.0 — 2026-08-29
+## 2.2.0 · 2026-08-29
 
 Published to npm on 2026-08-29 with SLSA provenance. The work was completed 2026-07-31; the malformed-pin guard
 was added 2026-08-28.
 
-- **Verification now fail-closed rejects integers outside ±2^53 in receipt/checkpoint numeric fields — bundles previously VERIFIED may now FAIL; this closes the cross-language verdict split.** JavaScript loses integer precision beyond `Number.MAX_SAFE_INTEGER`, so a bundle carrying e.g. `leaf_count > 2^53` could VERIFY here on bytes the Go and Python verifiers read as a different number. Every stack now rejects the same out-of-range bundles at the same floor.
+- **Verification now fail-closed rejects integers outside ±2^53 in receipt/checkpoint numeric fields; bundles previously VERIFIED may now FAIL; this closes the cross-language verdict split.** JavaScript loses integer precision beyond `Number.MAX_SAFE_INTEGER`, so a bundle carrying e.g. `leaf_count > 2^53` could VERIFY here on bytes the Go and Python verifiers read as a different number. Every stack now rejects the same out-of-range bundles at the same floor.
 - **A malformed `--pubkey` is now a hard usage error (exit 2), never a silent downgrade.** A key that
   is not exactly 64 lowercase hex previously fell through to `pinned = false`, skipping the
   `gateway_key_match` step entirely, so a truncated or mistyped key printed
-  `VERIFIED (integrity only — no --pubkey given)` and exited 0 — telling an operator who *did* pass a
+  an integrity-only success message and exited 0, telling an operator who *did* pass a
   key that they had not. The reference verifier (`aga-receipt-spec/verify/verify-sep.mjs`) has always
   refused this; the guard had never propagated here, the file that becomes this package.
   `REVIEWER_GUIDE.md`'s claim that "a malformed `--pubkey` is a hard error, not a silent downgrade"
   was false for the shipped tool and is now true. Regression-tested in both directions.
-- CLI entry guard: the CLI now runs only when this module itself is the executed entry script — resolved `process.argv[1]` must equal the module's own file path (realpath-resolved, so npm `.bin` symlinks still match; case-folded on Windows). The previous check ran the CLI whenever the entry script's path merely contained the substring `verify`, so importing the library from such a path hijacked stdout and called `process.exit()`. Regression-tested in both directions.
+- CLI entry guard: the CLI now runs only when this module itself is the executed entry script; resolved `process.argv[1]` must equal the module's own file path (realpath-resolved, so npm `.bin` symlinks still match; case-folded on Windows). The previous check ran the CLI whenever the entry script's path merely contained the substring `verify`, so importing the library from such a path hijacked stdout and called `process.exit()`. Regression-tested in both directions.
 - Internal: `node:` builtin imports are now static, removing the module's only top-level awaits.
 
 ## 2.1.1 and earlier

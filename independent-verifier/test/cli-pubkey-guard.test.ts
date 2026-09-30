@@ -1,7 +1,7 @@
 // Malformed --pubkey must be a hard usage error (exit 2), never a silent downgrade to an
 // integrity-only check. Before this fix, verify.ts's CLI passed a malformed pin straight
 // into verifyEvidenceBundle, where isHex(expectedPublicKey, 64) === false made `pinned`
-// false and skipped the gateway_key_match step entirely — an operator who fat-fingered
+// false and skipped the gateway_key_match step entirely; an operator who fat-fingered
 // --pubkey got a green "VERIFIED (integrity only)" exit 0 instead of the error they'd get
 // from aga-receipt-spec/verify/verify-sep.mjs, which has always guarded this correctly.
 // REVIEWER_GUIDE.md's "a malformed --pubkey is a hard error, not a silent downgrade" claim
@@ -47,6 +47,25 @@ describe('CLI --pubkey malformation guard', () => {
   it('no --pubkey at all still verifies integrity-only and exits 0 (control, unchanged)', () => {
     const r = runNode(['--import', 'tsx', VERIFY_TS, '--sample']);
     expect(r.status).toBe(0);
-    expect(r.stdout).toContain('OVERALL: VERIFIED (integrity only — no --pubkey given)');
+    expect(r.stdout).toContain('OVERALL: VERIFIED (integrity only; no --pubkey given)');
+  });
+
+  it.each([
+    ['--sample', '--pubkey'],
+    ['--pubkey', '--sample'],
+    ['--sample', '--pubkey', 'a'.repeat(64), '--pubkey', 'b'.repeat(64)],
+    ['--sample', '--unknown'],
+    ['--sample', 'example-bundle.json'],
+  ])('invalid option input %j fails as usage before verification', (...args) => {
+    const r = runNode(['--import', 'tsx', VERIFY_TS, ...args]);
+    expect(r.status).toBe(2);
+    expect(r.stdout).not.toContain('VERIFIED');
+  });
+
+  it('consumes the key before a file instead of treating it as a filename', () => {
+    const r = runNode(['--import', 'tsx', VERIFY_TS, '--pubkey', 'a'.repeat(64), 'example-bundle.json']);
+    expect(r.status).toBe(1);
+    expect(r.stdout).toContain('FAIL  gateway_key_match');
+    expect(r.stdout).not.toContain('could not read bundle file');
   });
 });

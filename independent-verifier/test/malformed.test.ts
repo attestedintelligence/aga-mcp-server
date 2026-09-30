@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { verifyEvidenceBundle } from '../verify';
 
 // The verifier must fail cleanly (return a result, never throw) on input that is
-// not a canonical SEP evidence bundle — including the LEGACY artifact-shape and
+// not a canonical SEP evidence bundle; including the LEGACY artifact-shape and
 // the receipt-spec example bundles. Regression guard for the crash the audit found.
 describe('verifier robustness on malformed / wrong-format input', () => {
   const cases: Array<[string, string]> = [

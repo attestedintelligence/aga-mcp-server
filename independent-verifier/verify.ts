@@ -2,14 +2,14 @@
  * AGA Independent Verifier (@attested-intelligence/aga-verify)
  *
  * Standalone, dependency-FREE verification of canonical AGA SEP Evidence Bundles.
- * Imports ZERO modules from the AGA codebase and ZERO third-party packages — only
+ * Imports ZERO modules from the AGA codebase and ZERO third-party packages; only
  * Node's built-in crypto (Ed25519 + SHA-256). The trust chain dead-ends at the
  * Node runtime and the gateway public key you pin; nothing else.
  *
  * Normative construction: aga-receipt-spec/CANONICAL_CONSTRUCTION_v2.md.
  * What a PASS proves: every PRESENT receipt is authentic, correctly chained,
  * Merkle-included under a gateway-SIGNED checkpoint, and (when --pubkey is given)
- * issued by that pinned key. A PASS does NOT prove non-omission — it cannot show
+ * issued by that pinned key. A PASS does NOT prove non-omission; it cannot show
  * the signer logged every action it took.
  *
  * CLI:  npx @attested-intelligence/aga-verify <bundle.json> [--pubkey <64-hex>]
@@ -27,7 +27,7 @@ const SPKI_PREFIX = Buffer.from('302a300506032b6570032100', 'hex'); // Ed25519 S
 const MAX_CANON_DEPTH = 100; // anti-DoS: deeper nesting fails closed, never stack-overflows
 
 // EXACT canonical field sets (single source of truth, mirrors src/sep/receipt.ts + checkpoint.ts).
-// The strict-schema floor requires an object to carry EXACTLY these keys — no extra, no missing,
+// The strict-schema floor requires an object to carry EXACTLY these keys; no extra, no missing,
 // no renamed, no duplicate, no "__proto__"-injected key (Object.keys counts a JSON-parsed
 // "__proto__" as an own key, so a 16th/8th key fails the count). Every conformant stack rejects
 // the identical bundles.
@@ -63,20 +63,20 @@ interface SepBundle {
 // Lone (unpaired) UTF-16 surrogate detector: a high surrogate U+D800..U+DBFF not immediately
 // followed by a low surrogate, or a low surrogate not immediately preceded by a high surrogate.
 // Such a string is INVALID Unicode that Go and Python cannot UTF-8-encode (they reject the
-// bundle); JS would otherwise silently map it to U+FFFD and self-consistently VERIFY — a cross-
+// bundle); JS would otherwise silently map it to U+FFFD and self-consistently VERIFY; a cross-
 // stack split. We throw a CONTROLLED error so the never-throw try/catch -> FAILED on all six.
 // Valid surrogate PAIRS (astral chars / emoji) are NOT matched and canonicalize unchanged.
 const LONE_SURROGATE = /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/;
 
 // Depth-bounded JCS-profile canon: input nested beyond MAX_CANON_DEPTH throws a CONTROLLED
 // error well before a native stack overflow (anti-DoS). verifySepBundle's try/catch turns that
-// into a FAILED verdict — a depth bomb can never crash the verifier. Mirrors src/sep/canonical.ts.
+// into a FAILED verdict; a depth bomb can never crash the verifier. Mirrors src/sep/canonical.ts.
 // Safe-integer floor (cross-stack numeric agreement, R3): reject any JSON number that is not a JS
-// SAFE INTEGER — an integer with |value| <= 2^53-1 (Number.MAX_SAFE_INTEGER). JS JSON.parse decodes
+// SAFE INTEGER; an integer with |value| <= 2^53-1 (Number.MAX_SAFE_INTEGER). JS JSON.parse decodes
 // every number to an IEEE-754 double, so an integer literal with |value| > 2^53-1 (or a non-integral
 // / non-finite number) cannot round-trip identically across the JS/Go/Python stacks: JS silently
 // rounds it before canon while Go (json.Number) and Python (arbitrary-precision int) preserve the
-// literal — a validly-signed bundle then splits the six verifiers 3/3. Throwing here (caught by the
+// literal; a validly-signed bundle then splits the six verifiers 3/3. Throwing here (caught by the
 // never-throw try/catch -> FAILED) makes all six reject identically; the only SIGNED numeric in a
 // conformant bundle is the small integer checkpoint.leaf_count (leaf_index lives in the unsigned
 // merkle_proofs, outside this floor). [R3]
@@ -94,7 +94,7 @@ function canon(o: unknown): string {
 }
 
 /**
- * Strict-schema floor: the object must carry EXACTLY the canonical fields — no extra, unknown,
+ * Strict-schema floor: the object must carry EXACTLY the canonical fields; no extra, unknown,
  * missing, or "__proto__"-injected keys. own-key-count === fields.length AND every canonical
  * field present as an own property. Mirrors src/sep/verify.ts hasExactKeys exactly.
  */
@@ -111,7 +111,7 @@ const stripField = (o: Record<string, unknown>, f: string): Record<string, unkno
   Object.fromEntries(Object.entries(o).filter(([k]) => k !== f));
 const isHex = (h: unknown, n: number): h is string => typeof h === 'string' && new RegExp(`^[0-9a-f]{${n}}$`).test(h);
 
-// Ed25519 points of order dividing 8 — a signature is trivially forgeable under such a key
+// Ed25519 points of order dividing 8; a signature is trivially forgeable under such a key
 // (e.g. the identity point admits R=A,S=0 universal forgery), so reject them. 10 canonical
 // encodings; non-canonical (y >= p) caught by isCanonicalY. Mirrors src/sep/crypto.ts and the
 // reference verifier so every conformant stack renders identical verdicts.
@@ -135,7 +135,7 @@ function isCanonicalY(hex: string): boolean {
 // ── canonical SEP timestamp (CANONICAL_CONSTRUCTION_v2.md §6.3) ────────────────
 // The mandated canonical form is EXACTLY what Date.prototype.toISOString() emits:
 // fixed-width zero-padded UTC with exactly 3 fractional digits and a literal 'Z'.
-// Validation uses NO date library — a literal [0-9] class (NOT \d, which matches
+// Validation uses NO date library; a literal [0-9] class (NOT \d, which matches
 // Unicode digits) plus PURE INTEGER calendar-range arithmetic, so every verifier
 // (JS/Go/Python) reaches a byte-identical verdict. Ordering is a plain lexicographic
 // string compare because the form is fixed-width zero-padded UTC.
@@ -187,10 +187,15 @@ function validateShape(b: any): string | null {
 
 /** Verify a parsed canonical SEP Evidence Bundle (CANONICAL_CONSTRUCTION_v2.md §6). */
 export function verifySepBundle(bundle: SepBundle, expectedPublicKey?: string): VerificationResult {
-  // Robust contract (D6): a malformed/hostile bundle — a depth bomb that overflows the
+  // Robust contract (D6): a malformed/hostile bundle; a depth bomb that overflows the
   // depth-bounded canon, a type confusion, a missing structure, a non-string where a string
-  // is expected — yields a FAILED verdict, NEVER a thrown exception / crash / stack overflow.
-  const pinned = isHex(expectedPublicKey, 64);
+  // is expected; yields a FAILED verdict, NEVER a thrown exception / crash / stack overflow.
+  const pinned = expectedPublicKey !== undefined;
+  if (pinned && !isHex(expectedPublicKey, 64)) {
+    return { verdict: 'FAILED', issuerVerified: false, pinned: true,
+      steps: [{ name: 'gateway_key_match', ok: false }],
+      errors: ['Invalid expected gateway key: use exactly 64 lowercase hex characters.'] };
+  }
   try {
   const steps: VerificationStep[] = [];
   const errors: string[] = [];
@@ -200,7 +205,7 @@ export function verifySepBundle(bundle: SepBundle, expectedPublicKey?: string): 
   const proofs = Array.isArray((bundle as any)?.merkle_proofs) ? (bundle as any).merkle_proofs : [];
   const pub = (bundle as any)?.public_key;
 
-  // §6.1 structural floor — incl. STRICT receipt schema (D1): every receipt must carry EXACTLY
+  // §6.1 structural floor; incl. STRICT receipt schema (D1): every receipt must carry EXACTLY
   // the 15 canonical fields (rejects extra/unknown/missing/renamed and "__proto__" injection).
   add('structural',
     (bundle as any)?.algorithm === ALGORITHM && wellFormedKey(pub)
@@ -213,7 +218,7 @@ export function verifySepBundle(bundle: SepBundle, expectedPublicKey?: string): 
     receipts.length > 0 && receipts.every((r: SepReceipt) => sigOk(pub, canon(stripField(r, 'signature')), r.signature)),
     'one or more receipt signatures invalid');
 
-  // §6.3 chain + ordering — CANONICAL timestamps (D3/T1): every receipt's timestamp must match
+  // §6.3 chain + ordering; CANONICAL timestamps (D3/T1): every receipt's timestamp must match
   // the canonical .sssZ form AND have in-range calendar fields (pure-integer check, NO date
   // library), and timestamps must be NON-DECREASING across the chain.
   const leaves = receipts.map(leafHash);
@@ -239,7 +244,7 @@ export function verifySepBundle(bundle: SepBundle, expectedPublicKey?: string): 
     seen.add(p.leaf_index);
     if (receipts[p.leaf_index] === undefined || leaves[p.leaf_index] !== p.leaf_hash) merkle = false;
     let cur = p.leaf_hash;
-    // C1: directions is UNSIGNED. Require it to be a well-formed array — same length as siblings and
+    // C1: directions is UNSIGNED. Require it to be a well-formed array; same length as siblings and
     // EVERY element exactly the literal "left" or "right". A rewritten token ("right"->"RIGHT") must
     // FAIL the merkle step, not fall through an else/ternary to "right" and still walk to the root.
     const sib: string[] = Array.isArray(p.siblings) ? p.siblings : [];
@@ -252,7 +257,7 @@ export function verifySepBundle(bundle: SepBundle, expectedPublicKey?: string): 
   const bijection = seen.size === receipts.length && [...seen].every((n) => Number.isInteger(n) && n >= 0 && n < receipts.length);
   add('merkle_and_bijection', merkle && bijection, 'Merkle proof, per-proof root, leaf recompute, or index bijection failed');
 
-  // §6.5 mandatory signed checkpoint — STRICT schema (D2): EXACTLY the 7 canonical fields AND
+  // §6.5 mandatory signed checkpoint; STRICT schema (D2): EXACTLY the 7 canonical fields AND
   // checkpoint.algorithm === ALGORITHM, then signature + root/count/head binding.
   const cp = bundle.checkpoint as any;
   let cpOk = false;
@@ -303,11 +308,42 @@ export function verifyEvidenceBundle(bundleJson: string, expectedPublicKey?: str
   return verifySepBundle(parsed as SepBundle, expectedPublicKey);
 }
 
+/** Consume options so a missing pin value can never become an unpinned check. */
+export function parseVerifyArgs(args: string[]) {
+  let file: string | undefined;
+  let sample = false;
+  let pubkey: string | undefined;
+  let help = false;
+  let version = false;
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i];
+    if (arg === '--pubkey') {
+      if (pubkey !== undefined) throw new Error('Duplicate --pubkey.');
+      const value = args[++i];
+      if (value === undefined || !isHex(value, 64)) {
+        throw new Error('--pubkey must be exactly 64 lowercase hex (a 32-byte Ed25519 key); refusing to silently downgrade to an integrity-only check.');
+      }
+      pubkey = value;
+    } else if (arg === '--sample') {
+      if (sample) throw new Error('Duplicate --sample.');
+      sample = true;
+    } else if (arg === '--help' || arg === '-h') help = true;
+    else if (arg === '--version') version = true;
+    else if (arg.startsWith('-')) throw new Error(`Unknown option: ${arg}`);
+    else {
+      if (file !== undefined) throw new Error('Expected one bundle file.');
+      file = arg;
+    }
+  }
+  if (sample && file !== undefined) throw new Error('Choose --sample or a file.');
+  return { file, sample, pubkey, help, version };
+}
+
 // ── CLI ──────────────────────────────────────────────────────────────────────
 // Entry-point detection: run the CLI ONLY when this module file itself is the
-// script node was told to execute — i.e. resolved argv[1] equals this module's
+// script node was told to execute; i.e. resolved argv[1] equals this module's
 // own file path (realpath-resolved so npm .bin symlinks still match; case-folded
-// on Windows). The previous check — argv[1] CONTAINS the substring 'verify' —
+// on Windows). The previous check tested whether argv[1] contained 'verify' and
 // fired for ANY entry script whose path merely contained 'verify', so importing
 // this library from such a script hijacked stdout and called process.exit().
 function isCliEntry(): boolean {
@@ -343,18 +379,17 @@ if (isCliEntry()) {
     'bundles, which this CLI does not implement and reports as FAILED); 2 usage error.',
   ].join('\n');
   const args = process.argv.slice(2);
-  if (args.includes('--version')) { console.log(pkgVersion); process.exit(0); }
-  if (args.includes('--help')) { console.log(USAGE); process.exit(0); }
-  const useSample = args.includes('--sample');
-  let file = args.find((a) => !a.startsWith('--'));
-  const pk = args.includes('--pubkey') ? args[args.indexOf('--pubkey') + 1] : undefined;
-  // A PRESENT-but-malformed --pubkey is a usage error, NOT a silent downgrade to integrity-only:
-  // an operator who intended to pin (and fat-fingered/truncated the key) must not get a green exit 0.
-  // Mirrors aga-receipt-spec/verify/verify-sep.mjs's CLI guard, which this file never inherited.
-  if (pk !== undefined && !isHex(pk, 64)) {
-    console.error('error: --pubkey must be exactly 64 lowercase hex (a 32-byte Ed25519 key); refusing to silently downgrade to an integrity-only check.');
+  let options: ReturnType<typeof parseVerifyArgs>;
+  try { options = parseVerifyArgs(args); }
+  catch (error) {
+    console.error(`error: ${error instanceof Error ? error.message : 'Invalid options.'}`);
     process.exit(2);
   }
+  if (options.version) { console.log(pkgVersion); process.exit(0); }
+  if (options.help) { console.log(USAGE); process.exit(0); }
+  const useSample = options.sample;
+  let file = options.file;
+  const pk = options.pubkey;
   if (useSample) {
     const sample = resolveNear('../example-bundle.json') ?? resolveNear('./example-bundle.json');
     if (!sample) { console.error('The packaged sample bundle was not found next to the installed package.'); process.exit(2); }
@@ -378,7 +413,7 @@ if (isCliEntry()) {
   for (const s of result.steps) console.log(`  ${s.ok ? 'PASS' : 'FAIL'}  ${s.name}`);
   // Suffix reflects the VERDICT: only a VERIFIED bundle gets a provenance/integrity tag; a FAILED
   // bundle prints just "FAILED" (never "FAILED (provenance verified)").
-  const prov = result.verdict === 'VERIFIED' ? (result.pinned ? ' (provenance verified)' : ' (integrity only — no --pubkey given)') : '';
+  const prov = result.verdict === 'VERIFIED' ? (result.pinned ? ' (provenance verified)' : ' (integrity only; no --pubkey given)') : '';
   console.log(`\nOVERALL: ${result.verdict}${prov}`);
   if (!result.pinned && result.verdict === 'VERIFIED') {
     console.log('NOTE: integrity + self-consistency proven, but NOT provenance. Re-run with --pubkey <gateway-key> to prove WHO issued it.');
