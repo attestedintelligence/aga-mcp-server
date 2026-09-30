@@ -1,6 +1,6 @@
-# Reproducibility ; regenerating `dist/` and the published tarball
+# Reproducibility: regenerating `dist/` and the published tarball
 
-Internal process doc (not shipped ; the pack allowlist excludes it). It documents how to
+Internal process doc (not shipped because the pack allowlist excludes it). It documents how to
 regenerate the published artifact from tagged source and how to verify it.
 
 ## Toolchain
@@ -8,7 +8,7 @@ regenerate the published artifact from tagged source and how to verify it.
 - Node `>=20`, npm (the lockfile pins every dependency, incl. `typescript`).
 - No other toolchain is needed to build or pack. (Go + Python are only needed to *run*
   `npm run conformance:cross-stack`, not to build `dist/`.)
-- The vendored `aga-receipt-spec/` directory (regular files, NOT a git submodule) is **not** needed to build or pack ; the shipped `dist/`
+- The vendored `aga-receipt-spec/` directory (regular files, NOT a git submodule) is **not** needed to build or pack; the shipped `dist/`
   does not import it; it is only needed to run the SEP conformance gate (the reference verifier).
 
 ## Regenerate `dist/` from tagged source
@@ -40,7 +40,7 @@ npm pack                    # writes attested-intelligence-aga-mcp-server-<versi
 ## Determinism
 
 `dist/*.js`, `dist/*.d.ts`, and the source maps are a **deterministic** function of `src/` +
-`tsconfig.json` + the pinned `typescript` version ; two clean builds from the same source produce
+`tsconfig.json` + the pinned `typescript` version; two clean builds from the same source produce
 **byte-identical** files.
 
 The **whole `.tgz`** reproduces too. `npm pack` writes fixed timestamps into the tar headers and the
@@ -68,7 +68,7 @@ with the published versions.
 
 - **Line endings (cross-platform determinism).** A committed `.gitattributes` forces `eol=lf` and
   `tsconfig.json` pins `"newLine": "lf"`, so `dist/` is byte-identical whether built on Linux, macOS,
-  or Windows. (Historically, a default Windows checkout ; `core.autocrlf=true` ; leaked CRLF from a
+  or Windows. (Historically, a default Windows checkout with `core.autocrlf=true` leaked CRLF from a
   source template literal into `dist/storage/sqlite.js`, breaking the per-file manifest match on
   Windows only. The published artifact was always the LF build; the `.gitattributes` makes every
   fresh checkout reproduce it.)
@@ -81,11 +81,11 @@ with the published versions.
   reference verifier `aga-receipt-spec/verify/verify-sep.mjs` has **zero** dependencies (Node
   `node:crypto` only): that is the trust-minimized verification path.
 - **`npm ci` advisory banner.** A fresh install reports dev-toolchain advisories (vitest/vite/esbuild);
-  **none ship** ; `npm audit --omit=dev` is clean, and the published package depends only on the 6 direct
+  **none ship**; `npm audit --omit=dev` is clean, and the published package depends only on the 6 direct
   production dependencies above (and the optional `better-sqlite3`). The `canonicalize` package is a dev-dependency (RFC 8785 reference for the JCS conformance
   test) and likewise does not ship.
 - **Provenance → commit.** `npm audit signatures` verifies the SLSA provenance; decode the attestation
   to read `subject` (the published tarball digest) and `resolvedDependencies[].digest.gitCommit` (the
-  exact source commit) ; then rebuild that commit and compare the per-file manifest. The full
+  exact source commit); then rebuild that commit and compare the per-file manifest. The full
   repo → commit → source → build → published-artifact loop closes independently.
 
