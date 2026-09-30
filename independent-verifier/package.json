@@ -47,10 +47,9 @@
     "test": "vitest run",
     "prepublishOnly": "node build.mjs && vitest run"
   },
-  "dependencies": {},
   "devDependencies": {
-    "esbuild": "^0.27.4",
+    "esbuild": "0.28.2",
     "tsx": "^4.19.0",
-    "vitest": "^2.1.0"
+    "vitest": "4.1.11"
   }
 }
