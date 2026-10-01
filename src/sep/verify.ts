@@ -111,12 +111,6 @@ export function verifySepBundle(bundle: any, expectedPublicKey?: string, opts?: 
     };
   }
 
-  // A supplied trust anchor is a request to check provenance. Invalid input must never downgrade it.
-  if (expectedPublicKey !== undefined && (!isRegisteredProfile(algorithm)
-    || typeof expectedPublicKey !== 'string' || !validPublicKeyForProfile(algorithm, expectedPublicKey))) {
-    return { verdict: 'FAILED', summary: 'Expected issuer key is invalid for this profile; no verification performed',
-      issuerVerified: false, pinned: true, steps: [{ name: 'gateway_key_match', ok: false }] };
-  }
   // Robust contract: a malformed/hostile bundle yields FAILED, never a thrown exception.
   let pinned = false;
   try {
@@ -140,6 +134,13 @@ export function verifySepBundle(bundle: any, expectedPublicKey?: string, opts?: 
       isRegisteredProfile(algorithm) && supported.includes(algorithm) && validPublicKeyForProfile(algorithm, pub)
       && receipts.length > 0 && proofs.length === receipts.length
       && receipts.every((r) => hasExactKeys(r, SEP_RECEIPT_FIELDS)));
+    // Validate the requested trust anchor before signature checks, retaining structural diagnostics.
+    if (pinned && (!isRegisteredProfile(algorithm) || typeof expectedPublicKey !== 'string'
+      || !validPublicKeyForProfile(algorithm, expectedPublicKey))) {
+      add('gateway_key_match', false);
+      return { verdict: 'FAILED', summary: 'Expected issuer key is invalid for this profile; no verification performed',
+        issuerVerified: false, pinned: true, steps };
+    }
 
     // §6.2 receipt signatures, verified under the bundle's profile primitive (provenance is §6.6)
     add('receipt_signatures', receipts.length > 0 && receipts.every((r) => verifyForProfile(algorithm, pub, canonicalize(strip(r, 'signature')), r.signature)));

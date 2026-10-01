@@ -58,7 +58,7 @@ describe('P3: persisted gateway key + verifier UX', () => {
   // WP0.2 (enterprise provenance): lock the negative side of the pinned-key contract that the enterprise
   // "provenance-required" mode depends on. No verifier change — this proves the existing §6.6 behavior so
   // it cannot regress and split the cross-stack verdict.
-  it('a WRONG pinned key fails closed (no key-substitution provenance); a malformed pin stays integrity-only', async () => {
+  it('wrong and malformed supplied keys fail closed without an integrity-only downgrade', async () => {
     const { call, cleanup } = await connectWith({ AGA_GATEWAY_KEY: SEED });
     const meta = { filename: 'f' };
     await call('attest_subject', { subject_content: 'x', subject_metadata: meta });
@@ -72,11 +72,11 @@ describe('P3: persisted gateway key + verifier UX', () => {
     expect(wrongPin.verdict).toBe('FAILED');
     expect(wrongPin.issuerVerified).toBe(false);
 
-    // A malformed pin is honored as integrity-only (pinned=false), NEVER a silent provenance pass.
+    // The September 30 trust-input policy refuses malformed supplied keys; omission alone selects integrity-only.
     const badPin = await call('verify_bundle_offline', { bundle, pinned_public_key: 'not-a-key' });
-    expect(badPin.verdict).toBe('VERIFIED');
+    expect(badPin.verdict).toBe('FAILED');
     expect(badPin.issuerVerified).toBe(false);
-    expect(badPin.summary).toContain('integrity only');
+    expect(badPin.summary).toContain('invalid');
 
     await cleanup();
   });

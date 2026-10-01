@@ -12,6 +12,7 @@ jobs:
     strategy:
       matrix:
         node: ['20','22']
+      fail-fast: false
     steps:
       - uses: actions/checkout@v4
         with:
@@ -39,7 +40,7 @@ jobs:
           image=$(docker image inspect node:${{ matrix.node }}-bookworm-slim --format '{{.Id}}')
           docker image inspect "$image" > "$RUNNER_TEMP/evidence/image.json"
           printf '%s\n' "$GITHUB_SHA" > "$RUNNER_TEMP/evidence/commit.txt"
-          timeout --signal=TERM --kill-after=15s 600s docker run --name runtime-qualification --init --network none --read-only --cap-drop ALL --security-opt no-new-privileges --pids-limit 128 --memory 1536m --cpus 2 --user node --tmpfs /tmp:rw,nosuid,nodev,size=384m --tmpfs /subject/node_modules/.vite-temp:rw,nosuid,nodev,size=16m,uid=1000,gid=1000 -e NODE_OPTIONS=--max-old-space-size=768 -e CI=true -v "$RUNNER_TEMP/subject:/subject:ro" -v "$RUNNER_TEMP/evidence:/evidence:rw" -w /subject "$image" bash scripts/runtime-qualification.sh 2>&1 | tee "$RUNNER_TEMP/evidence/qualification.log"
+          timeout --signal=TERM --kill-after=15s 600s docker run --name runtime-qualification --init --network none --read-only --cap-drop ALL --security-opt no-new-privileges --pids-limit 128 --memory 1536m --cpus 2 --user node --tmpfs /tmp:rw,nosuid,nodev,size=384m --tmpfs /home/node:rw,nosuid,nodev,size=32m,uid=1000,gid=1000 --tmpfs /subject/node_modules/.vite-temp:rw,nosuid,nodev,size=16m,uid=1000,gid=1000 -e NODE_OPTIONS=--max-old-space-size=768 -e CI=true -v "$RUNNER_TEMP/subject:/subject:ro" -v "$RUNNER_TEMP/evidence:/evidence:rw" -w /subject "$image" bash scripts/runtime-qualification.sh 2>&1 | tee "$RUNNER_TEMP/evidence/qualification.log"
       - name: Record outcome
         if: always()
         shell: bash
