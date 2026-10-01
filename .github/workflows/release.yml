@@ -43,6 +43,7 @@ on:
 
 permissions:
   contents: read
+  actions: read
   id-token: write   # npm OIDC trusted publishing + provenance attestation
 
 jobs:
@@ -99,6 +100,15 @@ jobs:
       - name: Documentation release byte-identity gate
         if: ${{ inputs.publish_server }}
         run: node scripts/check-docs-release.mjs
+      - name: Bind 3.6.5 publication to exact isolated qualification and package bytes
+        id: qualified
+        if: ${{ inputs.publish_server }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ "$(node -p "require('./package.json').version")" = "3.6.5" ]; then
+            node scripts/check-runtime-release.mjs
+          fi
       - name: Publish aga-mcp-server (or dry run)
         if: ${{ inputs.publish_server }}
         env:
@@ -106,6 +116,7 @@ jobs:
           PROVENANCE: ${{ inputs.provenance }}
           DRY_RUN: ${{ inputs.dry_run }}
           PROMOTE_ONLY: ${{ inputs.promote_only }}
+          QUALIFIED_TARBALL: ${{ steps.qualified.outputs.qualified_tarball }}
         run: |
           set -euo pipefail
           VERSION=$(node -p "require('./package.json').version")
@@ -147,7 +158,12 @@ jobs:
             echo "DRY RUN — would publish: npm publish --access public --tag $DIST_TAG $PROV_FLAG"
             npm pack --dry-run
           else
-            npm publish --access public --tag "$DIST_TAG" $PROV_FLAG
+            if [ "$VERSION" = "3.6.5" ]; then
+              test -n "$QUALIFIED_TARBALL"
+              npm publish "$QUALIFIED_TARBALL" --ignore-scripts --access public --tag "$DIST_TAG" $PROV_FLAG
+            else
+              npm publish --access public --tag "$DIST_TAG" $PROV_FLAG
+            fi
           fi
       - name: Post-publish gate — npm attestation MUST be present (aga-mcp-server)
         # A provenance-less publish must fail this workflow loudly. 3.3.0 shipped without
