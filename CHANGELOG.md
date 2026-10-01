@@ -1,5 +1,14 @@
 # Changelog
 
+## 3.6.5 | 2026-09-30
+
+- Validate and freeze policy snapshots; isolate rate-limit state by proxy owner; require typed paths and apply configured guards in allowlist and denylist modes.
+- Default the raw TCP listener to loopback; add explicit `--host`; bound connections, pending work and response bytes; cancel waits on client disconnect; clean up downstream children after failed listener startup.
+- Preserve UTF-8 across byte splits; refuse repeated JSON members and excessive transport nesting; remap stdio IDs so clients cannot receive another request's response.
+- Start children without a shell and without implicit gateway credentials. Reject foreign control-channel Host and browser Origin headers.
+- Fail malformed supplied expected issuer keys in the embedded verifier. This intentionally tightens legacy trust-input behavior without changing signed format bytes or historical fixtures.
+- Preserve deployment limits: no authenticated clients, privileged signing boundary, filesystem containment, complete MCP relay or durable ledger. Export cost and independently deployed companions retain their own scope.
+
 All notable changes to `@attested-intelligence/aga-mcp-server` are recorded here, newest first. This package follows [Semantic Versioning](https://semver.org). The signed receipt and evidence-bundle wire format is the canonical SEP profile; any format-affecting change is called out explicitly.
 
 ## 3.6.4 - 2026-09-30

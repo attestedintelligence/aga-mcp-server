@@ -8,11 +8,17 @@ Verifiable decision records for AI agents: each recorded tool-call decision is a
 
 > **Status: published reference implementation, before independent pilot validation.** Version 3.6.4 updates documentation and release verification. Runtime code and known issues are unchanged from 3.6.3 and 3.6.2. The gateway emits classical Ed25519-SHA256-JCS bundles. The published `@attested-intelligence/aga-verify@2.2.3` CLI checks that classical profile; on a v2/hybrid bundle it reports FAILED because it does not implement that profile. The package also exposes an ML-DSA-65 + Ed25519 composite as a library profile, and `aga-proxy verify` can check it. Reference verifiers have their own unsupported-profile behavior. These are different components, not one interchangeable verifier. Build provenance concerns the published build; it is not runtime correctness or an external security audit.
 
-> **Runtime status.** Since 3.5.0, a measurement requested after the active artifact's TTL expires moves it to TERMINATE; `delegate_to_subagent` also refuses after expiry. Nothing checks the TTL on a schedule, and the exported bundle does not record that transition. Do not downgrade to deprecated 3.3.3 as the evaluation path. Since 3.6.0, `aga-proxy` honors `AGA_GATEWAY_KEY` / `AGA_GATEWAY_KEY_FILE`; the stdio upstream can inherit those variables. Read the known issues and `THREAT_BOUNDARY.md` before any runtime evaluation.
+> **Runtime status.** Since 3.5.0, a measurement requested after the active artifact's TTL expires moves it to TERMINATE; `delegate_to_subagent` also refuses after expiry. Nothing checks the TTL on a schedule, and the exported bundle does not record that transition. Do not downgrade to deprecated 3.3.3 as the evaluation path. Since 3.6.0, `aga-proxy` honors `AGA_GATEWAY_KEY` / `AGA_GATEWAY_KEY_FILE`; through 3.6.4 the stdio upstream could inherit those variables. Version 3.6.5 uses an explicit environment without implicit gateway-key inheritance. Read the known issues and `THREAT_BOUNDARY.md` before any runtime evaluation.
 
 A Python companion SDK (`aga-governance`) is documented in the Python SDK section below.
 
-## Verify this yourself (don't take our word)
+## Reference runtime 3.6.5
+
+Version 3.6.5 hardens the reference proxy: loopback by default, an explicit `--host` option, immutable validated policy snapshots, per-proxy rate limits, request ownership and stdio ID remapping, fatal UTF-8 framing, bounded transport work and disconnect cancellation. Protocol JSON refuses repeated decoded member names. The stdio child receives a small explicit environment without implicit gateway-key variables. The read-only control channel rejects a foreign Host or any browser Origin. The embedded verifier now fails a supplied malformed expected key; only omission selects integrity-only verification.
+
+These controls do not provide authenticated clients, a filesystem sandbox, privileged key custody or complete MCP session/notification/server-request support. Export remains synchronous and the ledger remains volatile. A PERMITTED receipt records a policy decision, not confirmed execution. Use synthetic inputs in disposable isolation. [DEPLOYMENT.md](DEPLOYMENT.md) and [THREAT_BOUNDARY.md](THREAT_BOUNDARY.md) give the current behavior; the thirteen cases below retain their historical observations through 3.6.4. Other verifier implementations retain their separately documented behavior.
+
+## Verify a retained record
 
 Obtain the repository or the [website's static sample kit](https://attestedintelligence.com/verify#offline) while online. Once the verifier, sample and expected public key are local, the verification command itself needs no network or callback to us. Repository cloning and package installation require network access unless their inputs are already cached:
 
@@ -32,17 +38,17 @@ This is built for teams shipping agentic-AI products into financial services and
 
 Covered tool calls routed through `aga-proxy` are evaluated against its configured policy. Each recorded decision (PERMITTED or DENIED) takes the form of a signed, hash-linked governance receipt; known issue 7 below describes calls refused without a receipt. `aga-proxy` also signs the SHA-256 of its policy's canonical JSON into every receipt; see [KNOWN_LIMITATIONS.md](https://github.com/attestedintelligence/aga-mcp-server/blob/main/KNOWN_LIMITATIONS.md) for what that field binds. Receipts are collected into evidence bundles that anyone holding the published format and the public key can verify offline, with no callback to us.
 
-**Record. Prove. Verify.**
+**Signed decisions. Independent verification. Explicit limits.**
 
 **Scope:** a verified bundle proves the *integrity of the receipts present*: each is authentic, correctly ordered, Merkle-included, and (when a key is pinned) provenance-bound. It does **not** prove non-omission (that every action the agent took was logged); completeness is bounded by the tamper-evidence of the interception point, which is outside the bundle. See **[KNOWN_LIMITATIONS.md](https://github.com/attestedintelligence/aga-mcp-server/blob/main/KNOWN_LIMITATIONS.md)** for the full honest boundary, and `THREAT_BOUNDARY.md` for the per-field detail.
 
 ## Optional runtime evaluation
 
-Runtime examples identify the observed 3.6.2 package. They are not a production recommendation. Review all known issues and use approved isolation with synthetic inputs before starting a gateway. For a first check, use the static sample and verifier above. Do not start these examples on a workstation containing production credentials or customer data.
+Runtime examples identify reference runtime 3.6.5. They are not a production recommendation. Review all known issues and use approved isolation with synthetic inputs before starting a gateway. For a first check, use the static sample and verifier above. Do not start these examples on a workstation containing production credentials or customer data.
 
 ```bash
 # Runtime example only, after the isolation and known-issue review.
-npx -y @attested-intelligence/aga-mcp-server@3.6.2
+npx -y @attested-intelligence/aga-mcp-server@3.6.5
 ```
 
 ### Use with Claude Desktop in the approved evaluation environment
@@ -54,7 +60,7 @@ Add to that environment's Claude Desktop MCP config (`claude_desktop_config.json
   "mcpServers": {
     "aga": {
       "command": "npx",
-      "args": ["-y", "@attested-intelligence/aga-mcp-server@3.6.2"]
+      "args": ["-y", "@attested-intelligence/aga-mcp-server@3.6.5"]
     }
   }
 }
@@ -80,14 +86,14 @@ Provide it via `AGA_GATEWAY_KEY`, or `AGA_GATEWAY_KEY_FILE` (a path to the seed)
   "mcpServers": {
     "aga": {
       "command": "npx",
-      "args": ["-y", "@attested-intelligence/aga-mcp-server@3.6.2"],
+      "args": ["-y", "@attested-intelligence/aga-mcp-server@3.6.5"],
       "env": { "AGA_GATEWAY_KEY": "<your-64-hex-seed>" }
     }
   }
 }
 ```
 
-Keep the seed secret and out of version control; see `DEPLOYMENT.md` for key handling. A seed in an agent client's environment is not a separate trust domain, and the stdio upstream can inherit the key-related variables (known issue 3). Same-key restarts do not preserve the in-memory ledger: export and verify before stopping.
+Keep the seed secret and out of version control; see `DEPLOYMENT.md` for key handling. A seed in an agent client's environment is not a separate trust domain, and through 3.6.4 the stdio upstream could inherit the key-related variables (historical issue 3). Environment filtering in 3.6.5 does not separate filesystem or host privileges. Same-key restarts do not preserve the in-memory ledger: export and verify before stopping.
 
 ## MCP Tools (15)
 
@@ -115,7 +121,7 @@ npx -y @attested-intelligence/aga-verify@2.2.3 evidence-bundle.json --pubkey <ga
 node aga-receipt-spec/verify/verify-sep.mjs evidence-bundle.json --pubkey <gateway-public-key>
 ```
 
-The published `@attested-intelligence/aga-verify` CLI is the shipped path (the older forgeable 1.0.0 is deprecated); the reference `verify-sep.mjs` provides another implementation from a repo clone; verdict agreement is scoped to tested cases, not all input bytes. Without `--pubkey` you get an **integrity-only** result (`issuerVerified=false`); supply a nonempty expected key from a separate trusted channel to authenticate that signing key; the mapping to an organization depends on that channel. Version 2.2.3 refuses missing or malformed supplied keys, repeated or unknown options and ambiguous file/sample selection with a usage error, exit 2. Versions through 2.2.2 treated a trailing `--pubkey` as absent. The 2.2.3 library API refuses malformed supplied expected keys; this patch does not change the verifier embedded in the runtime package. See `THREAT_BOUNDARY.md`, Known residual risks. A hosted browser verifier is linked under [Links](#links).
+The published `@attested-intelligence/aga-verify` CLI is the shipped path (the older forgeable 1.0.0 is deprecated); the reference `verify-sep.mjs` provides another implementation from a repo clone; verdict agreement is scoped to tested cases, not all input bytes. Without `--pubkey` you get an **integrity-only** result (`issuerVerified=false`); supply a nonempty expected key from a separate trusted channel to authenticate that signing key; the mapping to an organization depends on that channel. Version 2.2.3 refuses missing or malformed supplied keys, repeated or unknown options and ambiguous file/sample selection with a usage error, exit 2. Versions through 2.2.2 treated a trailing `--pubkey` as absent. The 2.2.3 library API refuses malformed supplied expected keys; runtime 3.6.5 separately adopts fail-closed malformed expected-key handling in its embedded verifier. See `THREAT_BOUNDARY.md`, Known residual risks. A hosted browser verifier is linked under [Links](#links).
 
 The reference §6 algorithm is implemented in **three languages**: JavaScript (`aga-receipt-spec/verify/verify-sep.mjs`), Go (`verify.go`, stdlib `crypto/ed25519`), and Python (`verify.py`, pure-stdlib RFC-8032 Ed25519). A cross-stack harness (`npm run conformance:cross-stack`; first: `npm run build && npm --prefix independent-verifier run build`) proves all three, plus the in-server engine and `aga-verify`, agree on the published canonical cases as the harness feeds them (object cases are re-serialized; raw-byte cases are separate). Outside that corpus, the implementations differ, including some parser and pin semantics. The **v2 composite** profile (`ML-DSA-65+Ed25519-SHA256-JCS`) is held to the same bar by a second harness (`npm run conformance:cross-stack-v2`): a `@noble`/JavaScript engine and a CIRCL/Go oracle, two genuinely independent toolchains, render identical verdicts on the pinned v2 corpus, and the **reference** v1 verifier (`verify-sep.mjs`/`verify.py`/`verify.go`) returns `UNSUPPORTED_PROFILE` (exit 3) on a v2 bundle, signalling "profile not implemented" rather than a misleading "invalid". *(The published `aga-verify` CLI does not implement this profile trichotomy: on a v2 bundle it returns FAILED (exit 1). Use exit 3 as the unsupported-profile signal only with the reference verifiers.)*
 
@@ -133,7 +139,7 @@ The JS reference verifier and the Python SDK (`aga-governance`) decompose the sa
 | `envelope_consistency` | `envelope_consistent` | envelope `gateway_id`, `generated_at`, `merkle_root` vs signed content (`bundle_id`, `schema_version`, the envelope `policy_reference` and `offline_capable` are unsigned and unchecked) |
 | `gateway_key_match` (with `--pubkey`) | `gateway_key_match` / `provenance` | pinned issuer key |
 
-Known decomposition difference: the JS reference recomputes every Merkle leaf from full receipt content, so a receipt-signature tamper also fails `merkle_and_bijection`; the Python verifier surfaces the same tamper in `receipt_signatures_valid`, `chain_integrity_valid`, and `bundle_consistent` while its `merkle_proofs_valid` can remain true. Neither is looser: the bundle fails in both stacks, exit 1. A `--pubkey KEY` that is not 64 lowercase hex characters is a usage error (exit 2) in the JS reference, `aga-verify` and the Python SDK, and a 64-hex pin that is not a valid curve point is honored, fails to match, and fails the bundle (exit 1). In the September 25 measurements, `--pubkey=KEY` was ignored by the JS reference, `aga-verify` through 2.2.2, `verify.go` and `v2/verify-v2.go`, and by `verify.py` when it follows the bundle path (integrity only, exit 0), and read by the Python SDK. Other verifiers differ as well. The in-server engine (the package's `./verify` export, which `verify_bundle_offline` calls) treats a pin that is not a well-formed key for the bundle's profile (for a v1 bundle, a small-order point or a non-canonical encoding) as no pin, and returns VERIFIED with `pinned: false`. `v2/verify-v2.go` does the same and prints `integrity only; no key pinned` (exit 0). A 64-hex value that is not a curve point counts as well-formed, so both take it as a pin and the bundle fails. The Go and Python reference verifiers in `aga-receipt-spec/verify/` treat a pin that is not 64 lowercase hex the same way and print `integrity only; no key pinned` (exit 0). Read `pinned` before taking a VERIFIED as provenance; in CI, pass the key after a space and check that the output says provenance verified. A `--pubkey` given with no value is also treated as no pin (exit 0, integrity only) by `aga-verify` through 2.2.2, `verify-sep.mjs`, `verify.py`, `verify.go` and `v2/verify-v2.go`, and is a usage error in the Python SDK. Other differences concern the bundle rather than the pin, and <https://attestedintelligence.com/security> lists the ones measured, including which algorithm labels each verifier leaves unchecked; outside the conformance corpus the verifiers differ in both directions. Two examples, where the failing side fails closed: a proof `leaf_index` spelled as an integral float (`1.0`) reports FAILED in aga-governance 0.3.2 and VERIFIED in the others, and object keys outside the Basic Multilingual Plane (possible only in a non-string field value, which no shipped producer emits) sort differently in `verify.py`, `verify.go`, `v2/verify-v2.go` and aga-governance than in the JavaScript verifiers, so such a bundle reports VERIFIED in JavaScript and FAILED in Go and Python. These parser and cross-language differences remain. Standalone verifier 2.2.3 separately fixes expected-key handling: equals-form options are refused rather than ignored, missing values are usage errors, and malformed supplied API keys fail verification.
+Known decomposition difference: the JS reference recomputes every Merkle leaf from full receipt content, so a receipt-signature tamper also fails `merkle_and_bijection`; the Python verifier surfaces the same tamper in `receipt_signatures_valid`, `chain_integrity_valid`, and `bundle_consistent` while its `merkle_proofs_valid` can remain true. Neither is looser: the bundle fails in both stacks, exit 1. A `--pubkey KEY` that is not 64 lowercase hex characters is a usage error (exit 2) in the JS reference, `aga-verify` and the Python SDK, and a 64-hex pin that is not a valid curve point is honored, fails to match, and fails the bundle (exit 1). In the September 25 measurements, `--pubkey=KEY` was ignored by the JS reference, `aga-verify` through 2.2.2, `verify.go` and `v2/verify-v2.go`, and by `verify.py` when it follows the bundle path (integrity only, exit 0), and read by the Python SDK. Other verifiers differ as well. Through runtime 3.6.4, the in-server engine (the package's `./verify` export, which `verify_bundle_offline` calls) treats a pin that is not a well-formed key for the bundle's profile (for a v1 bundle, a small-order point or a non-canonical encoding) as no pin, and returns VERIFIED with `pinned: false`. `v2/verify-v2.go` does the same and prints `integrity only; no key pinned` (exit 0). A 64-hex value that is not a curve point counts as well-formed, so both take it as a pin and the bundle fails. The Go and Python reference verifiers in `aga-receipt-spec/verify/` treat a pin that is not 64 lowercase hex the same way and print `integrity only; no key pinned` (exit 0). Read `pinned` before taking a VERIFIED as provenance; in CI, pass the key after a space and check that the output says provenance verified. A `--pubkey` given with no value is also treated as no pin (exit 0, integrity only) by `aga-verify` through 2.2.2, `verify-sep.mjs`, `verify.py`, `verify.go` and `v2/verify-v2.go`, and is a usage error in the Python SDK. Other differences concern the bundle rather than the pin, and <https://attestedintelligence.com/security> lists the ones measured, including which algorithm labels each verifier leaves unchecked; outside the conformance corpus the verifiers differ in both directions. Two examples, where the failing side fails closed: a proof `leaf_index` spelled as an integral float (`1.0`) reports FAILED in aga-governance 0.3.2 and VERIFIED in the others, and object keys outside the Basic Multilingual Plane (possible only in a non-string field value, which no shipped producer emits) sort differently in `verify.py`, `verify.go`, `v2/verify-v2.go` and aga-governance than in the JavaScript verifiers, so such a bundle reports VERIFIED in JavaScript and FAILED in Go and Python. These parser and cross-language differences remain. Standalone verifier 2.2.3 separately fixes expected-key handling: equals-form options are refused rather than ignored, missing values are usage errors, and malformed supplied API keys fail verification.
 
 ## How It Works
 
@@ -162,7 +168,7 @@ Run AGA as a proxy in front of an MCP server that it starts as a stdio child pro
 ```bash
 # Start the proxy (the `aga-proxy` bin) in front of an upstream MCP server.
 # stdio upstream = the default stdio transport (the upstream is a child process, not network-reachable).
-npx -p @attested-intelligence/aga-mcp-server@3.6.2 aga-proxy start \
+npx -p @attested-intelligence/aga-mcp-server@3.6.5 aga-proxy start \
   --upstream "npx -y @modelcontextprotocol/server-filesystem /tmp/test" --profile permissive
 ```
 
@@ -178,13 +184,13 @@ A **separate** `aga-proxy export` invocation reads that file and fetches the sam
 
 ```bash
 # Terminal A: start the proxy in front of an upstream MCP server
-npx -p @attested-intelligence/aga-mcp-server@3.6.2 aga-proxy start \
+npx -p @attested-intelligence/aga-mcp-server@3.6.5 aga-proxy start \
   --upstream "npx -y @modelcontextprotocol/server-filesystem /tmp/test" --profile permissive
 
 # (First, drive at least one tools/call through the proxy from your MCP client; an empty
 #  ledger has no receipts to checkpoint, and the export reports there is nothing to export.)
 # Terminal B: export the live ledger from a different shell, then verify it offline
-npx -p @attested-intelligence/aga-mcp-server@3.6.2 aga-proxy export -o evidence.json
+npx -p @attested-intelligence/aga-mcp-server@3.6.5 aga-proxy export -o evidence.json
 npx -y @attested-intelligence/aga-verify@2.2.3 evidence.json --pubkey <gateway-public-key>
 ```
 
@@ -303,7 +309,7 @@ tests/                 # Historical 3.6.0 CI: 428 tests; reviewed 2026-09-21
 - [Threat boundary](https://github.com/attestedintelligence/aga-mcp-server/blob/main/THREAT_BOUNDARY.md)
 - [Deployment guide](https://github.com/attestedintelligence/aga-mcp-server/blob/main/DEPLOYMENT.md)
 
-## Known issues in 3.6.0 to 3.6.2 and the published verifiers
+## Historical issues through 3.6.4 and separately published verifiers
 
 3.6.1 and 3.6.2 change only the documentation and the version number; the runtime is 3.6.0's. Items 1 to 4 were reproduced on 2026-09-23 on `@attested-intelligence/aga-mcp-server` 3.6.0 installed from npm, and
 concern the `aga-proxy` gateway. Item 5, added 2026-09-25, concerns the verifiers and was reproduced on 2026-09-25

@@ -49,6 +49,16 @@ jobs:
           docker rm -f runtime-qualification || true
           cd "$RUNNER_TEMP/evidence"
           sha256sum * > SHA256SUMS.txt
+      - name: Package qualified source and audit production dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/subject"
+          npm audit --omit=dev --audit-level=high
+          node scripts/check-pack.mjs
+          npm pack --ignore-scripts --pack-destination "$RUNNER_TEMP/evidence"
+          cd "$RUNNER_TEMP/evidence"
+          sha256sum *.tgz > PACKAGE-SHA256.txt
       - uses: actions/upload-artifact@v4
         if: always()
         with:

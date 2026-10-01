@@ -1,6 +1,6 @@
 # Threat boundary and current limitations
 
-Updated September 30, 2026. This is the current scope statement for the published reference implementation. Documentation-only releases 3.6.3 and 3.6.4 do not repair the behavioral limitations observed in 3.6.0 through 3.6.2. The README retains the thirteen detailed known issues and their observed version scope.
+Updated September 30, 2026 for reference runtime 3.6.5. Documentation-only releases 3.6.3 and 3.6.4 retain the earlier runtime behavior. The README preserves thirteen historical cases; this table gives the 3.6.5 disposition. Qualification of a reference implementation does not approve a deployment or establish independent certification.
 
 ## 1. What verification establishes
 
@@ -22,19 +22,19 @@ For new governed tools, verify the actual request path, policy decision, receipt
 
 | Issue | Current limitation |
 | --- | --- |
-| 1 | The agent listener has no authentication, binds broadly and has shared-host exposure. |
-| 2 | Clients reusing a JSON-RPC identifier can receive each other's results. |
-| 3 | A stdio upstream inherits signing-related environment variables. |
+| 1 | Default bind is loopback; explicit --host may expose it. No client authentication or shared-host privilege separation. |
+| 2 | Stdio IDs are remapped and replies remain owned by the originating request. Duplicate in-flight IDs within one client are refused. This is not complete MCP session support. |
+| 3 | No implicit signing-variable inheritance; explicit gateway-key variables are refused. Same-account filesystem and network access remain. |
 | 4 | The HTTP upstream mode does not implement MCP Streamable HTTP. |
-| 5 | Duplicate JSON field names are interpreted using the last value. Other readers may display a different value. |
-| 6 | Duplicate HTTP method members can bypass policy evaluation and receipt creation. |
-| 7 | Some malformed calls are refused without a receipt or response. |
-| 8 | Non-ASCII bytes split across reads can be altered in transport. |
+| 5 | Proxy transport and policy-file JSON reject repeated decoded member names. Other verifier parsers retain their own documented behavior; the library receives parsed objects. |
+| 6 | Ambiguous request JSON is refused before HTTP or stdio forwarding. Refused syntax is not treated as an attributable tool decision. |
+| 7 | Missing/invalid tool names and uncanonicalizable arguments have denied receipts and responses. Invalid syntax, oversized frames and connection/resource refusals need not yield a receipt; no complete request capture is claimed. |
+| 8 | Framing preserves UTF-8 byte splits and refuses malformed UTF-8. This does not prove arbitrary downstream protocol compatibility. |
 | 9 | Export can block calls and contribute to timeouts after an upstream effect. |
-| 10 | Policy types, top-level path/pattern rules and shared rate limits have important constraints. |
-| 11 | Large stdio output can be dropped after a PERMITTED receipt, with later timeout. |
-| 12 | The loopback control channel lacks Host/Origin validation, leaving a DNS-rebinding risk where the browser permits it. |
-| 13 | Large HTTP responses can interrupt the agent connection and lose in-flight replies on Linux. |
+| 10 | Policies are validated immutable snapshots and rate state is per proxy. Required paths must be strings; lexical prefixes and top-level patterns are not filesystem containment. |
+| 11 | Stdio output and pending work are bounded; malformed/oversized output rejects pending work. An upstream effect can precede failure; PERMITTED is not execution proof. |
+| 12 | Control requests require the bound loopback Host and no Origin; cross-site browser metadata is refused. Any local process can still read the ledger; no local authorization is supplied. |
+| 13 | HTTP work has a 30-second deadline, 8 MiB response bound, fatal UTF-8 and response-ID validation. Failed or oversized work can follow an upstream effect; do not infer non-execution or retry automatically. |
 
 Read the [complete cases and measured workarounds](https://attestedintelligence.com/security#known-issues) before relying on a mitigation. A workaround is not a claim that a defect has been fixed.
 
@@ -44,7 +44,7 @@ Additional boundaries:
 - The default policy profile is permissive. Only covered `tools/call` traffic is policy-evaluated; other methods have passthrough or unrecorded paths. The CLI does not expose the library's `denyMethods` option.
 - In MCP server mode, the governed client can re-attest its baseline and lift a lifecycle block without that call appearing in the exported bundle. Measurement and lifecycle events are not interchangeable with exported tool-call receipts.
 - The live ledger is volatile. Retention, restart behavior, an independent witness, trusted time and freshness checks require separate arrangements.
-- Standalone aga-verify 2.2.3 refuses malformed supplied API keys and missing, malformed, repeated or unknown CLI options. Older standalone versions and other implementations can fall back to integrity-only behavior for some malformed trust inputs. The verifier embedded in runtime 3.6.4 is unchanged. Check the exact verifier and the issuer-match result.
+- Standalone aga-verify 2.2.3 refuses malformed supplied API keys and missing, malformed, repeated or unknown CLI options. Runtime 3.6.5 independently fails malformed supplied expected keys. Omission remains integrity-only. Older versions and other implementations can downgrade some malformed inputs; check the exact verifier and issuer-match result. Signed format bytes and historical specifications remain unchanged.
 - The record does not prevent jailbreaks, infrastructure compromise, signing-key theft or actions outside the recorded boundary. It does not certify compliance or establish court, regulator or customer acceptance.
 
 ## 4. Historical test evidence

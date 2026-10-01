@@ -101,6 +101,12 @@ export class ProxyControlServer {
   }
 
   private handle(req: http.IncomingMessage, res: http.ServerResponse): void {
+    const host = req.headers.host;
+    const validHost = host === `${CONTROL_HOST}:${this.boundPort}` || host === `localhost:${this.boundPort}`;
+    if (!validHost || req.headers.origin !== undefined || req.headers['sec-fetch-site'] === 'cross-site') {
+      this.json(res, 403, { error: 'control requests require the bound loopback authority and no browser origin' });
+      return;
+    }
     // READ-ONLY: only GET is accepted; no route mutates policy or ledger state.
     if (req.method !== 'GET') {
       this.json(res, 405, { error: 'method not allowed; the control channel is read-only (GET only)' });

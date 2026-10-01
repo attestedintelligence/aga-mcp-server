@@ -4,11 +4,11 @@ Updated September 30, 2026. The published gateway is a reference implementation 
 
 ## 1. Choose and test the boundary
 
-`aga-proxy` evaluates covered `tools/call` messages and records decisions. Its agent port uses newline-delimited JSON-RPC over raw TCP, listens on every interface and has no authentication. A stdio client needs a relay; SSE and Streamable HTTP require a bridge. Those adapters are not supplied by the package.
+Reference runtime 3.6.5 evaluates covered `tools/call` requests and records decisions. Its agent port uses newline-delimited JSON-RPC over raw TCP and binds to 127.0.0.1 by default. `--host` explicitly changes that address. There is no client authentication: local access remains a trust boundary, and non-loopback exposure requires separate access controls. A stdio client needs a relay; SSE and Streamable HTTP require a bridge. Those adapters are not supplied by the package.
 
-The default stdio upstream is a child process. That transport alone does not establish isolation: the child shares the proxy's account and inherits its environment, including signing-related variables. The listener, control channel, filesystem privileges and alternative routes to tools need separate controls.
+The default stdio upstream is a child process started without a shell. Version 3.6.5 uses a small environment allowlist and refuses explicitly supplied gateway-key variables. This removes implicit signing-environment inheritance, but the child still shares the proxy's account, filesystem and network privileges. The listener, control channel, filesystem privileges and alternative routes to tools need separate controls.
 
-With `--upstream-url`, the proxy sends plain JSON-RPC HTTP requests. It does not implement MCP Streamable HTTP sessions or SSE. Any direct route to the upstream bypasses the proxy. Duplicate `method` members can also bypass HTTP policy evaluation. Review all thirteen [known issues](https://attestedintelligence.com/security#known-issues) before selecting a topology.
+With `--upstream-url`, the proxy sends plain JSON-RPC HTTP requests. It does not implement MCP Streamable HTTP sessions or SSE. Any direct route to the upstream bypasses the proxy. Repeated JSON member names are now refused before forwarding, including escaped aliases. Read the thirteen historical cases and their current disposition in [THREAT_BOUNDARY.md](THREAT_BOUNDARY.md) before selecting a topology.
 
 Use a disposable environment with synthetic inputs and keys for the first runtime test. Before any run, verify actual listener exposure, account separation, child environment, resource limits, retained output and process cleanup. A configuration diagram is not proof that these controls work.
 
@@ -22,17 +22,17 @@ A policy for two named tools has this shape:
 {"mode":"allowlist","constraints":{"read_text_file":{"name":"read_text_file","allowed":true},"list_directory":{"name":"list_directory","allowed":true}}}
 ```
 
-This illustrates policy syntax, not a recommended deployment or filesystem boundary. A missing or null `constraints` member can cause refusal without a receipt or response. Missing or unrecognized `mode` values deny tool calls. Unknown constraint keys are ignored; wrongly typed truthy values can allow a call. Path and pattern rules inspect top-level string arguments only and do not provide a filesystem sandbox. See known issues 7 and 10 for the exact cases.
+This illustrates policy syntax, not a recommended deployment or filesystem boundary. Policies are validated, copied and frozen before startup or a policy switch. Missing, wrongly typed or unknown fields are refused. Configured path keys require nonempty string arguments; absent keys fail the call. Path-prefix checks remain lexical, and pattern rules inspect top-level strings. Neither provides filesystem containment or symlink protection. Rate limits are per proxy instance.
 
-Only `tools/call` is policy-evaluated. Protocol methods can pass without receipts; other methods may have passthrough receipts without policy evaluation. `denyMethods` is a library constructor option, not a CLI policy setting. A PERMITTED receipt does not establish successful tool execution.
+Only `tools/call` requests are policy-evaluated. Protocol methods can pass without receipts; other requests may have passthrough receipts without policy evaluation. Only initialization notifications are forwarded; unsupported notifications are refused and recorded without a JSON-RPC response. Complete server-initiated requests, sessions and cancellation relay are not implemented. `denyMethods` is a library constructor option, not a CLI policy setting. A PERMITTED receipt does not establish successful tool execution.
 
 ## 3. Key custody and verification
 
 Both binaries accept `AGA_GATEWAY_KEY` or `AGA_GATEWAY_KEY_FILE`; otherwise they use an ephemeral signing key. The proxy also has an explicit `--ephemeral` option. A restart with a new key changes the identity a reviewer must expect.
 
-Use synthetic keys in a lab. A persistent production key requires an independently reviewed custody and access design. Supplying a seed to an agent process, or retaining a key file under the same untrusted account, does not create a protected signing boundary. The stdio child can inherit the signing-related environment. Do not put real seeds in source, shell history, screenshots or support messages.
+Use synthetic keys in a lab. A persistent production key requires an independently reviewed custody and access design. Supplying a seed to an agent process, or retaining a key file under the same untrusted account, does not create a protected signing boundary. Environment filtering does not restrict a child's filesystem access to key files. Do not put real seeds in source, shell history, screenshots or support messages.
 
-A reviewer must obtain the expected public key through a separate trusted channel. A key read from the bundle under test establishes only internal consistency. Check both the verification result and issuer-key match. Some implementations treat malformed pins as absent; do not interpret exit zero alone as issuer verification. Read the README's exact verifier differences.
+A reviewer must obtain the expected public key through a separate trusted channel. A key read from the bundle under test establishes only internal consistency. Check both the verification result and issuer-key match. Runtime 3.6.5 and standalone aga-verify 2.2.3 fail supplied malformed keys. Other implementations can treat them as absent; do not interpret exit zero alone as issuer verification. Read the README's version-scoped verifier differences.
 
 ## 4. Export and retention
 

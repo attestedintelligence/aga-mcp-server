@@ -1,6 +1,6 @@
 # Reference runtime hardening candidate
 
-This branch is an unreleased candidate. The published runtime remains 3.6.4 until qualification, documentation reconciliation and exact package acceptance succeed.
+This branch prepares reference runtime 3.6.5. Publication remains gated on qualification of the exact source, documentation, package bytes and registry readback. A build or branch push alone is not publication.
 
 The candidate snapshots and freezes validated policies before binding their references, separates rate-limit state by proxy owner, defaults the TCP listener to loopback, validates request envelopes, refuses unsupported notifications without replying to them, bounds connections and in-flight work, cancels pending transport waits when their client disconnects, remaps stdio request IDs and preserves UTF-8 across byte splits. HTTP responses have a deadline, byte limit and response-ID check. Downstream children receive an explicit environment without implicit gateway credentials and start without a shell.
 

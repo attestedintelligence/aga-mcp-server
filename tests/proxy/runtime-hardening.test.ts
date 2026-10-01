@@ -1,6 +1,8 @@
 import {describe,it,expect} from 'vitest';
 import {once} from 'node:events';
 import * as net from 'node:net';
+import * as http from 'node:http';
+import {ProxyControlServer} from '../../src/proxy/control.js';
 import {JsonLineFramer} from '../../src/proxy/json-lines.js';
 import {parseUnambiguousJson} from '../../src/proxy/strict-json.js';
 import {snapshotPolicy} from '../../src/proxy/policy-snapshot.js';
@@ -100,5 +102,17 @@ describe('shared runtime trust input',()=>{
     const gw=new SepGateway({gatewayId:'synthetic',signer:signerFromSeed(new Uint8Array(32).fill(7))});
     gw.record({tool_name:'read',decision:'PERMITTED',reason:'synthetic'});const bundle=gw.exportBundle();
     expect(verifySepBundle(bundle).verdict).toBe('VERIFIED');expect(verifySepBundle(bundle,pin)).toMatchObject({verdict:'FAILED',pinned:true,issuerVerified:false});
+  });
+});
+describe('control-channel browser boundary',()=>{
+  it('refuses foreign Host and browser Origin before reading the ledger',async()=>{
+    let reads=0;const read=()=>{reads++;return {synthetic:true}};
+    const control=new ProxyControlServer({getStatus:read,getReceipts:read,exportBundle:read});const {port}=await control.start(0);
+    const get=(headers:Record<string,string>)=>new Promise<number>((resolve,reject)=>{http.get({host:'127.0.0.1',port,path:'/status',headers},res=>{res.resume();res.on('end',()=>resolve(res.statusCode!))}).on('error',reject)});
+    try{expect(await get({Host:`127.0.0.1:${port}`})).toBe(200);expect(reads).toBe(1);
+      expect(await get({Host:`untrusted.example:${port}`})).toBe(403);
+      expect(await get({Host:`127.0.0.1:${port}`,Origin:'https://untrusted.example'})).toBe(403);
+      expect(await get({Host:`127.0.0.1:${port}`,'Sec-Fetch-Site':'cross-site'})).toBe(403);expect(reads).toBe(1);
+    }finally{await control.stop()}
   });
 });
