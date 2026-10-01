@@ -16,7 +16,9 @@
 
 import * as net from 'node:net';
 import { EventEmitter } from 'node:events';
-import { evaluate, resetRateLimits } from './evaluator.js';
+import { evaluate, resetRateLimits, createRateLimitState } from './evaluator.js';
+import { snapshotPolicy } from './policy-snapshot.js';
+import { JsonLineFramer } from './json-lines.js';
 import { StdioBridge, type StdioBridgeOptions } from './stdio-bridge.js';
 import { PERMISSIVE } from './profiles.js';
 import type { ToolPolicy } from './types.js';
@@ -50,6 +52,8 @@ export const DEFAULT_PASSTHROUGH_EXCLUDE = [
 
 export interface ProxyServerOptions {
   port?: number;
+  /** Loopback by default. Wider binding requires explicit deployment controls. */
+  host?: string;
   policy?: ToolPolicy;
   upstream?: StdioBridgeOptions;
   upstreamUrl?: string;
@@ -78,6 +82,10 @@ export class GovernanceProxy extends EventEmitter {
   // State
   private policy: ToolPolicy;
   private port: number;
+  private host: string;
+  private sockets = new Set<net.Socket>();
+  private rateState = createRateLimitState();
+  private inFlight = 0;
   private started = false;
   private upstreamOptions: StdioBridgeOptions | null;
   private upstreamUrl: string | null;
@@ -100,7 +108,8 @@ export class GovernanceProxy extends EventEmitter {
   constructor(options: ProxyServerOptions = {}) {
     super();
     this.port = options.port ?? 18800;
-    this.policy = options.policy ?? PERMISSIVE;
+    this.policy = snapshotPolicy(options.policy ?? PERMISSIVE);
+    this.host = options.host ?? '127.0.0.1';
     this.upstreamOptions = options.upstream ?? null;
     this.upstreamUrl = options.upstreamUrl ?? null;
     this.gatewayId = options.gatewayId ?? 'aga-proxy';
@@ -128,8 +137,8 @@ export class GovernanceProxy extends EventEmitter {
     // Start downstream bridge if configured
     if (this.upstreamOptions) {
       this.bridge = new StdioBridge(this.upstreamOptions);
+      this.bridge.on('error', (err) => { if (this.listenerCount('error')) this.emit('error', err); });
       await this.bridge.start();
-      this.bridge.on('error', (err) => this.emit('error', err));
       this.bridge.on('exit', (code: number) => {
         process.stderr.write(`[aga-proxy] Downstream exited with code ${code}\n`);
       });
@@ -142,18 +151,22 @@ export class GovernanceProxy extends EventEmitter {
     // Start TCP server
     this.server = net.createServer((socket) => this.handleConnection(socket));
     await new Promise<void>((resolve, reject) => {
-      this.server!.listen(this.port, () => resolve());
+      this.server!.listen(this.port, this.host, () => resolve());
       this.server!.on('error', reject);
     });
+    const bound = this.server.address();
+    if (bound && typeof bound === 'object') this.port = bound.port;
 
     this.started = true;
     this.stats.started_at = new Date().toISOString();
-    resetRateLimits();
+    resetRateLimits(this.rateState);
     this.emit('started', { port: this.port });
   }
 
   async stop(): Promise<void> {
     if (!this.started) return;
+    // Connections own their pending work; closing them cancels upstream waits before server.close.
+    for (const socket of this.sockets) socket.destroy();
 
     if (this.bridge) {
       await this.bridge.stop();
@@ -174,34 +187,39 @@ export class GovernanceProxy extends EventEmitter {
   // ── Connection handler ─────────────────────────────────────
 
   private handleConnection(socket: net.Socket): void {
-    let buffer = '';
+    if (this.sockets.size >= 64) { socket.destroy(); return; }
+    this.sockets.add(socket);
+    const owner = new AbortController();
+    const pending = new Set<string | number>();
+    let active = 0;
+    const framer = new JsonLineFramer(MAX_MESSAGE_BYTES);
+    socket.on('close', () => { owner.abort(); this.sockets.delete(socket); });
+    socket.setTimeout(60_000, () => socket.destroy());
 
     socket.on('data', (chunk) => {
-      buffer += chunk.toString();
-      // Fail-closed on a flood with no line terminator: bound the incomplete-line buffer so a client cannot
-      // exhaust memory by streaming bytes without a newline. Reject and close rather than keep accumulating.
-      if (buffer.length > MAX_MESSAGE_BYTES) {
-        this.respond(socket, { jsonrpc: '2.0', error: { code: -32600, message: 'Message too large' }, id: null });
-        buffer = '';
+      let lines: string[];
+      try { lines = framer.push(chunk); }
+      catch {
+        this.respond(socket, { jsonrpc: '2.0', error: { code: -32600, message: 'Invalid UTF-8 or oversized message' }, id: null });
         socket.destroy();
         return;
       }
-      const lines = buffer.split('\n');
-      buffer = lines.pop() || '';
 
       for (const line of lines) {
         const trimmed = line.trim();
         if (!trimmed) continue;
-        this.handleMessage(trimmed, socket).catch((err) => {
-          process.stderr.write(`[aga-proxy] Error handling message: ${err}\n`);
-        });
+        if (active >= 16 || this.inFlight >= 128) { socket.destroy(); break; }
+        active++; this.inFlight++;
+        this.handleMessage(trimmed, socket, owner.signal, pending).catch(() => {
+          socket.destroy();
+        }).finally(() => { active--; this.inFlight--; });
       }
     });
 
     socket.on('error', () => { /* client disconnected */ });
   }
 
-  private async handleMessage(raw: string, socket: net.Socket): Promise<void> {
+  private async handleMessage(raw: string, socket: net.Socket, signal: AbortSignal, pending: Set<string | number>): Promise<void> {
     let parsed: Record<string, unknown>;
     try {
       parsed = JSON.parse(raw);
@@ -210,13 +228,31 @@ export class GovernanceProxy extends EventEmitter {
       return;
     }
 
-    if (parsed.jsonrpc !== '2.0') {
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed) || parsed.jsonrpc !== '2.0'
+      || typeof parsed.method !== 'string' || !parsed.method || parsed.method.length > 256
+      || (parsed.params !== undefined && (!parsed.params || typeof parsed.params !== 'object' || Array.isArray(parsed.params)))
+      || (Object.hasOwn(parsed, 'id') && !(typeof parsed.id === 'string' || (typeof parsed.id === 'number' && Number.isSafeInteger(parsed.id))))) {
       this.respond(socket, { jsonrpc: '2.0', error: { code: -32600, message: 'Invalid Request: missing jsonrpc 2.0' }, id: null });
       return;
     }
 
     const requestId = (parsed.id as string | number | null) ?? null;
     const method = parsed.method as string | undefined;
+    if (!Object.hasOwn(parsed, 'id')) {
+      // A tool call requires a request ID; arbitrary notifications cannot take an unrecorded execution path.
+      if (method === 'notifications/initialized' || method === 'initialized') {
+        if (this.bridge) this.bridge.sendRaw(parsed);
+        else if (this.upstreamUrl) await this.forwardHttp(raw, socket, null, signal, true);
+      } else {
+        this.generateReceipt('(notification)', 'DENIED', `unsupported notification refused: ${method}`, null, parsed.params as Record<string,unknown> | undefined, method);
+      }
+      return; // JSON-RPC notifications never receive a fabricated response.
+    }
+    if (pending.has(requestId!)) {
+      this.respond(socket, {jsonrpc:'2.0',error:{code:-32600,message:'Duplicate in-flight request ID'},id:requestId});return;
+    }
+    pending.add(requestId!);
+    try {
 
     // Non-tools/call methods: NOT policy-evaluated, but recorded for AUDITABILITY as a signed
     // passthrough receipt so they are visible in the evidence bundle — unless they are benign
@@ -237,7 +273,7 @@ export class GovernanceProxy extends EventEmitter {
       }
       if (this.bridge) {
         try {
-          const response = await this.bridge.send(parsed);
+          const response = await this.bridge.send(parsed, 30_000, signal);
           this.respond(socket, response);
         } catch (err) {
           this.respond(socket, {
@@ -247,7 +283,7 @@ export class GovernanceProxy extends EventEmitter {
           });
         }
       } else if (this.upstreamUrl) {
-        await this.forwardHttp(raw, socket, requestId);
+        await this.forwardHttp(raw, socket, requestId, signal);
       } else {
         this.respond(socket, {
           jsonrpc: '2.0',
@@ -259,7 +295,8 @@ export class GovernanceProxy extends EventEmitter {
     }
 
     // tools/call - governance intercept
-    await this.interceptToolCall(parsed, socket, requestId);
+    await this.interceptToolCall(parsed, socket, requestId, signal);
+    } finally { pending.delete(requestId!); }
   }
 
   // ── Tool call interception ─────────────────────────────────
@@ -268,6 +305,7 @@ export class GovernanceProxy extends EventEmitter {
     parsed: Record<string, unknown>,
     socket: net.Socket,
     requestId: string | number | null,
+    signal: AbortSignal,
   ): Promise<void> {
     const params = parsed.params as Record<string, unknown> | undefined;
     const toolName = params?.name as string | undefined;
@@ -276,7 +314,8 @@ export class GovernanceProxy extends EventEmitter {
     this.stats.total++;
 
     // Fail-closed: no tool name
-    if (!toolName) {
+    if (typeof toolName !== 'string' || !toolName || toolName.length > 256
+      || (toolArgs !== undefined && (!toolArgs || typeof toolArgs !== 'object' || Array.isArray(toolArgs)))) {
       const receipt = this.generateReceipt('UNKNOWN', 'DENIED', 'tool name extraction failed, fail-closed', requestId, undefined);
       this.stats.denied++;
       this.respond(socket, {
@@ -307,7 +346,7 @@ export class GovernanceProxy extends EventEmitter {
     }
 
     // Evaluate against policy
-    const decision = evaluate(this.policy, toolName, toolArgs);
+    const decision = evaluate(this.policy, toolName, toolArgs, this.rateState);
     const receipt = this.generateReceipt(
       toolName,
       decision.allowed ? 'PERMITTED' : 'DENIED',
@@ -337,7 +376,7 @@ export class GovernanceProxy extends EventEmitter {
 
     if (this.bridge) {
       try {
-        const response = await this.bridge.send(parsed);
+        const response = await this.bridge.send(parsed, 30_000, signal);
         this.respond(socket, response);
       } catch (err) {
         this.respond(socket, {
@@ -347,7 +386,7 @@ export class GovernanceProxy extends EventEmitter {
         });
       }
     } else if (this.upstreamUrl) {
-      await this.forwardHttp(JSON.stringify(parsed), socket, requestId);
+      await this.forwardHttp(JSON.stringify(parsed), socket, requestId, signal);
     } else {
       // No upstream - return success with receipt info
       this.respond(socket, {
@@ -390,16 +429,28 @@ export class GovernanceProxy extends EventEmitter {
 
   // ── HTTP forwarding ────────────────────────────────────────
 
-  private async forwardHttp(body: string, socket: net.Socket, requestId: string | number | null): Promise<void> {
+  private async forwardHttp(body: string, socket: net.Socket, requestId: string | number | null, signal: AbortSignal, notification = false): Promise<void> {
     try {
       const resp = await fetch(this.upstreamUrl!, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body,
+        signal: AbortSignal.any([signal, AbortSignal.timeout(30_000)]),
       });
-      const data = await resp.json();
-      this.respond(socket, data as Record<string, unknown>);
+      if (notification) { await resp.body?.cancel(); return; }
+      if (!resp.ok || !resp.body) throw new Error('Upstream did not return a usable response');
+      const reader = resp.body.getReader(); const chunks: Uint8Array[] = []; let bytes = 0;
+      try {
+        for (;;) { const {done,value} = await reader.read(); if(done)break;
+          bytes += value.byteLength; if(bytes > MAX_MESSAGE_BYTES)throw new Error('Upstream response exceeds byte limit'); chunks.push(value); }
+      } finally { await reader.cancel().catch(() => {}); reader.releaseLock(); }
+      const data: unknown = JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(Buffer.concat(chunks,bytes)));
+      if (!data || typeof data !== 'object' || Array.isArray(data) || (data as Record<string,unknown>).jsonrpc !== '2.0'
+        || (data as Record<string,unknown>).id !== requestId
+        || !(Object.hasOwn(data,'result') || Object.hasOwn(data,'error'))) throw new Error('Invalid upstream response');
+      this.respond(socket, data as Record<string,unknown>);
     } catch (err) {
+      if (notification) return;
       this.respond(socket, {
         jsonrpc: '2.0',
         error: { code: -32603, message: `HTTP upstream error: ${err}` },
@@ -424,10 +475,12 @@ export class GovernanceProxy extends EventEmitter {
   // ── Public API ─────────────────────────────────────────────
 
   async switchPolicy(newPolicy: ToolPolicy): Promise<void> {
-    this.policy = newPolicy;
-    this.policyHash = derivePolicyReference(newPolicy);
+    const next = snapshotPolicy(newPolicy);
+    const nextHash = derivePolicyReference(next);
+    this.policy = next;
+    this.policyHash = nextHash;
     this.sep.setPolicyReference(this.policyHash);
-    resetRateLimits();
+    resetRateLimits(this.rateState);
     this.emit('policy_switched');
   }
 
@@ -440,6 +493,7 @@ export class GovernanceProxy extends EventEmitter {
     return {
       running: this.started,
       port: this.port,
+      host: this.host,
       policy_mode: this.policy.mode,
       receipt_count: this.sep.count,
       ...this.stats,

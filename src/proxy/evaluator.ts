@@ -15,18 +15,20 @@ interface RateWindow {
   timestamps: number[];
 }
 
-const rateLimits = new Map<string, RateWindow>();
+export type RateLimitState = Map<string, RateWindow>;
+export const createRateLimitState = (): RateLimitState => new Map();
+const rateLimits = createRateLimitState();
 
-function checkRateLimit(toolName: string, maxPerMinute: number): boolean {
+function checkRateLimit(toolName: string, maxPerMinute: number, state: RateLimitState): boolean {
   // Monotonic basis: a wall-clock adjustment (NTP step, DST, manual/container clock change) must not perturb
   // the rate-limit window. performance.now() is monotonic and immune to such skew, unlike Date.now().
   const now = performance.now();
   const cutoff = now - 60_000;
 
-  let window = rateLimits.get(toolName);
+  let window = state.get(toolName);
   if (!window) {
     window = { timestamps: [] };
-    rateLimits.set(toolName, window);
+    state.set(toolName, window);
   }
 
   // Prune expired entries
@@ -38,8 +40,8 @@ function checkRateLimit(toolName: string, maxPerMinute: number): boolean {
   return true;
 }
 
-export function resetRateLimits(): void {
-  rateLimits.clear();
+export function resetRateLimits(state: RateLimitState = rateLimits): void {
+  state.clear();
 }
 
 // ── Path Utilities ────────────────────────────────
@@ -85,10 +87,11 @@ function checkPathConstraints(
 ): string | null {
   if (!constraint.path_prefix) return null;
   const keys = constraint.path_keys?.length ? constraint.path_keys : ['path'];
-  if (!args) return null;
+  if (!args) return 'required path arguments are missing';
 
   for (const key of keys) {
-    const val = args[key];
+    const val = Object.hasOwn(args, key) ? args[key] : undefined;
+    if (typeof val !== 'string' || !val) return `required path argument "${key}" must be a non-empty string`;
     if (typeof val === 'string') {
       if (!matchesPrefix(constraint.path_prefix, val)) {
         return `path "${val}" outside allowed prefix "${constraint.path_prefix}"`;
@@ -122,8 +125,13 @@ export function evaluate(
   policy: ToolPolicy,
   toolName: string,
   args?: Record<string, unknown>,
+  state: RateLimitState = rateLimits,
 ): ToolCallDecision {
   const base = { tool_name: toolName, policy_mode: policy.mode };
+  if (typeof toolName !== 'string' || !toolName || toolName.length > 256
+    || (args !== undefined && (!args || typeof args !== 'object' || Array.isArray(args)))) {
+    return { ...base, allowed: false, reason: 'invalid tool name or arguments' };
+  }
 
   // Audit-only mode: always permit
   if (policy.mode === 'audit_only') {
@@ -134,19 +142,19 @@ export function evaluate(
     return { ...base, allowed: false, reason: `unknown policy mode: ${policy.mode}` };
   }
 
-  const constraint = policy.constraints[toolName];
+  const constraint = Object.hasOwn(policy.constraints, toolName) ? policy.constraints[toolName] : undefined;
 
   if (policy.mode === 'allowlist') {
     if (!constraint) {
       return { ...base, allowed: false, reason: 'tool not in allowlist' };
     }
-    if (!constraint.allowed) {
+    if (constraint.allowed !== true) {
       return { ...base, allowed: false, reason: 'tool explicitly disallowed' };
     }
 
     // Rate limit check
     if (constraint.max_calls_per_minute) {
-      if (!checkRateLimit(toolName, constraint.max_calls_per_minute)) {
+      if (!checkRateLimit(toolName, constraint.max_calls_per_minute, state)) {
         return { ...base, allowed: false, reason: `rate limit exceeded: ${constraint.max_calls_per_minute}/min` };
       }
     }
@@ -169,10 +177,14 @@ export function evaluate(
 
   // Rate limit check for denylist mode (tool not explicitly denied)
   if (constraint?.max_calls_per_minute) {
-    if (!checkRateLimit(toolName, constraint.max_calls_per_minute)) {
+    if (!checkRateLimit(toolName, constraint.max_calls_per_minute, state)) {
       return { ...base, allowed: false, reason: `rate limit exceeded: ${constraint.max_calls_per_minute}/min` };
     }
   }
 
+  if (constraint) {
+    const reason = checkPathConstraints(constraint, args) ?? checkDeniedPatterns(constraint, args);
+    if (reason !== null) return { ...base, allowed: false, reason };
+  }
   return { ...base, allowed: true, reason: 'tool not denied' };
 }

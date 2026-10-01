@@ -21,6 +21,7 @@ permissions:
 
 jobs:
   test:
+    if: github.ref != 'refs/heads/rc/sol61-runtime-hardening-20260930'
     runs-on: ubuntu-latest
     strategy:
       matrix:

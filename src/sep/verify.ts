@@ -111,6 +111,12 @@ export function verifySepBundle(bundle: any, expectedPublicKey?: string, opts?: 
     };
   }
 
+  // A supplied trust anchor is a request to check provenance. Invalid input must never downgrade it.
+  if (expectedPublicKey !== undefined && (!isRegisteredProfile(algorithm)
+    || typeof expectedPublicKey !== 'string' || !validPublicKeyForProfile(algorithm, expectedPublicKey))) {
+    return { verdict: 'FAILED', summary: 'Expected issuer key is invalid for this profile; no verification performed',
+      issuerVerified: false, pinned: true, steps: [{ name: 'gateway_key_match', ok: false }] };
+  }
   // Robust contract: a malformed/hostile bundle yields FAILED, never a thrown exception.
   let pinned = false;
   try {
@@ -126,10 +132,7 @@ export function verifySepBundle(bundle: any, expectedPublicKey?: string, opts?: 
     for (const r of receipts) assertSafeNumbers(r);
     assertSafeNumbers(bundle?.checkpoint);
 
-    // A pin is honored only if it is well-formed for the bundle's (supported, registered) profile;
-    // a malformed pin is an integrity-only check (pinned=false), never a silent provenance pass.
-    pinned = isRegisteredProfile(algorithm) && supported.includes(algorithm)
-      && typeof expectedPublicKey === 'string' && validPublicKeyForProfile(algorithm, expectedPublicKey);
+    pinned = expectedPublicKey !== undefined;
 
     // §6.1 structural floor — supported registered profile + profile-valid key + STRICT receipt schema
     // (exactly the canonical fields; rejects extra/unknown keys and "__proto__" injection).
