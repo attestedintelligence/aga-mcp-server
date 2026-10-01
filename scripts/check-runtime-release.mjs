@@ -22,7 +22,7 @@ for(const n of [20,22]){
  const c=JSON.parse(fs.readFileSync(path.join(dir,'container.json')))[0],h=c.HostConfig;
  assert.equal(c.State.ExitCode,0);assert.equal(c.State.OOMKilled,false);assert.equal(h.NetworkMode,'none');assert.equal(h.ReadonlyRootfs,true);
  assert.equal(c.Config.User,'node');assert(h.CapDrop.includes('ALL'));assert(h.SecurityOpt.includes('no-new-privileges'));assert(h.PidsLimit<=128&&h.Memory<=1536*1024*1024&&h.Memory>0);
- const log=fs.readFileSync(path.join(dir,'qualification.log'),'utf8');const tests=Number(log.match(/Tests\s+(\d+) passed \(\d+\)/)?.[1]);assert(tests>=461&&log.includes('CONFORMANCE PASSED (6/6)'));
+ const log=fs.readFileSync(path.join(dir,'qualification.log'),'utf8').replace(/\x1b\[[0-?]*[ -/]*[@-~]/g,'');const tests=Number(log.match(/Tests\s+(\d+) passed \(\d+\)/)?.[1]);assert(tests>=461&&log.includes('CONFORMANCE PASSED (6/6)'));
  const tarball=path.join(dir,'attested-intelligence-aga-mcp-server-3.6.5.tgz');const digest=crypto.createHash('sha256').update(fs.readFileSync(tarball)).digest('hex');
  assert(fs.readFileSync(path.join(dir,'PACKAGE-SHA256.txt'),'utf8').startsWith(digest+' '));rows.push({node:n,tests,image:c.Image,tarball,sha256:digest});
 }
