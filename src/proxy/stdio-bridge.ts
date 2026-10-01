@@ -3,6 +3,7 @@ import { spawn, type ChildProcess } from 'node:child_process';
 import { EventEmitter } from 'node:events';
 import { randomUUID } from 'node:crypto';
 import { JsonLineFramer } from './json-lines.js';
+import { parseUnambiguousJson } from './strict-json.js';
 
 export interface StdioBridgeOptions { command: string; args?: string[]; env?: Record<string,string>; cwd?: string; }
 const MAX_MESSAGE_BYTES = 8 * 1024 * 1024;
@@ -35,7 +36,7 @@ export class StdioBridge extends EventEmitter {
     child.stdout!.on('data',(chunk: Buffer)=>{
       try {
         for (const line of this.framer.push(chunk)) {
-          const msg: unknown = JSON.parse(line);
+          const msg = parseUnambiguousJson(line);
           if (!msg || typeof msg !== 'object' || Array.isArray(msg) || (msg as Record<string,unknown>).jsonrpc !== '2.0') throw new Error('Invalid downstream frame');
           this.handleMessage(msg as Record<string,unknown>);
         }

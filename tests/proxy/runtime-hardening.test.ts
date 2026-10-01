@@ -2,6 +2,7 @@ import {describe,it,expect} from 'vitest';
 import {once} from 'node:events';
 import * as net from 'node:net';
 import {JsonLineFramer} from '../../src/proxy/json-lines.js';
+import {parseUnambiguousJson} from '../../src/proxy/strict-json.js';
 import {snapshotPolicy} from '../../src/proxy/policy-snapshot.js';
 import {evaluate,createRateLimitState,resetRateLimits} from '../../src/proxy/evaluator.js';
 import {StdioBridge,downstreamEnvironment} from '../../src/proxy/stdio-bridge.js';
@@ -73,6 +74,25 @@ describe('transport ownership and cleanup',()=>{
       await new Promise(r=>setTimeout(r,40));expect(responses).toBe(0);expect(proxy.getReceipts().at(-1)?.decision).toBe('DENIED');expect(proxy.getStatus().host).toBe('127.0.0.1');
       const closed=once(socket,'close');await proxy.stop();await closed;
     }finally{socket.destroy();await proxy.stop()}
+  });
+});
+describe('unambiguous protocol JSON',()=>{
+  it.each(['{"method":"echo","method":"tools/call"}','{"method":"echo","m\\u0065thod":"tools/call"}','{"params":{"name":"a","name":"b"}}'])('rejects repeated decoded names: %s',raw=>expect(()=>parseUnambiguousJson(raw)).toThrow());
+  it('allows repeated names in separate objects and escaped strings',()=>expect(parseUnambiguousJson('{"a":[{"x":1},{"x":2}],"s":"a\\\"b"}')).toEqual({a:[{x:1},{x:2}],s:'a"b'}));
+  it('bounds depth without an unbounded recursive parse',()=>expect(()=>parseUnambiguousJson('['.repeat(66)+'0'+']'.repeat(66))).toThrow());
+  it.each(['{"x":01}','{"x":true,}','[1,]','{"x":"bad\ntext"}','{"x":1}junk'])('rejects invalid grammar: %s',raw=>expect(()=>parseUnambiguousJson(raw)).toThrow());
+  it('refuses ambiguous requests without downstream execution',async()=>{
+    const proxy=new GovernanceProxy({port:0,ephemeral:true,policy:makePolicy()});await proxy.start();
+    const socket=net.createConnection({host:'127.0.0.1',port:proxy.getStatus().port});await once(socket,'connect');
+    try{const reply=once(socket,'data');socket.write('{"jsonrpc":"2.0","id":1,"method":"echo","method":"tools/call"}\n');expect(JSON.parse(String((await reply)[0])).error.code).toBe(-32700);expect(proxy.getReceipts()).toHaveLength(0)}
+    finally{socket.destroy();await proxy.stop()}
+  });
+  it('cleans up its downstream child if listener binding fails',async()=>{
+    const busy=net.createServer();busy.listen(0,'127.0.0.1');await once(busy,'listening');
+    const port=(busy.address() as net.AddressInfo).port;
+    const proxy=new GovernanceProxy({port,ephemeral:true,upstream:{command:process.execPath,args:['-e','setInterval(()=>{},1000)']}});
+    try{await expect(proxy.start()).rejects.toThrow();expect((proxy as any).bridge).toBeNull();expect((proxy as any).server).toBeNull()}
+    finally{await proxy.stop();await new Promise<void>(resolve=>busy.close(()=>resolve()))}
   });
 });
 describe('shared runtime trust input',()=>{

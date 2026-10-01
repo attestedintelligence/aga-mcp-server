@@ -19,6 +19,7 @@ import { EventEmitter } from 'node:events';
 import { evaluate, resetRateLimits, createRateLimitState } from './evaluator.js';
 import { snapshotPolicy } from './policy-snapshot.js';
 import { JsonLineFramer } from './json-lines.js';
+import { parseUnambiguousJson } from './strict-json.js';
 import { StdioBridge, type StdioBridgeOptions } from './stdio-bridge.js';
 import { PERMISSIVE } from './profiles.js';
 import type { ToolPolicy } from './types.js';
@@ -108,6 +109,7 @@ export class GovernanceProxy extends EventEmitter {
   constructor(options: ProxyServerOptions = {}) {
     super();
     this.port = options.port ?? 18800;
+    if (!Number.isInteger(this.port) || this.port < 0 || this.port > 65535) throw new Error('Invalid proxy port');
     this.policy = snapshotPolicy(options.policy ?? PERMISSIVE);
     this.host = options.host ?? '127.0.0.1';
     this.upstreamOptions = options.upstream ?? null;
@@ -150,10 +152,17 @@ export class GovernanceProxy extends EventEmitter {
 
     // Start TCP server
     this.server = net.createServer((socket) => this.handleConnection(socket));
-    await new Promise<void>((resolve, reject) => {
-      this.server!.listen(this.port, this.host, () => resolve());
-      this.server!.on('error', reject);
-    });
+    try {
+      await new Promise<void>((resolve, reject) => {
+        this.server!.once('error', reject);
+        this.server!.listen(this.port, this.host, () => { this.server!.removeListener('error', reject); resolve(); });
+      });
+    } catch (error) {
+      this.server = null;
+      if (this.bridge) { await this.bridge.stop(); this.bridge = null; }
+      throw error;
+    }
+    this.server.on('error', error => { if (this.listenerCount('error')) this.emit('error', error); });
     const bound = this.server.address();
     if (bound && typeof bound === 'object') this.port = bound.port;
 
@@ -222,7 +231,7 @@ export class GovernanceProxy extends EventEmitter {
   private async handleMessage(raw: string, socket: net.Socket, signal: AbortSignal, pending: Set<string | number>): Promise<void> {
     let parsed: Record<string, unknown>;
     try {
-      parsed = JSON.parse(raw);
+      parsed = parseUnambiguousJson(raw) as Record<string, unknown>;
     } catch {
       this.respond(socket, { jsonrpc: '2.0', error: { code: -32700, message: 'Parse error' }, id: null });
       return;
@@ -444,7 +453,7 @@ export class GovernanceProxy extends EventEmitter {
         for (;;) { const {done,value} = await reader.read(); if(done)break;
           bytes += value.byteLength; if(bytes > MAX_MESSAGE_BYTES)throw new Error('Upstream response exceeds byte limit'); chunks.push(value); }
       } finally { await reader.cancel().catch(() => {}); reader.releaseLock(); }
-      const data: unknown = JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(Buffer.concat(chunks,bytes)));
+      const data = parseUnambiguousJson(new TextDecoder('utf-8',{fatal:true}).decode(Buffer.concat(chunks,bytes)));
       if (!data || typeof data !== 'object' || Array.isArray(data) || (data as Record<string,unknown>).jsonrpc !== '2.0'
         || (data as Record<string,unknown>).id !== requestId
         || !(Object.hasOwn(data,'result') || Object.hasOwn(data,'error'))) throw new Error('Invalid upstream response');

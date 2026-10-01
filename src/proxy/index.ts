@@ -20,6 +20,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as os from 'node:os';
 import { GovernanceProxy } from './server.js';
+import { parseUnambiguousJson } from './strict-json.js';
 import { PROFILES, resolveProfile, auditOnlyWarningBanner } from './profiles.js';
 import type { ToolPolicy } from './types.js';
 import {
@@ -53,6 +54,7 @@ program
   .command('start')
   .description('Start the governance proxy')
   .option('-p, --port <port>', 'Proxy port', '18800')
+  .option('--host <host>', 'Listener address; non-loopback exposure requires separate access controls', '127.0.0.1')
   .option('--control-port <port>', 'Loopback-only control port for out-of-process export/status (127.0.0.1)', String(DEFAULT_CONTROL_PORT))
   .option('--upstream <command>', 'Downstream MCP server command (stdio)')
   .option('--upstream-url <url>', 'Downstream MCP server URL (HTTP)')
@@ -65,13 +67,15 @@ program
 // argv through the start subcommand with 'start' left in the array, which commander rejects as a
 // stray operand — `aga-proxy run` exited 1 on every invocation from 3.0.0 through 3.3.3 without
 // ever reaching policy resolution. A shared action function cannot regress that way.
-async function startAction(opts: { port: string; controlPort: string; upstream?: string; upstreamUrl?: string; profile: string; policy?: string; ephemeral?: boolean }) {
-    const port = parseInt(opts.port, 10);
-    const controlPort = parseInt(opts.controlPort, 10);
+async function startAction(opts: { port: string; host: string; controlPort: string; upstream?: string; upstreamUrl?: string; profile: string; policy?: string; ephemeral?: boolean }) {
+    const port = Number(opts.port);
+    const controlPort = Number(opts.controlPort);
+    if (![opts.port, opts.controlPort].every(v => /^\d+$/.test(v)) || ![port, controlPort].every(v => Number.isInteger(v) && v >= 1 && v <= 65535)) throw new Error('Ports must be decimal integers from 1 to 65535');
+    if (!opts.host.trim() || opts.host !== opts.host.trim()) throw new Error('Invalid listener address');
     let policy: ToolPolicy;
 
     if (opts.policy) {
-      policy = JSON.parse(fs.readFileSync(opts.policy, 'utf-8'));
+      policy = parseUnambiguousJson(fs.readFileSync(opts.policy, 'utf-8')) as ToolPolicy;
     } else {
       // REL-04: an unrecognized profile name is a hard error, not a silent
       // fallback to 'permissive' (which is audit_only and denies nothing).
@@ -95,6 +99,7 @@ async function startAction(opts: { port: string; controlPort: string; upstream?:
 
     proxy = new GovernanceProxy({
       port,
+      host: opts.host,
       policy,
       upstream,
       upstreamUrl: opts.upstreamUrl,
@@ -173,6 +178,7 @@ program
   .command('run')
   .description('Run proxy in foreground (same as start, Ctrl+C to stop)')
   .option('-p, --port <port>', 'Proxy port', '18800')
+  .option('--host <host>', 'Listener address; non-loopback exposure requires separate access controls', '127.0.0.1')
   .option('--control-port <port>', 'Loopback-only control port (127.0.0.1)', String(DEFAULT_CONTROL_PORT))
   .option('--upstream <command>', 'Downstream MCP server command (stdio)')
   .option('--upstream-url <url>', 'Downstream MCP server URL (HTTP)')
