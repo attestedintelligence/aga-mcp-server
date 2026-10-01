@@ -70,7 +70,7 @@ program
 async function startAction(opts: { port: string; host: string; controlPort: string; upstream?: string; upstreamUrl?: string; profile: string; policy?: string; ephemeral?: boolean }) {
     const port = Number(opts.port);
     const controlPort = Number(opts.controlPort);
-    if (![opts.port, opts.controlPort].every(v => /^\d+$/.test(v)) || ![port, controlPort].every(v => Number.isInteger(v) && v >= 1 && v <= 65535)) throw new Error('Ports must be decimal integers from 1 to 65535');
+    if (![opts.port, opts.controlPort].every(v => /^\d+$/.test(v)) || ![port, controlPort].every(v => Number.isInteger(v) && v >= 0 && v <= 65535)) throw new Error('Ports must be decimal integers from 0 to 65535; zero allocates an available port');
     if (!opts.host.trim() || opts.host !== opts.host.trim()) throw new Error('Invalid listener address');
     let policy: ToolPolicy;
 

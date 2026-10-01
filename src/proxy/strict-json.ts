@@ -13,7 +13,9 @@ export function parseUnambiguousJson(raw: string): unknown {
     return fail();
   };
   const value = (depth: number): void => {
-    if (depth > 64 || ++nodes > 100000) fail();
+    // Higher than the signed-argument canonicalization limit so attributable tool
+    // requests still reach the existing DENIED-receipt path for excessive depth.
+    if (depth > 1024 || ++nodes > 100000) fail();
     space(); const c = raw[at];
     if (c === '"') { string(); return; }
     if (c === '{' || c === '[') {

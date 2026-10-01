@@ -79,7 +79,7 @@ describe('transport ownership and cleanup',()=>{
 describe('unambiguous protocol JSON',()=>{
   it.each(['{"method":"echo","method":"tools/call"}','{"method":"echo","m\\u0065thod":"tools/call"}','{"params":{"name":"a","name":"b"}}'])('rejects repeated decoded names: %s',raw=>expect(()=>parseUnambiguousJson(raw)).toThrow());
   it('allows repeated names in separate objects and escaped strings',()=>expect(parseUnambiguousJson('{"a":[{"x":1},{"x":2}],"s":"a\\\"b"}')).toEqual({a:[{x:1},{x:2}],s:'a"b'}));
-  it('bounds depth without an unbounded recursive parse',()=>expect(()=>parseUnambiguousJson('['.repeat(66)+'0'+']'.repeat(66))).toThrow());
+  it('bounds depth without an unbounded recursive parse',()=>expect(()=>parseUnambiguousJson('['.repeat(1026)+'0'+']'.repeat(1026))).toThrow());
   it.each(['{"x":01}','{"x":true,}','[1,]','{"x":"bad\ntext"}','{"x":1}junk'])('rejects invalid grammar: %s',raw=>expect(()=>parseUnambiguousJson(raw)).toThrow());
   it('refuses ambiguous requests without downstream execution',async()=>{
     const proxy=new GovernanceProxy({port:0,ephemeral:true,policy:makePolicy()});await proxy.start();
