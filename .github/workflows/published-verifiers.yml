@@ -35,7 +35,8 @@ jobs:
         if: always()
         run: |
           mkdir -p "$RUNNER_TEMP/published-evidence"
-          docker inspect aga-published-qualification > "$RUNNER_TEMP/published-evidence/container.json" || true
+          docker inspect aga-published-qualification > "$RUNNER_TEMP/published-evidence/container.json"
+          node -e 'const fs=require("fs"); const c=JSON.parse(fs.readFileSync(process.argv[1]))[0]; const h=c.HostConfig; const b={network:h.NetworkMode,readOnly:h.ReadonlyRootfs,capDrop:h.CapDrop,securityOpt:h.SecurityOpt,memory:h.Memory,nanoCpus:h.NanoCpus,pids:h.PidsLimit,user:c.Config.User,exitCode:c.State.ExitCode,oomKilled:c.State.OOMKilled,mounts:c.Mounts.map(m=>({destination:m.Destination,rw:m.RW})),tmpfs:h.Tmpfs}; console.log("AGA_PUBLISHED_CONTAINER_BOUNDARY="+Buffer.from(JSON.stringify(b)).toString("base64"));' "$RUNNER_TEMP/published-evidence/container.json"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
