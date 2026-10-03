@@ -50,4 +50,46 @@ const dependencies=invoke('/app/venv/bin/python',['-m','pip','freeze']);assert.e
 const report={schema:1,checkedAt:new Date().toISOString(),commit:process.env.QUALIFIED_COMMIT,input,runtime:{node:process.version,pythonDependencies:dependencies.output.trim().split('\n')},scope:'Published npm and Python verifier CLI sample controls in a disposable offline non-root container. No production signing or enforcement claim.',controls:5,results,passed:results.every(row=>row.passed)};
 fs.writeFileSync('/evidence/report.json',JSON.stringify(report,null,2)+'\n');
 console.log('AGA_PUBLISHED_VERIFIER_REPORT='+Buffer.from(JSON.stringify(report)).toString('base64'));
+
+// Separate byte-preserving characterization. Never parse/re-serialize these inputs
+// before invoking a published CLI. This records parser differences rather than
+// extending the historical parsed-object conformance claim to raw file bytes.
+const source = genuine.toString('utf8');
+assert.match(source, /"leaf_index"\s*:\s*0\b/);
+assert.match(source, /"decision"\s*:\s*"(?:PERMITTED|DENIED)"/);
+const firstDecision = source.match(/"decision"\s*:\s*"(PERMITTED|DENIED)"/)[1];
+const otherDecision = firstDecision === 'PERMITTED' ? 'DENIED' : 'PERMITTED';
+const inject = prefix => Buffer.concat([Buffer.from(prefix), genuine.subarray(genuine.indexOf(123) + 1)]);
+const rawCases = [
+  { name: 'original-file-bytes', bytes: genuine, expectedExit: 0 },
+  { name: 'duplicate-decision-original-last', bytes: Buffer.from(source.replace(/"decision"\s*:\s*"(?:PERMITTED|DENIED)"/, match => `"decision":"${otherDecision}",${match}`)), expectedExit: 0 },
+  { name: 'duplicate-decision-changed-last', bytes: Buffer.from(source.replace(/"decision"\s*:\s*"(?:PERMITTED|DENIED)"/, match => `${match},"decision":"${otherDecision}"`)), expectedExit: 1 },
+  { name: 'leaf-index-decimal-spelling', bytes: Buffer.from(source.replace(/("leaf_index"\s*:\s*)0\b/, '$10.0')) },
+  { name: 'leaf-index-exponent-spelling', bytes: Buffer.from(source.replace(/("leaf_index"\s*:\s*)0\b/, '$10e0')) },
+  { name: 'unsigned-unicode-field', bytes: inject('{"compatibility_note":"synthetic \\uD83D\\uDD0E",'), expectedExit: 0 },
+  { name: 'invalid-utf8-unsigned-field', bytes: Buffer.concat([Buffer.from('{"compatibility_note":"'), Buffer.from([0xff]), Buffer.from('",'), genuine.subarray(genuine.indexOf(123) + 1)]) },
+  { name: 'utf8-byte-order-mark', bytes: Buffer.concat([Buffer.from([0xef, 0xbb, 0xbf]), genuine]) },
+  { name: 'changed-signed-decision-bytes', bytes: Buffer.from(source.replace(/"decision"\s*:\s*"(?:PERMITTED|DENIED)"/, `"decision":"${otherDecision}"`)), expectedExit: 1 },
+];
+const rawResults = [];
+fs.mkdirSync('/evidence/raw-inputs', { recursive: true });
+for (const item of rawCases) {
+  const file = `/tmp/raw-${item.name}.json`;
+  fs.writeFileSync(file, item.bytes);
+  fs.writeFileSync(`/evidence/raw-inputs/${item.name}.json`, item.bytes);
+  assert.equal(sha(fs.readFileSync(file)), sha(item.bytes));
+  for (const engine of ['npm', 'python']) {
+    const args = [file, '--pubkey', original.public_key];
+    const run = engine === 'npm' ? invoke(process.execPath, [js, ...args]) : invoke(py, ['verify', ...args]);
+    const completedWithoutCrash = !run.error && !run.signal && [0, 1, 2].includes(run.code) && !!run.output.trim() && !/Traceback|\n\s+at\s/.test(run.output);
+    const expectedMet = item.expectedExit === undefined ? null : acceptable(run, item.expectedExit, engine);
+    rawResults.push({ case: item.name, engine, bytes: item.bytes.length, sha256: sha(item.bytes), expectedExit: item.expectedExit ?? null, completedWithoutCrash, expectedMet, ...run });
+  }
+}
+const rawReport = { schema: 1, checkedAt: new Date().toISOString(), commit: process.env.QUALIFIED_COMMIT, input,
+  scope: 'Exact file bytes against the downloaded npm and Python CLIs, with an expected key. Numeric spelling, invalid UTF-8 and BOM rows characterize compatibility; acceptance agreement is not presumed. No Go or browser parity claim.',
+  results: rawResults, passed: rawResults.every(row => row.completedWithoutCrash && row.expectedMet !== false) };
+fs.writeFileSync('/evidence/raw-byte-report.json', JSON.stringify(rawReport, null, 2) + '\n');
+console.log('AGA_RAW_BYTE_REPORT=' + Buffer.from(JSON.stringify(rawReport)).toString('base64'));
+if (!rawReport.passed) { console.error('Raw-byte characterization found a crash or failed known control'); process.exitCode = 1; }
 if(!report.passed){console.error('Published verifier qualification failed');process.exitCode=1;}
