@@ -36,7 +36,7 @@ jobs:
       - name: Dependency CVE audit — prod deps only (gate on high+)
         # Fails the build on a high/critical CVE in a PRODUCTION dependency. Dev-only deps are
         # excluded (--omit=dev): they never ship in the published tarball. The audit is
-        # lockfile-deterministic, so run it once (node 20 leg) rather than redundantly per matrix entry.
+        # lockfile-deterministic, so run it once (Node 22 leg) rather than redundantly per matrix entry.
         if: matrix.node-version == 22
         run: npm audit --omit=dev --audit-level=high
       - name: OSV-Scanner lockfile CVE scan (non-blocking)
