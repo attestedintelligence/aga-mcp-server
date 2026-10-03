@@ -1,5 +1,7 @@
 # Cross-stack SEP conformance vectors
 
+**Scope clarification, October 3, 2026:** the agreement below is specific to this corpus and its harness. It does not establish universal raw-file parser agreement or agreement across every published package. The [published npm/Python byte compatibility matrix](../../docs/qualification/published-verifier-bytes-20261003.md) records current duplicate-member, numeric-spelling and UTF-8 behavior, including disagreements. The contract below describes intended conformance; the dated status describes measured corpus results.
+
 `vectors.json` is the **portable contract** every conformant SEP verifier must satisfy *identically* —
 the TypeScript engine (`src/sep`), the reference verifier (`aga-receipt-spec/verify/verify-sep.mjs`), the
 published `aga-verify` (`independent-verifier/`), the Go verifier (`verify.go`), and the Python verifier in

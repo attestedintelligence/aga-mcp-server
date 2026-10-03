@@ -1,0 +1,242 @@
+{
+  "schema": 1,
+  "checkedAt": "2026-10-03T14:29:33.886Z",
+  "commit": "02491c051bec49bf4c3f5256238acb710a740455",
+  "input": {
+    "npm": {
+      "name": "@attested-intelligence/aga-verify",
+      "version": "2.2.3",
+      "sha256": "f7174a66426f236e483383798db27d87dbb582e5d6b49d6e65c6d46f6973e642",
+      "integrity": "sha512-5JEEerAmORNj2CA+MOG3+/FZln03ODi01JOZcCjhLcLg6cZYp2Wv6ajeis/f03JZnydHPVB0bJVFecl7pY5wDw=="
+    },
+    "python": {
+      "name": "aga-governance",
+      "version": "0.3.2",
+      "filename": "aga_governance-0.3.2-py3-none-any.whl",
+      "sha256": "5241cea2c4be99b66ab39014ca16dd34495c7f8a48ad9d8db6a37889d688d78e"
+    },
+    "sample": {
+      "sha256": "967d0a4767d583af2aebfcc34c0f2193ed96aa327fcf79a0be37b049204feca7"
+    }
+  },
+  "scope": "Exact file bytes against the downloaded npm and Python CLIs, with an expected key. Numeric spelling, invalid UTF-8 and BOM rows characterize compatibility; acceptance agreement is not presumed. No Go or browser parity claim.",
+  "results": [
+    {
+      "case": "original-file-bytes",
+      "engine": "npm",
+      "bytes": 4962,
+      "sha256": "967d0a4767d583af2aebfcc34c0f2193ed96aa327fcf79a0be37b049204feca7",
+      "expectedExit": 0,
+      "completedWithoutCrash": true,
+      "expectedMet": true,
+      "code": 0,
+      "signal": null,
+      "output": "\nAGA Offline Verifier v2.2.3\n\n  PASS  structural\n  PASS  receipt_signatures\n  PASS  chain_and_ordering\n  PASS  merkle_and_bijection\n  PASS  signed_checkpoint\n  PASS  envelope_consistency\n  PASS  gateway_key_match\n\nOVERALL: VERIFIED (provenance verified)\n"
+    },
+    {
+      "case": "original-file-bytes",
+      "engine": "python",
+      "bytes": 4962,
+      "sha256": "967d0a4767d583af2aebfcc34c0f2193ed96aa327fcf79a0be37b049204feca7",
+      "expectedExit": 0,
+      "completedWithoutCrash": true,
+      "expectedMet": true,
+      "code": 0,
+      "signal": null,
+      "output": "Bundle: /tmp/raw-original-file-bytes.json\nAlgorithm: Ed25519-SHA256-JCS\nReceipts checked: 3\n  Algorithm valid:     True\n  Signatures valid:    True\n  Chain integrity:     True\n  Merkle proofs:       True\n  Bundle consistent:   True\n  Checkpoint valid:    True\n  Envelope consistent: True\n  Gateway key match:   True\n\nVerification: PASSED (provenance verified)\n"
+    },
+    {
+      "case": "duplicate-decision-original-last",
+      "engine": "npm",
+      "bytes": 4982,
+      "sha256": "a645d0577dd33808eb9b67ec12c27d62c09b158698142ebdccc89b25a3ed1b57",
+      "expectedExit": 0,
+      "completedWithoutCrash": true,
+      "expectedMet": true,
+      "code": 0,
+      "signal": null,
+      "output": "\nAGA Offline Verifier v2.2.3\n\n  PASS  structural\n  PASS  receipt_signatures\n  PASS  chain_and_ordering\n  PASS  merkle_and_bijection\n  PASS  signed_checkpoint\n  PASS  envelope_consistency\n  PASS  gateway_key_match\n\nOVERALL: VERIFIED (provenance verified)\n"
+    },
+    {
+      "case": "duplicate-decision-original-last",
+      "engine": "python",
+      "bytes": 4982,
+      "sha256": "a645d0577dd33808eb9b67ec12c27d62c09b158698142ebdccc89b25a3ed1b57",
+      "expectedExit": 0,
+      "completedWithoutCrash": true,
+      "expectedMet": true,
+      "code": 0,
+      "signal": null,
+      "output": "Bundle: /tmp/raw-duplicate-decision-original-last.json\nAlgorithm: Ed25519-SHA256-JCS\nReceipts checked: 3\n  Algorithm valid:     True\n  Signatures valid:    True\n  Chain integrity:     True\n  Merkle proofs:       True\n  Bundle consistent:   True\n  Checkpoint valid:    True\n  Envelope consistent: True\n  Gateway key match:   True\n\nVerification: PASSED (provenance verified)\n"
+    },
+    {
+      "case": "duplicate-decision-changed-last",
+      "engine": "npm",
+      "bytes": 4982,
+      "sha256": "50bbf0aef11d007648fa9acf92d101f497fc39bab8e0d1f45e33d5b425054d2e",
+      "expectedExit": 1,
+      "completedWithoutCrash": true,
+      "expectedMet": true,
+      "code": 1,
+      "signal": null,
+      "output": "\nAGA Offline Verifier v2.2.3\n\n  PASS  structural\n  FAIL  receipt_signatures\n  FAIL  chain_and_ordering\n  FAIL  merkle_and_bijection\n  PASS  signed_checkpoint\n  PASS  envelope_consistency\n  PASS  gateway_key_match\n\nOVERALL: FAILED\n\nErrors:\n  - one or more receipt signatures invalid\n  - chain linkage, non-canonical timestamp, or ordering broken\n  - Merkle proof, per-proof root, leaf recompute, or index bijection failed\n"
+    },
+    {
+      "case": "duplicate-decision-changed-last",
+      "engine": "python",
+      "bytes": 4982,
+      "sha256": "50bbf0aef11d007648fa9acf92d101f497fc39bab8e0d1f45e33d5b425054d2e",
+      "expectedExit": 1,
+      "completedWithoutCrash": true,
+      "expectedMet": true,
+      "code": 1,
+      "signal": null,
+      "output": "Bundle: /tmp/raw-duplicate-decision-changed-last.json\nAlgorithm: Ed25519-SHA256-JCS\nReceipts checked: 3\n  Algorithm valid:     True\n  Signatures valid:    False\n  Chain integrity:     False\n  Merkle proofs:       True\n  Bundle consistent:   False\n  Checkpoint valid:    True\n  Envelope consistent: True\n  Gateway key match:   True\n\nVerification: FAILED\n"
+    },
+    {
+      "case": "leaf-index-decimal-spelling",
+      "engine": "npm",
+      "bytes": 4964,
+      "sha256": "8c87c1805c4c1126a7f88b11a7f40a4430d10ad67cb6b0ca1dc07e5ff5ec1b4b",
+      "expectedExit": null,
+      "completedWithoutCrash": true,
+      "expectedMet": null,
+      "code": 0,
+      "signal": null,
+      "output": "\nAGA Offline Verifier v2.2.3\n\n  PASS  structural\n  PASS  receipt_signatures\n  PASS  chain_and_ordering\n  PASS  merkle_and_bijection\n  PASS  signed_checkpoint\n  PASS  envelope_consistency\n  PASS  gateway_key_match\n\nOVERALL: VERIFIED (provenance verified)\n"
+    },
+    {
+      "case": "leaf-index-decimal-spelling",
+      "engine": "python",
+      "bytes": 4964,
+      "sha256": "8c87c1805c4c1126a7f88b11a7f40a4430d10ad67cb6b0ca1dc07e5ff5ec1b4b",
+      "expectedExit": null,
+      "completedWithoutCrash": true,
+      "expectedMet": null,
+      "code": 1,
+      "signal": null,
+      "output": "Bundle: /tmp/raw-leaf-index-decimal-spelling.json\nAlgorithm: Ed25519-SHA256-JCS\nReceipts checked: 3\n  Algorithm valid:     True\n  Signatures valid:    True\n  Chain integrity:     True\n  Merkle proofs:       True\n  Bundle consistent:   False\n  Checkpoint valid:    True\n  Envelope consistent: True\n  Gateway key match:   True\n\nVerification: FAILED\n"
+    },
+    {
+      "case": "leaf-index-exponent-spelling",
+      "engine": "npm",
+      "bytes": 4964,
+      "sha256": "48c24fc7d303a97a9fbeff15e779224114e2d49dceab66313797f0000b2cfb64",
+      "expectedExit": null,
+      "completedWithoutCrash": true,
+      "expectedMet": null,
+      "code": 0,
+      "signal": null,
+      "output": "\nAGA Offline Verifier v2.2.3\n\n  PASS  structural\n  PASS  receipt_signatures\n  PASS  chain_and_ordering\n  PASS  merkle_and_bijection\n  PASS  signed_checkpoint\n  PASS  envelope_consistency\n  PASS  gateway_key_match\n\nOVERALL: VERIFIED (provenance verified)\n"
+    },
+    {
+      "case": "leaf-index-exponent-spelling",
+      "engine": "python",
+      "bytes": 4964,
+      "sha256": "48c24fc7d303a97a9fbeff15e779224114e2d49dceab66313797f0000b2cfb64",
+      "expectedExit": null,
+      "completedWithoutCrash": true,
+      "expectedMet": null,
+      "code": 1,
+      "signal": null,
+      "output": "Bundle: /tmp/raw-leaf-index-exponent-spelling.json\nAlgorithm: Ed25519-SHA256-JCS\nReceipts checked: 3\n  Algorithm valid:     True\n  Signatures valid:    True\n  Chain integrity:     True\n  Merkle proofs:       True\n  Bundle consistent:   False\n  Checkpoint valid:    True\n  Envelope consistent: True\n  Gateway key match:   True\n\nVerification: FAILED\n"
+    },
+    {
+      "case": "unsigned-unicode-field",
+      "engine": "npm",
+      "bytes": 5008,
+      "sha256": "92405ba5b87917b835568470ec110ed1786b23fa31a8ded8d39836fd04093804",
+      "expectedExit": 0,
+      "completedWithoutCrash": true,
+      "expectedMet": true,
+      "code": 0,
+      "signal": null,
+      "output": "\nAGA Offline Verifier v2.2.3\n\n  PASS  structural\n  PASS  receipt_signatures\n  PASS  chain_and_ordering\n  PASS  merkle_and_bijection\n  PASS  signed_checkpoint\n  PASS  envelope_consistency\n  PASS  gateway_key_match\n\nOVERALL: VERIFIED (provenance verified)\n"
+    },
+    {
+      "case": "unsigned-unicode-field",
+      "engine": "python",
+      "bytes": 5008,
+      "sha256": "92405ba5b87917b835568470ec110ed1786b23fa31a8ded8d39836fd04093804",
+      "expectedExit": 0,
+      "completedWithoutCrash": true,
+      "expectedMet": true,
+      "code": 0,
+      "signal": null,
+      "output": "Bundle: /tmp/raw-unsigned-unicode-field.json\nAlgorithm: Ed25519-SHA256-JCS\nReceipts checked: 3\n  Algorithm valid:     True\n  Signatures valid:    True\n  Chain integrity:     True\n  Merkle proofs:       True\n  Bundle consistent:   True\n  Checkpoint valid:    True\n  Envelope consistent: True\n  Gateway key match:   True\n\nVerification: PASSED (provenance verified)\n"
+    },
+    {
+      "case": "invalid-utf8-unsigned-field",
+      "engine": "npm",
+      "bytes": 4987,
+      "sha256": "cb29e052791b4fa648982682023da1e2424d48aaa1b65bc942611e7052d4e933",
+      "expectedExit": null,
+      "completedWithoutCrash": true,
+      "expectedMet": null,
+      "code": 0,
+      "signal": null,
+      "output": "\nAGA Offline Verifier v2.2.3\n\n  PASS  structural\n  PASS  receipt_signatures\n  PASS  chain_and_ordering\n  PASS  merkle_and_bijection\n  PASS  signed_checkpoint\n  PASS  envelope_consistency\n  PASS  gateway_key_match\n\nOVERALL: VERIFIED (provenance verified)\n"
+    },
+    {
+      "case": "invalid-utf8-unsigned-field",
+      "engine": "python",
+      "bytes": 4987,
+      "sha256": "cb29e052791b4fa648982682023da1e2424d48aaa1b65bc942611e7052d4e933",
+      "expectedExit": null,
+      "completedWithoutCrash": true,
+      "expectedMet": null,
+      "code": 1,
+      "signal": null,
+      "output": "Bundle: /tmp/raw-invalid-utf8-unsigned-field.json\nAlgorithm: \nReceipts checked: 0\n  Algorithm valid:     False\n  Signatures valid:    False\n  Chain integrity:     False\n  Merkle proofs:       False\n  Bundle consistent:   False\n  Checkpoint valid:    False\n  Envelope consistent: False\n  Gateway key match:   None\n\nVerification: FAILED\nError: bundle rejected before verification: 'utf-8' codec can't decode byte 0xff in position 23: invalid start byte\n"
+    },
+    {
+      "case": "utf8-byte-order-mark",
+      "engine": "npm",
+      "bytes": 4965,
+      "sha256": "111e71bc472835f182ee8de02a435ab073676c806ddfe2661a4afb7fb872f719",
+      "expectedExit": null,
+      "completedWithoutCrash": true,
+      "expectedMet": null,
+      "code": 1,
+      "signal": null,
+      "output": "\nAGA Offline Verifier v2.2.3\n\n\nOVERALL: FAILED\n\nErrors:\n  - failed to parse bundle JSON\n"
+    },
+    {
+      "case": "utf8-byte-order-mark",
+      "engine": "python",
+      "bytes": 4965,
+      "sha256": "111e71bc472835f182ee8de02a435ab073676c806ddfe2661a4afb7fb872f719",
+      "expectedExit": null,
+      "completedWithoutCrash": true,
+      "expectedMet": null,
+      "code": 1,
+      "signal": null,
+      "output": "Bundle: /tmp/raw-utf8-byte-order-mark.json\nAlgorithm: \nReceipts checked: 0\n  Algorithm valid:     False\n  Signatures valid:    False\n  Chain integrity:     False\n  Merkle proofs:       False\n  Bundle consistent:   False\n  Checkpoint valid:    False\n  Envelope consistent: False\n  Gateway key match:   None\n\nVerification: FAILED\nError: bundle rejected before verification: Unexpected UTF-8 BOM (decode using utf-8-sig): line 1 column 1 (char 0)\n"
+    },
+    {
+      "case": "changed-signed-decision-bytes",
+      "engine": "npm",
+      "bytes": 4958,
+      "sha256": "f2d508106f6e4e8e62215505fd58d316d2884557a284d5ad809db4dd7133acd6",
+      "expectedExit": 1,
+      "completedWithoutCrash": true,
+      "expectedMet": true,
+      "code": 1,
+      "signal": null,
+      "output": "\nAGA Offline Verifier v2.2.3\n\n  PASS  structural\n  FAIL  receipt_signatures\n  FAIL  chain_and_ordering\n  FAIL  merkle_and_bijection\n  PASS  signed_checkpoint\n  PASS  envelope_consistency\n  PASS  gateway_key_match\n\nOVERALL: FAILED\n\nErrors:\n  - one or more receipt signatures invalid\n  - chain linkage, non-canonical timestamp, or ordering broken\n  - Merkle proof, per-proof root, leaf recompute, or index bijection failed\n"
+    },
+    {
+      "case": "changed-signed-decision-bytes",
+      "engine": "python",
+      "bytes": 4958,
+      "sha256": "f2d508106f6e4e8e62215505fd58d316d2884557a284d5ad809db4dd7133acd6",
+      "expectedExit": 1,
+      "completedWithoutCrash": true,
+      "expectedMet": true,
+      "code": 1,
+      "signal": null,
+      "output": "Bundle: /tmp/raw-changed-signed-decision-bytes.json\nAlgorithm: Ed25519-SHA256-JCS\nReceipts checked: 3\n  Algorithm valid:     True\n  Signatures valid:    False\n  Chain integrity:     False\n  Merkle proofs:       True\n  Bundle consistent:   False\n  Checkpoint valid:    True\n  Envelope consistent: True\n  Gateway key match:   True\n\nVerification: FAILED\n"
+    }
+  ],
+  "passed": true
+}
