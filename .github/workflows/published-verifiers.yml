@@ -1,0 +1,44 @@
+name: Published verifier qualification
+on:
+  push:
+    branches: ['main', 'rc/oct3-published-monitor']
+  workflow_dispatch:
+  schedule:
+    - cron: '40 12 * * *'
+permissions:
+  contents: read
+jobs:
+  qualification:
+    name: published verifier qualification
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Prepare bounded registry archives without executing verifiers
+        run: node scripts/prepare-published-verifiers.mjs "$RUNNER_TEMP/published-subject"
+      - name: Prepare disposable image
+        run: docker build --tag aga-published-verifiers "$RUNNER_TEMP/published-subject"
+      - name: Qualify published bytes offline without credentials
+        env:
+          QUALIFIED_COMMIT: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/published-evidence"
+          chmod 777 "$RUNNER_TEMP/published-evidence"
+          timeout --signal=TERM --kill-after=10s 300s docker run --name aga-published-qualification --init --network none --read-only --cap-drop ALL --security-opt no-new-privileges --pids-limit 128 --memory 768m --cpus 2 --user node --tmpfs /tmp:rw,nosuid,nodev,size=64m -e AGA_DISPOSABLE_CHECK=1 -e QUALIFIED_COMMIT -v "$RUNNER_TEMP/published-evidence:/evidence:rw" aga-published-verifiers
+      - name: Retain container boundary evidence
+        if: always()
+        run: |
+          mkdir -p "$RUNNER_TEMP/published-evidence"
+          docker inspect aga-published-qualification > "$RUNNER_TEMP/published-evidence/container.json" || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: published-verifier-evidence-${{ github.run_id }}
+          path: ${{ runner.temp }}/published-evidence
+          retention-days: 30
