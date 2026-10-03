@@ -33,7 +33,7 @@ describe('cross-stack small-order rejection (engine == reference == aga-verify)'
   });
 
   for (const key of SMALL_ORDER) {
-    it(`a bundle keyed to small-order ${key.slice(0, 8)}… is FAILED on all three stacks`, () => {
+    it(`a bundle keyed to small-order ${key} is FAILED on all three stacks`, () => {
       const { bundle } = realBundle();
       const b = JSON.parse(JSON.stringify(bundle));
       b.public_key = key;
