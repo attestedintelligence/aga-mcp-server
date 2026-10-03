@@ -1,319 +1,193 @@
 name: release
-# Provenance publish workflow for @attested-intelligence/aga-mcp-server (PUBLIC repo).
-#
-# Manual only (workflow_dispatch). Builds from the checked-out ref, runs the FULL gate
-# (`npm run check`) AND the 6-verifier cross-stack conformance harness as REQUIRED pre-publish
-# gates, then publishes with npm provenance under a dist-tag (default `rc`, `latest` only for a
-# vetted final). This repo is PUBLIC, so npm provenance is supported and is REQUIRED for `latest`.
-#
-# Auth: npm OIDC TRUSTED PUBLISHING (no stored token). Configure the package's trusted publisher on
-# npmjs.com to this repo (attestedintelligence/aga-mcp-server) + this workflow (release.yml); the job
-# requests `id-token: write`. The reference verifier is vendored in-repo (aga-receipt-spec/verify),
-# so there is no submodule/token to manage.
-#
-# Action `uses:` SHAs verified against upstream release tags 2026-06-07.
-
+# Build/test has no OIDC permission. The publisher consumes only exact checked archives.
 on:
   workflow_dispatch:
     inputs:
       dist_tag:
-        description: 'npm dist-tag (rc for the soak; latest only for a vetted release)'
-        type: string
-        default: 'rc'
+        description: 'Registry tag for an approved release'
+        type: choice
+        options: [rc, latest]
+        default: rc
       provenance:
-        description: 'Publish with npm provenance (REQUIRED for latest)'
+        description: 'Required for every publication'
         type: boolean
         default: true
       dry_run:
-        description: 'Dry run: build + full gate + cross-stack + pack guard, but DO NOT publish'
+        description: 'Qualify archives without registry writes'
         type: boolean
         default: true
       promote_only:
-        description: 'CANNOT RUN IN CI — the job prints the exact local command and exits 1. OIDC trusted publishing scopes its credential to npm publish, and a dist-tag move is not a publish (E401). Move an rc to latest from a machine with npm login.'
+        description: 'Unsupported by OIDC publication; reject rather than republish'
         type: boolean
         default: false
       publish_server:
-        description: 'Publish @attested-intelligence/aga-mcp-server'
         type: boolean
         default: true
+        description: 'Qualify/publish the runtime archive'
       publish_verifier:
-        description: 'Also publish @attested-intelligence/aga-verify from independent-verifier/ (needs its own npm trusted-publisher config pointing at this repo + release.yml)'
         type: boolean
         default: false
-
+        description: 'Qualify/publish the standalone verifier archive'
 permissions:
   contents: read
-  actions: read
-  id-token: write   # npm OIDC trusted publishing + provenance attestation
-
+concurrency:
+  group: npm-release
+  cancel-in-progress: false
 jobs:
-  release:
+  qualify:
     runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      contents: read
+      actions: read
+    outputs:
+      server_hash: ${{ steps.server.outputs.sha256 }}
+      server_version: ${{ steps.server.outputs.version }}
+      verifier_hash: ${{ steps.archives.outputs.verifier_hash }}
+      verifier_version: ${{ steps.archives.outputs.verifier_version }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Validate release intent
+        env:
+          TAG: ${{ inputs.dist_tag }}
+          PROMOTE: ${{ inputs.promote_only }}
+          PROVENANCE: ${{ inputs.provenance }}
+          SERVER: ${{ inputs.publish_server }}
+          VERIFIER: ${{ inputs.publish_verifier }}
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REPOSITORY" = attestedintelligence/aga-mcp-server
+          case "$GITHUB_REF" in refs/heads/main|refs/heads/rc/*) ;; *) echo 'Release requires main or a reviewed rc branch'; exit 1;; esac
+          case "$TAG" in rc|latest) ;; *) exit 1;; esac
+          test "$PROMOTE" = false || { echo 'A tag move is not publication. Use an authenticated registry tag operation.'; exit 1; }
+          test "$PROVENANCE" = true
+          test "$SERVER" = true || test "$VERIFIER" = true
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           persist-credentials: false
-      - name: Setup Node
-        uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af # v4.1.0
+      - uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af
         with:
-          node-version: '20'
-          registry-url: 'https://registry.npmjs.org'
-      - name: Upgrade npm for OIDC trusted publishing
-        # node 20 ships npm 10, which cannot authenticate the registry publish via OIDC trusted
-        # publishing (needs npm >= 11.5.1). npm 12 dropped node 20 (EBADENGINE), so pin the
-        # npm 11 line — OIDC-capable and compatible with the node pin above.
-        run: npm install -g npm@11
-      - name: Setup Go (cross-stack harness)
-        uses: actions/setup-go@3041bf56c941b39c61721a86cd11f3bb1338122a # v5.2.0
+          node-version: '24'
+      - uses: actions/setup-go@3041bf56c941b39c61721a86cd11f3bb1338122a
         with:
-          # >= the v2 oracle module's go directive (aga-receipt-spec/verify/v2/go.mod) so CIRCL builds;
-          # the zero-dep v1 verify.go builds on any toolchain.
           go-version: '1.26'
-      - name: Setup Python (cross-stack harness)
-        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
         with:
           python-version: '3.12'
-      - name: Install deps
-        run: npm ci
-      - name: Required gate — dependency CVE audit (prod deps only, high+)
-        # BLOCKS the release before publish on a high/critical CVE in a PRODUCTION dependency.
-        # Dev-only deps are excluded (--omit=dev): they are never present in the published tarball.
-        run: npm audit --omit=dev --audit-level=high
-      - name: Install audited Ed25519 for the default Python verifier
-        run: python -m pip install --upgrade cryptography
-      - name: Required gate — build + lint + tests + SEP conformance + pack guard
-        run: npm run check
-      - name: Build the published verifier (aga-verify) for the cross-stack harness
+      - run: npm ci
+      - run: npm audit --omit=dev --audit-level=high
+      - run: python -m pip install --upgrade cryptography
+      - run: npm run check
+      - run: node --test scripts/runtime-release-evidence.test.mjs
+      - name: Build and test the independent verifier
         working-directory: independent-verifier
         run: |
           npm ci
           node build.mjs
-      - name: Required gate — cross-stack conformance (all 6 verifiers agree)
-        run: npm run conformance:cross-stack
-      - name: Required gate — v2 cross-stack conformance (noble/JS ≡ CIRCL/Go on the pinned v2 corpus)
-        # Locks the v2 (ML-DSA-65+Ed25519 composite) profile: two independent-language oracles must agree
-        # on every pinned v2 corpus case, and the v1-only verifiers must emit UNSUPPORTED_PROFILE on v2.
-        # The Go oracle (aga-receipt-spec/verify/v2) fetches CIRCL via the default proxy and verifies it
-        # against the committed go.sum. A gapped/divergent v2 verifier cannot be published.
-        run: npm run conformance:cross-stack-v2
-      - name: Documentation release byte-identity gate
-        if: ${{ inputs.publish_server }}
+          npm test
+      - run: npm run conformance:cross-stack
+      - run: npm run conformance:cross-stack-v2
+      - name: Preserve historical documentation-release gate
+        if: inputs.publish_server
         run: node scripts/check-docs-release.mjs
-      - name: Bind 3.6.5 publication to exact isolated qualification and package bytes
-        id: qualified
-        if: ${{ inputs.publish_server }}
+      - name: Bind every runtime version to isolated exact-archive qualification
+        id: server
+        if: inputs.publish_server
         env:
           GH_TOKEN: ${{ github.token }}
-        run: |
-          if [ "$(node -p "require('./package.json').version")" = "3.6.5" ]; then
-            node scripts/check-runtime-release.mjs
-          fi
-      - name: Publish aga-mcp-server (or dry run)
-        if: ${{ inputs.publish_server }}
+        run: node scripts/check-runtime-release.mjs
+      - name: Stage only qualified archives
+        id: archives
         env:
-          DIST_TAG: ${{ inputs.dist_tag }}
-          PROVENANCE: ${{ inputs.provenance }}
-          DRY_RUN: ${{ inputs.dry_run }}
-          PROMOTE_ONLY: ${{ inputs.promote_only }}
-          QUALIFIED_TARBALL: ${{ steps.qualified.outputs.qualified_tarball }}
+          SERVER: ${{ inputs.publish_server }}
+          VERIFIER: ${{ inputs.publish_verifier }}
+          QUALIFIED_TARBALL: ${{ steps.server.outputs.qualified_tarball }}
         run: |
           set -euo pipefail
-          VERSION=$(node -p "require('./package.json').version")
-          # PROMOTE path. npm refuses to publish a version that already exists
-          # (EPUBLISHCONFLICT), so the rc -> latest move is a TAG operation, not a publish. This
-          # existed as a real gap: the 3.5.0 latest run failed here because the rc run had already
-          # published that exact version. Provenance is unaffected — the attestation is bound to the
-          # published tarball, and moving a dist-tag only repoints a pointer at it.
-          # PROMOTION CANNOT RUN HERE, and pretending it could cost a release.
-          # This job authenticates with npm OIDC trusted publishing, which mints a
-          # short-lived credential scoped to 'npm publish'. A dist-tag move is a
-          # different registry write, so npm falls back to the .npmrc that setup-node
-          # wrote -- the empty placeholder that exists because this repo deliberately
-          # stores no NPM_TOKEN -- and the registry answers E401. Proven on run
-          # 35556989791 (2026-09-21) and on every promote attempt before it.
-          # So: print the exact command that does work, and fail honestly.
-          if [ "$PROMOTE_ONLY" = "true" ]; then
-            echo "promote_only: moving a dist-tag is not a publish, and this job cannot authenticate it."
-            echo ""
-            echo "Run this from a machine that has done 'npm login':"
-            echo ""
-            echo "  npm dist-tag add @attested-intelligence/aga-mcp-server@$VERSION $DIST_TAG"
-            echo ""
-            echo "Provenance is unaffected. The attestation is bound to the published tarball;"
-            echo "a dist-tag only repoints a pointer at it."
-            if [ "$DRY_RUN" = "true" ]; then
-              echo "DRY RUN -- reporting only, no failure."
-              exit 0
-            fi
-            echo "::error::promote_only cannot run in CI under OIDC (E401). Run the 'npm dist-tag add' line printed above, locally."
-            exit 1
+          mkdir -p "$RUNNER_TEMP/publish"
+          if [ "$SERVER" = true ]; then
+            test -f "$QUALIFIED_TARBALL"
+            cp "$QUALIFIED_TARBALL" "$RUNNER_TEMP/publish/server.tgz"
           fi
-          if [ "$DIST_TAG" = "latest" ] && [ "$PROVENANCE" != "true" ]; then
-            echo "::error::provenance is REQUIRED for a latest publish (this repo is public)"; exit 1
+          if [ "$VERIFIER" = true ]; then
+            cd independent-verifier
+            archive=$(npm pack --ignore-scripts --silent)
+            mkdir "$RUNNER_TEMP/verifier-consumer"
+            tar -xzf "$archive" -C "$RUNNER_TEMP/verifier-consumer"
+            version=$(node -p "require('./package.json').version")
+            key=$(node -p "require('./example-bundle.json').public_key")
+            node "$RUNNER_TEMP/verifier-consumer/package/dist/aga-verify.mjs" "$RUNNER_TEMP/verifier-consumer/package/example-bundle.json" --pubkey "$key"
+            cp "$archive" "$RUNNER_TEMP/publish/verifier.tgz"
+            printf 'verifier_hash=%s\n' "$(sha256sum "$archive" | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+            printf 'verifier_version=%s\n' "$version" >> "$GITHUB_OUTPUT"
           fi
-          PROV_FLAG=""
-          [ "$PROVENANCE" = "true" ] && PROV_FLAG="--provenance"
-          if [ "$DRY_RUN" = "true" ]; then
-            echo "DRY RUN — would publish: npm publish --access public --tag $DIST_TAG $PROV_FLAG"
-            npm pack --dry-run
-          else
-            if [ "$VERSION" = "3.6.5" ]; then
-              test -n "$QUALIFIED_TARBALL"
-              npm publish "$QUALIFIED_TARBALL" --ignore-scripts --access public --tag "$DIST_TAG" $PROV_FLAG
-            else
-              npm publish --access public --tag "$DIST_TAG" $PROV_FLAG
-            fi
-          fi
-      - name: Post-publish gate — npm attestation MUST be present (aga-mcp-server)
-        # A provenance-less publish must fail this workflow loudly. 3.3.0 shipped without
-        # dist.attestations; this gate makes that class of regression impossible to miss.
-        if: ${{ inputs.publish_server && !inputs.dry_run }}
-        run: |
-          set -euo pipefail
-          VERSION=$(node -p "require('./package.json').version")
-          PKG="@attested-intelligence/aga-mcp-server"
-          ENC=$(printf '%s' "$PKG" | sed 's|/|%2F|')
-          DOC=$(mktemp)
-          # SIX MINUTES, not sixty seconds, and read the REGISTRY rather than `npm view`.
-          #
-          # Budget: npm publishes asynchronously. The CLI answers "your package is being
-          # processed and may take a few minutes to become available" and the version is
-          # unreadable until that finishes. On the 3.6.0 release the publish returned at
-          # 03:12:01 and the version became readable at 03:14:23 -- 64 seconds after a
-          # 6x10s budget had already given up. The job went red on a publish that had
-          # completely succeeded, provenance and all. That is the worst thing a gate can
-          # do: it teaches the operator to re-run, and a second publish of the same
-          # version is EPUBLISHCONFLICT.
-          #
-          # Source: `npm view` answers from npm's local metadata cache, so it can report a
-          # 404 for a version that is already live. The version document on the registry
-          # has no cache in front of it and is a clean 200-or-404, which is exactly the
-          # question being asked.
-          #
-          # Three outcomes, three messages. "Published without provenance" is NOT a
-          # waiting problem -- attestations are attached at publish time, so if the
-          # document exists and lacks them, retrying cannot help and the gate says so
-          # immediately instead of burning six minutes.
-          for i in $(seq 1 36); do
-            if curl -fsSL "https://registry.npmjs.org/$ENC/$VERSION" -o "$DOC" 2>/dev/null; then
-              if node -e "const j=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'));process.exit(j.dist&&j.dist.attestations?0:1)" "$DOC"; then
-                PUBLISHED=$(curl -fsSL "https://registry.npmjs.org/$ENC" 2>/dev/null \
-                  | node -pe "try{JSON.parse(require('fs').readFileSync(0,'utf8')).time['$VERSION']||'unknown'}catch(e){'unknown'}" 2>/dev/null || echo unknown)
-                ATT=$(node -pe "JSON.parse(require('fs').readFileSync(process.argv[1],'utf8')).dist.attestations.url" "$DOC" 2>/dev/null || echo unknown)
-                echo "OK: $PKG@$VERSION carries dist.attestations"
-                echo "    readable after ~$((i * 10))s; registry publish time $PUBLISHED"
-                echo "    attestations: $ATT"
-                exit 0
-              fi
-              echo "::error::$PKG@$VERSION IS PUBLISHED but carries no dist.attestations. The tarball went out without provenance, and provenance cannot be added after the fact. Do NOT move a dist-tag onto it: publish a patch version with --provenance instead."
-              exit 1
-            fi
-            echo "attempt $i/36: $PKG@$VERSION not on the registry yet (npm publishes asynchronously); retrying in 10s"
-            sleep 10
-          done
-          echo "::error::$PKG@$VERSION never became readable within 6 minutes. BEFORE RE-RUNNING, READ THE REGISTRY: curl https://registry.npmjs.org/$ENC/$VERSION -- if it returns 200 the publish SUCCEEDED and re-running will fail with EPUBLISHCONFLICT, so move the dist-tag locally instead; if it 404s the publish genuinely failed and a re-run is correct."
-          exit 1
-      - name: Publish aga-verify (or dry run)
-        # Publishes the standalone verifier from independent-verifier/ with npm provenance via the
-        # SAME OIDC trusted-publishing flow. npm trusted publishing is configured PER PACKAGE on
-        # npmjs.com — @attested-intelligence/aga-verify must have a trusted publisher pointing at
-        # attestedintelligence/aga-mcp-server + release.yml, or this step fails with an auth error.
-        # Ordered AFTER the server publish + its attestation gate so a verifier-side auth failure
-        # can never block an already-gated server release.
-        if: ${{ inputs.publish_verifier }}
-        working-directory: independent-verifier
+          node --version > "$RUNNER_TEMP/publish/toolchain.txt"
+          npm --version >> "$RUNNER_TEMP/publish/toolchain.txt"
+          python -m pip freeze >> "$RUNNER_TEMP/publish/toolchain.txt"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: publication-${{ github.sha }}
+          path: ${{ runner.temp }}/publish
+          if-no-files-found: error
+          retention-days: 30
+  publish:
+    needs: qualify
+    if: ${{ !inputs.dry_run }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      actions: read
+      id-token: write
+    steps:
+      # No checkout, application code, build, tests or lifecycle scripts in this job.
+      - uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af
+        with:
+          node-version: '24'
+          registry-url: 'https://registry.npmjs.org'
+      - run: npm install -g npm@11 --ignore-scripts
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: publication-${{ github.sha }}
+          path: ${{ runner.temp }}/publish
+      - name: Publish checked bytes and verify direct registry readback
         env:
+          SERVER: ${{ inputs.publish_server }}
+          VERIFIER: ${{ inputs.publish_verifier }}
+          SERVER_HASH: ${{ needs.qualify.outputs.server_hash }}
+          SERVER_VERSION: ${{ needs.qualify.outputs.server_version }}
+          VERIFIER_HASH: ${{ needs.qualify.outputs.verifier_hash }}
+          VERIFIER_VERSION: ${{ needs.qualify.outputs.verifier_version }}
           DIST_TAG: ${{ inputs.dist_tag }}
-          PROVENANCE: ${{ inputs.provenance }}
-          DRY_RUN: ${{ inputs.dry_run }}
-          PROMOTE_ONLY: ${{ inputs.promote_only }}
+        shell: bash
         run: |
           set -euo pipefail
-          VERSION=$(node -p "require('./package.json').version")
-          # PROMOTE path — see the equivalent block in the server step for why a tag move is not a
-          # publish. Kept symmetrical deliberately: the two packages release together, so a promote
-          # that covered only one of them would leave `latest` split across versions.
-          # PROMOTION CANNOT RUN HERE, and pretending it could cost a release.
-          # This job authenticates with npm OIDC trusted publishing, which mints a
-          # short-lived credential scoped to 'npm publish'. A dist-tag move is a
-          # different registry write, so npm falls back to the .npmrc that setup-node
-          # wrote -- the empty placeholder that exists because this repo deliberately
-          # stores no NPM_TOKEN -- and the registry answers E401. Proven on run
-          # 35556989791 (2026-09-21) and on every promote attempt before it.
-          # So: print the exact command that does work, and fail honestly.
-          if [ "$PROMOTE_ONLY" = "true" ]; then
-            echo "promote_only: moving a dist-tag is not a publish, and this job cannot authenticate it."
-            echo ""
-            echo "Run this from a machine that has done 'npm login':"
-            echo ""
-            echo "  npm dist-tag add @attested-intelligence/aga-verify@$VERSION $DIST_TAG"
-            echo ""
-            echo "Provenance is unaffected. The attestation is bound to the published tarball;"
-            echo "a dist-tag only repoints a pointer at it."
-            if [ "$DRY_RUN" = "true" ]; then
-              echo "DRY RUN -- reporting only, no failure."
-              exit 0
-            fi
-            echo "::error::promote_only cannot run in CI under OIDC (E401). Run the 'npm dist-tag add' line printed above, locally."
-            exit 1
-          fi
-          if [ "$DIST_TAG" = "latest" ] && [ "$PROVENANCE" != "true" ]; then
-            echo "::error::provenance is REQUIRED for a latest publish (this repo is public)"; exit 1
-          fi
-          PROV_FLAG=""
-          [ "$PROVENANCE" = "true" ] && PROV_FLAG="--provenance"
-          if [ "$DRY_RUN" = "true" ]; then
-            echo "DRY RUN — would publish: npm publish --access public --tag $DIST_TAG $PROV_FLAG"
-            npm pack --dry-run
-          else
-            npm publish --access public --tag "$DIST_TAG" $PROV_FLAG
-          fi
-      - name: Post-publish gate — npm attestation MUST be present (aga-verify)
-        if: ${{ inputs.publish_verifier && !inputs.dry_run }}
-        working-directory: independent-verifier
-        run: |
-          set -euo pipefail
-          VERSION=$(node -p "require('./package.json').version")
-          PKG="@attested-intelligence/aga-verify"
-          ENC=$(printf '%s' "$PKG" | sed 's|/|%2F|')
-          DOC=$(mktemp)
-          # SIX MINUTES, not sixty seconds, and read the REGISTRY rather than `npm view`.
-          #
-          # Budget: npm publishes asynchronously. The CLI answers "your package is being
-          # processed and may take a few minutes to become available" and the version is
-          # unreadable until that finishes. On the 3.6.0 release the publish returned at
-          # 03:12:01 and the version became readable at 03:14:23 -- 64 seconds after a
-          # 6x10s budget had already given up. The job went red on a publish that had
-          # completely succeeded, provenance and all. That is the worst thing a gate can
-          # do: it teaches the operator to re-run, and a second publish of the same
-          # version is EPUBLISHCONFLICT.
-          #
-          # Source: `npm view` answers from npm's local metadata cache, so it can report a
-          # 404 for a version that is already live. The version document on the registry
-          # has no cache in front of it and is a clean 200-or-404, which is exactly the
-          # question being asked.
-          #
-          # Three outcomes, three messages. "Published without provenance" is NOT a
-          # waiting problem -- attestations are attached at publish time, so if the
-          # document exists and lacks them, retrying cannot help and the gate says so
-          # immediately instead of burning six minutes.
-          for i in $(seq 1 36); do
-            if curl -fsSL "https://registry.npmjs.org/$ENC/$VERSION" -o "$DOC" 2>/dev/null; then
-              if node -e "const j=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'));process.exit(j.dist&&j.dist.attestations?0:1)" "$DOC"; then
-                PUBLISHED=$(curl -fsSL "https://registry.npmjs.org/$ENC" 2>/dev/null \
-                  | node -pe "try{JSON.parse(require('fs').readFileSync(0,'utf8')).time['$VERSION']||'unknown'}catch(e){'unknown'}" 2>/dev/null || echo unknown)
-                ATT=$(node -pe "JSON.parse(require('fs').readFileSync(process.argv[1],'utf8')).dist.attestations.url" "$DOC" 2>/dev/null || echo unknown)
-                echo "OK: $PKG@$VERSION carries dist.attestations"
-                echo "    readable after ~$((i * 10))s; registry publish time $PUBLISHED"
-                echo "    attestations: $ATT"
-                exit 0
+          cd "$RUNNER_TEMP/publish"
+          case "$DIST_TAG" in rc|latest) ;; *) exit 1;; esac
+          publish_one() {
+            local file="$1" hash="$2" package="$3" version="$4"
+            [[ "$hash" =~ ^[a-f0-9]{64}$ ]]
+            [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]
+            test -f "$file" && test ! -L "$file"
+            printf '%s  %s\n' "$hash" "$file" | sha256sum --check --strict
+            # An existing immutable version is not overwritten or automatically republished.
+            local metadata="https://registry.npmjs.org/@attested-intelligence%2F${package}/${version}"
+            local before
+            before=$(curl -sS -o before.json -w '%{http_code}' --max-time 20 "$metadata")
+            test "$before" = 404 || { echo "Registry state $before: refusing duplicate or uncertain publication"; return 1; }
+            npm publish "$file" --ignore-scripts --access public --tag "$DIST_TAG" --provenance
+            for attempt in $(seq 1 36); do
+              if curl -fsS --max-time 20 "$metadata" -o registry.json; then
+                node -e 'const j=require("./registry.json");if(!j.dist?.attestations?.url)throw Error("Published without provenance");const u=new URL(j.dist.tarball);if(u.origin!=="https://registry.npmjs.org")throw Error("Unexpected archive host")'
+                url=$(node -p 'require("./registry.json").dist.tarball')
+                curl -fsS --max-time 30 "$url" -o registry.tgz
+                printf '%s  registry.tgz\n' "$hash" | sha256sum --check --strict
+                echo "Verified registry bytes and provenance metadata for $package@$version"
+                return 0
               fi
-              echo "::error::$PKG@$VERSION IS PUBLISHED but carries no dist.attestations. The tarball went out without provenance, and provenance cannot be added after the fact. Do NOT move a dist-tag onto it: publish a patch version with --provenance instead."
-              exit 1
-            fi
-            echo "attempt $i/36: $PKG@$VERSION not on the registry yet (npm publishes asynchronously); retrying in 10s"
-            sleep 10
-          done
-          echo "::error::$PKG@$VERSION never became readable within 6 minutes. BEFORE RE-RUNNING, READ THE REGISTRY: curl https://registry.npmjs.org/$ENC/$VERSION -- if it returns 200 the publish SUCCEEDED and re-running will fail with EPUBLISHCONFLICT, so move the dist-tag locally instead; if it 404s the publish genuinely failed and a re-run is correct."
-          exit 1
+              sleep 10
+            done
+            echo 'Registry readback unresolved. Inspect it before any retry; do not assume publication failed.'
+            return 1
+          }
+          if [ "$SERVER" = true ]; then publish_one server.tgz "$SERVER_HASH" aga-mcp-server "$SERVER_VERSION"; fi
+          if [ "$VERIFIER" = true ]; then publish_one verifier.tgz "$VERIFIER_HASH" aga-verify "$VERIFIER_VERSION"; fi

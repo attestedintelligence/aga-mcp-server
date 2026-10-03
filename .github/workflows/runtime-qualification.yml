@@ -1,7 +1,7 @@
 name: Isolated runtime qualification
 on:
   push:
-    branches: ['rc/sol61-runtime-hardening-20260930']
+    branches: ['main', 'rc/**']
   workflow_dispatch:
 permissions:
   contents: read
@@ -11,7 +11,7 @@ jobs:
     timeout-minutes: 20
     strategy:
       matrix:
-        node: ['20','22']
+        node: ['22','24']
       fail-fast: false
     steps:
       - uses: actions/checkout@v4
@@ -32,6 +32,16 @@ jobs:
           node node_modules/typescript/bin/tsc
           mkdir -p node_modules/.vite-temp
           chmod 777 "$RUNNER_TEMP/evidence"
+          node scripts/check-pack.mjs
+          npm pack --ignore-scripts --pack-destination "$RUNNER_TEMP/evidence"
+          cd "$RUNNER_TEMP/evidence"
+          sha256sum *.tgz > PACKAGE-SHA256.txt
+          mkdir -p "$RUNNER_TEMP/consumer"
+          cd "$RUNNER_TEMP/consumer"
+          npm init -y
+          npm install "$RUNNER_TEMP/evidence/"*.tgz --ignore-scripts --omit=optional --no-audit --no-fund
+          npm ls --all --json > "$RUNNER_TEMP/evidence/consumer-dependencies.json"
+          npm audit --omit=dev --audit-level=high
       - name: Run credential-free bounded container
         shell: bash
         run: |
@@ -40,7 +50,7 @@ jobs:
           image=$(docker image inspect node:${{ matrix.node }}-bookworm-slim --format '{{.Id}}')
           docker image inspect "$image" > "$RUNNER_TEMP/evidence/image.json"
           printf '%s\n' "$GITHUB_SHA" > "$RUNNER_TEMP/evidence/commit.txt"
-          timeout --signal=TERM --kill-after=15s 600s docker run --name runtime-qualification --init --network none --read-only --cap-drop ALL --security-opt no-new-privileges --pids-limit 128 --memory 1536m --cpus 2 --user node --tmpfs /tmp:rw,nosuid,nodev,size=384m --tmpfs /home/node:rw,nosuid,nodev,size=32m,uid=1000,gid=1000 --tmpfs /subject/node_modules/.vite-temp:rw,nosuid,nodev,size=16m,uid=1000,gid=1000 -e NODE_OPTIONS=--max-old-space-size=768 -e CI=true -v "$RUNNER_TEMP/subject:/subject:ro" -v "$RUNNER_TEMP/evidence:/evidence:rw" -w /subject "$image" bash scripts/runtime-qualification.sh 2>&1 | tee "$RUNNER_TEMP/evidence/qualification.log"
+          timeout --signal=TERM --kill-after=15s 600s docker run --name runtime-qualification --init --network none --read-only --cap-drop ALL --security-opt no-new-privileges --pids-limit 128 --memory 1536m --cpus 2 --user node --tmpfs /tmp:rw,nosuid,nodev,size=384m --tmpfs /home/node:rw,nosuid,nodev,size=32m,uid=1000,gid=1000 --tmpfs /subject/node_modules/.vite-temp:rw,nosuid,nodev,size=16m,uid=1000,gid=1000 -e NODE_OPTIONS=--max-old-space-size=768 -e CI=true -v "$RUNNER_TEMP/subject:/subject:ro" -v "$RUNNER_TEMP/consumer:/consumer:ro" -v "$RUNNER_TEMP/evidence:/evidence:rw" -w /subject "$image" bash scripts/runtime-qualification.sh 2>&1 | tee "$RUNNER_TEMP/evidence/qualification.log"
       - name: Record outcome
         if: always()
         shell: bash
@@ -49,16 +59,12 @@ jobs:
           docker rm -f runtime-qualification || true
           cd "$RUNNER_TEMP/evidence"
           sha256sum * > SHA256SUMS.txt
-      - name: Package qualified source and audit production dependencies
+      - name: Audit locked production dependencies
         shell: bash
         run: |
           set -euo pipefail
           cd "$RUNNER_TEMP/subject"
           npm audit --omit=dev --audit-level=high
-          node scripts/check-pack.mjs
-          npm pack --ignore-scripts --pack-destination "$RUNNER_TEMP/evidence"
-          cd "$RUNNER_TEMP/evidence"
-          sha256sum *.tgz > PACKAGE-SHA256.txt
       - uses: actions/upload-artifact@v4
         if: always()
         with:

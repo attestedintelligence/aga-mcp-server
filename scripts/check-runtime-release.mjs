@@ -3,19 +3,21 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import assert from 'node:assert/strict';
 import {execFileSync} from 'node:child_process';
+import {NODE_MATRIX, validateEvidence} from './runtime-release-evidence.mjs';
 const repo='attestedintelligence/aga-mcp-server';
 const gh=args=>execFileSync('gh',args,{encoding:'utf8',maxBuffer:8*1024*1024});
 const api=p=>JSON.parse(gh(['api',`repos/${repo}/${p}`]));
 const sha=execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim();
-assert.equal(JSON.parse(fs.readFileSync('package.json')).version,'3.6.5','This explicit runtime gate qualifies 3.6.5 only');
+const pkg=JSON.parse(fs.readFileSync('package.json'));
+assert.match(pkg.version,/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/);
 const runs=api('actions/workflows/runtime-qualification.yml/runs?per_page=100').workflow_runs;
-const run=runs.find(x=>x.head_sha===sha&&x.status==='completed'&&x.conclusion==='success');
+const run=runs.find(x=>x.head_sha===sha&&x.status==='completed'&&x.conclusion==='success'&&x.head_repository?.full_name===repo&&['push','workflow_dispatch'].includes(x.event));
 assert(run,'No successful isolated qualification for this exact source');
 const jobs=api(`actions/runs/${run.id}/jobs?per_page=100`).jobs;
-assert([20,22].every(n=>jobs.some(j=>j.name===`qualification (${n})`&&j.conclusion==='success')),'Both Node versions must pass');
+assert(NODE_MATRIX.every(n=>jobs.some(j=>j.name===`qualification (${n})`&&j.conclusion==='success')),'Both maintained Node versions must pass');
 const root=fs.mkdtempSync(path.join(process.env.RUNNER_TEMP??process.cwd(),'qualified-runtime-'));
 const rows=[];
-for(const n of [20,22]){
+for(const n of NODE_MATRIX){
  const dir=path.join(root,String(n));fs.mkdirSync(dir);
  gh(['run','download',String(run.id),'--repo',repo,'--name',`runtime-qualification-node${n}-${sha}`,'--dir',dir]);
  assert.equal(fs.readFileSync(path.join(dir,'commit.txt'),'utf8').trim(),sha);
@@ -23,10 +25,15 @@ for(const n of [20,22]){
  assert.equal(c.State.ExitCode,0);assert.equal(c.State.OOMKilled,false);assert.equal(h.NetworkMode,'none');assert.equal(h.ReadonlyRootfs,true);
  assert.equal(c.Config.User,'node');assert(h.CapDrop.includes('ALL'));assert(h.SecurityOpt.includes('no-new-privileges'));assert(h.PidsLimit<=128&&h.Memory<=1536*1024*1024&&h.Memory>0);
  const log=fs.readFileSync(path.join(dir,'qualification.log'),'utf8').replace(/\x1b\[[0-?]*[ -/]*[@-~]/g,'');const tests=Number(log.match(/Tests\s+(\d+) passed \(\d+\)/)?.[1]);assert(tests>=461&&log.includes('CONFORMANCE PASSED (6/6)'));
- const tarball=path.join(dir,'attested-intelligence-aga-mcp-server-3.6.5.tgz');const digest=crypto.createHash('sha256').update(fs.readFileSync(tarball)).digest('hex');
- assert(fs.readFileSync(path.join(dir,'PACKAGE-SHA256.txt'),'utf8').startsWith(digest+' '));rows.push({node:n,tests,image:c.Image,tarball,sha256:digest});
+ const tarball=path.join(dir,`attested-intelligence-aga-mcp-server-${pkg.version}.tgz`);const digest=crypto.createHash('sha256').update(fs.readFileSync(tarball)).digest('hex');
+ const metadata=JSON.parse(execFileSync('tar',['-xOf',tarball,'package/package.json'],{encoding:'utf8',maxBuffer:1024*1024}));
+ const json=file=>JSON.parse(fs.readFileSync(path.join(dir,file),'utf8'));
+ rows.push({node:n,commit:sha,tests:json('tests.json'),consumer:json('consumer-result.json'),container:c,log,
+   packageName:metadata.name,packageVersion:metadata.version,image:c.Image,tarball,sha256:digest,
+   declaredSHA256:fs.readFileSync(path.join(dir,'PACKAGE-SHA256.txt'),'utf8').trim().split(/\s+/)[0]});
 }
-assert.equal(rows[0].sha256,rows[1].sha256,'Independent Node builds must package identical bytes');
+validateEvidence({commit:sha,pkg,run,jobs,rows});
 fs.writeFileSync(path.join(root,'ACCEPTANCE.json'),JSON.stringify({sourceCommit:sha,qualificationRun:run.html_url,passed:true,rows},null,2));
-fs.appendFileSync(process.env.GITHUB_OUTPUT,`qualified_tarball=${rows[0].tarball}\n`);
-console.log(JSON.stringify({passed:true,sourceCommit:sha,qualificationRun:run.id,packageSHA256:rows[0].sha256,testsPerNode:rows.map(x=>x.tests)}));
+assert(process.env.GITHUB_OUTPUT,'Workflow output destination required');
+fs.appendFileSync(process.env.GITHUB_OUTPUT,`qualified_tarball=${rows[0].tarball}\nsha256=${rows[0].sha256}\nversion=${pkg.version}\n`);
+console.log(JSON.stringify({passed:true,sourceCommit:sha,qualificationRun:run.id,packageSHA256:rows[0].sha256,testsPerNode:rows.map(x=>x.tests.numPassedTests)}));

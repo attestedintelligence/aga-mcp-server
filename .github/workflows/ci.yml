@@ -21,11 +21,10 @@ permissions:
 
 jobs:
   test:
-    if: github.ref != 'refs/heads/rc/sol61-runtime-hardening-20260930'
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node-version: [20, 22]
+        node-version: [22, 24]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -38,13 +37,13 @@ jobs:
         # Fails the build on a high/critical CVE in a PRODUCTION dependency. Dev-only deps are
         # excluded (--omit=dev): they never ship in the published tarball. The audit is
         # lockfile-deterministic, so run it once (node 20 leg) rather than redundantly per matrix entry.
-        if: matrix.node-version == 20
+        if: matrix.node-version == 22
         run: npm audit --omit=dev --audit-level=high
       - name: OSV-Scanner lockfile CVE scan (non-blocking)
         # Cross-ecosystem OSV-database coverage over the lockfile, for visibility. Non-blocking
         # (continue-on-error) so an OSV advisory — or a scanner/download hiccup — never fails CI;
         # the npm audit step above is the enforcing gate. Pinned binary, no third-party action needed.
-        if: matrix.node-version == 20
+        if: matrix.node-version == 22
         continue-on-error: true
         run: |
           curl -sSfL -o "$RUNNER_TEMP/osv-scanner" https://github.com/google/osv-scanner/releases/download/v2.4.0/osv-scanner_linux_amd64
@@ -58,7 +57,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
       - run: npm ci
       - run: npm run build
       - run: cd independent-verifier && npm ci && npm test
@@ -72,7 +71,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
       - run: node scripts/check-spec-vendor.mjs
 
   verify-zero-imports:
