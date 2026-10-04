@@ -41,7 +41,25 @@ for (const surface of ownershipSurfaces) {
   assert.equal(verifySepBundle(snapshot, signer.publicKeyHex).verdict, 'VERIFIED');
 }
 const root = require.resolve('@attested-intelligence/aga-mcp-server/package.json').replace(/package\.json$/, '');
+// Exercise the shipped writer used by the CLI, including exclusive publication
+// and preservation of other links during explicit replacement.
+const { exportBundleToFile } = await import(pathToFileURL(root + 'dist/proxy/control.js'));
+const outputDir = fs.mkdtempSync('/tmp/aga-consumer-export-');
+const output = outputDir + '/record.json';
+await exportBundleToFile({ proxy: gateway, dataDir: outputDir, output });
+assert.equal(verifySepBundle(JSON.parse(fs.readFileSync(output, 'utf8')), signer.publicKeyHex).verdict, 'VERIFIED');
+const firstBytes = fs.readFileSync(output);
+await assert.rejects(exportBundleToFile({ proxy: gateway, dataDir: outputDir, output }), { name: 'ExportTargetExistsError' });
+assert.deepEqual(fs.readFileSync(output), firstBytes);
+fs.linkSync(output, outputDir + '/retained.json');
+gateway.record({ tool_name: 'read_document', decision: 'DENIED', reason: 'later installed export' });
+await exportBundleToFile({ proxy: gateway, dataDir: outputDir, output, force: true });
+assert.deepEqual(fs.readFileSync(outputDir + '/retained.json'), firstBytes);
+assert.equal(JSON.parse(fs.readFileSync(output, 'utf8')).receipts.length, 258);
+assert.equal(verifySepBundle(JSON.parse(fs.readFileSync(output, 'utf8')), signer.publicKeyHex).verdict, 'VERIFIED');
+assert.deepEqual(fs.readdirSync(outputDir).sort(), ['record.json', 'retained.json']);
+fs.unlinkSync(output); fs.unlinkSync(outputDir + '/retained.json'); fs.rmdirSync(outputDir);
 const help = execFileSync(process.execPath, [root + pkg.bin['aga-proxy'], '--help'], { encoding: 'utf8', timeout: 10000 });
 assert.match(help, /Usage:/);
 const archive = `/evidence/attested-intelligence-aga-mcp-server-${pkg.version}.tgz`;
-fs.writeFileSync('/evidence/consumer-result.json', JSON.stringify({ passed: true, version: pkg.version, packageSHA256: crypto.createHash('sha256').update(fs.readFileSync(archive)).digest('hex'), exportCompatibility: { receipts: 257, legacyProofsMatched: true, checkpointMatched: true, verifiedWithExpectedKey: true }, detachedReceiptSurfaces: ownershipSurfaces, scope: 'fresh consumer install, verify and sep exports, six fixtures, 257-receipt producer comparison, three receipt ownership paths and proxy help; optional native dependencies omitted; runtime deployment not qualified' }, null, 2));
+fs.writeFileSync('/evidence/consumer-result.json', JSON.stringify({ passed: true, version: pkg.version, packageSHA256: crypto.createHash('sha256').update(fs.readFileSync(archive)).digest('hex'), exportCompatibility: { receipts: 257, legacyProofsMatched: true, checkpointMatched: true, verifiedWithExpectedKey: true }, detachedReceiptSurfaces: ownershipSurfaces, installedWriter: { verifiedExport: true, existingTargetPreserved: true, forcedReplacementPreservesOtherLinks: true, stagingCleaned: true }, scope: 'fresh consumer install, verify and sep exports, six fixtures, 257-receipt producer comparison, three receipt ownership paths, installed export publication/replacement and proxy help; optional native dependencies omitted; runtime deployment not qualified' }, null, 2));

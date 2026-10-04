@@ -22,6 +22,7 @@
 import * as http from 'node:http';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import { writeExportFile } from './export-file.js';
 
 /** Loopback address the control listener binds to. Never 0.0.0.0. */
 export const CONTROL_HOST = '127.0.0.1';
@@ -301,10 +302,11 @@ export async function exportBundleToFile(opts: {
   // `export --output <existing-file>` silently TRUNCATED whatever the operator pointed at — a
   // config, a key file, a prior bundle — and exited 0 reporting success. No attacker and no
   // unusual deployment required, on the exact artifact a verifier consumes. Default is now
-  // exclusive-create ('wx', which fails if the path exists); replacement requires --force.
+  // exclusive publication (which fails if the path exists); replacement requires --force.
+  // Stage and flush complete bytes first, so a failed replacement preserves the prior export.
   const write = opts.writeFile ?? ((p: string, d: string) => {
     try {
-      fs.writeFileSync(p, d, opts.force ? undefined : { flag: 'wx' });
+      writeExportFile(p, d, opts.force === true);
     } catch (e) {
       if (!opts.force && (e as NodeJS.ErrnoException)?.code === 'EEXIST') throw new ExportTargetExistsError(p);
       throw e;

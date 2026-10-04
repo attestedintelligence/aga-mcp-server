@@ -1,0 +1,52 @@
+name: Export filesystem qualification
+on:
+  push:
+    branches: ['main', 'rc/**']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  windows-export:
+    runs-on: windows-2022
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ['22', '24']
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: ${{ matrix.node }}
+      - name: Prepare tracked source on the disposable runner
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $subject = Join-Path $env:RUNNER_TEMP 'export-subject'
+          $archive = Join-Path $env:RUNNER_TEMP 'export-source.zip'
+          git archive --format=zip --output=$archive HEAD
+          if ($LASTEXITCODE -ne 0) { throw 'Tracked source export failed' }
+          Expand-Archive -LiteralPath $archive -DestinationPath $subject
+          Set-Location -LiteralPath $subject
+          npm ci --ignore-scripts --no-audit --no-fund
+          if ($LASTEXITCODE -ne 0) { throw 'Dependency preparation failed' }
+      - name: Run filesystem-only cases with a restricted environment
+        shell: pwsh
+        env:
+          QUALIFIED_COMMIT: ${{ github.sha }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $evidence = Join-Path $env:RUNNER_TEMP 'export-evidence'
+          New-Item -ItemType Directory -Path $evidence | Out-Null
+          Set-Location -LiteralPath (Join-Path $env:RUNNER_TEMP 'export-subject')
+          node scripts/windows-export-qualification.mjs $evidence
+          if ($LASTEXITCODE -ne 0) { throw 'Filesystem qualification failed' }
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: export-windows-node${{ matrix.node }}-${{ github.sha }}
+          path: ${{ runner.temp }}/export-evidence
+          if-no-files-found: error
+          retention-days: 30

@@ -2,6 +2,7 @@
 
 ## Unreleased | 3.6.7 candidate
 
+- Stage and flush CLI export bytes before publishing the destination. A failed write or flush preserves the prior export; default publication still refuses an existing path. Forced replacement replaces the directory entry without following a destination symlink. This is not a power-loss durability guarantee.
 - Return detached signed receipts from the ledger API, including exported bundles. Mutating a returned receipt no longer corrupts later exports or the receipt chain.
 - Bound control-channel retrieval to 15 seconds and 32 MiB, reject redirects and unsupported locator hosts, and reject malformed UTF-8 instead of silently replacing input bytes. Limits apply before a complete export is written. Exported evidence still requires verification against an independently expected key.
 - Pin direct workflow action references to upstream commit identities and disable persisted checkout credentials in read-only jobs.
