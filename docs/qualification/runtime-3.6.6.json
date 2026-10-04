@@ -1,0 +1,197 @@
+{
+  "observedAt": "2026-10-04T03:14:23.436743+00:00",
+  "package": "@attested-intelligence/aga-mcp-server",
+  "version": "3.6.6",
+  "sourceCommit": "fec28431ca1561bab80cd37114dd8b0d1c7be5c4",
+  "packageSHA256": "3cb8782e08fa9def5f3dcecbe0454a69c284995024d68a5995de2d6d2ffdb980",
+  "packageBytes": 153322,
+  "qualificationRun": "https://github.com/attestedintelligence/aga-mcp-server/actions/runs/37172936072",
+  "publicationRun": "https://github.com/attestedintelligence/aga-mcp-server/actions/runs/37173182342",
+  "nodeResults": [
+    {
+      "node": 22,
+      "nodeVersion": "v22.23.3",
+      "tests": 488,
+      "testFiles": 49,
+      "packageSHA256": "3cb8782e08fa9def5f3dcecbe0454a69c284995024d68a5995de2d6d2ffdb980",
+      "containerImage": "sha256:88f8ba583a884279252779bbe221bf1ff2c61cf236cc973f8ca97676ae6d07f0",
+      "consumer": {
+        "receipts": 257,
+        "legacyProofsMatched": true,
+        "checkpointMatched": true,
+        "verifiedWithExpectedKey": true
+      },
+      "proofBenchmark": {
+        "checkedAt": "2026-10-04T03:04:19.641Z",
+        "node": "v22.23.3",
+        "platform": "linux",
+        "cpu": "AMD EPYC 7763 64-Core Processor",
+        "rows": [
+          {
+            "leaves": 128,
+            "proofs": 128,
+            "equal": true,
+            "outputSHA256": "1171a398c61aaadbb2eae6096f4dfe9d83c40428ffe7b88d06526c3e650c69a3",
+            "milliseconds": {
+              "legacy": [
+                47.38798499999999,
+                25.09935,
+                24.475116
+              ],
+              "batch": [
+                0.5023869999999988,
+                0.2974150000000009,
+                0.29065299999999183
+              ]
+            },
+            "medianLegacyMilliseconds": 25.09935,
+            "medianBatchMilliseconds": 0.2974150000000009
+          },
+          {
+            "leaves": 512,
+            "proofs": 512,
+            "equal": true,
+            "outputSHA256": "d2a9a8930ffd7e8a79429bdcf98dc9cad6f9cff021eba5e94d0cdcbff45cbf67",
+            "milliseconds": {
+              "legacy": [
+                398.5929299999999,
+                395.29617600000006,
+                402.581284
+              ],
+              "batch": [
+                1.2818429999999807,
+                0.7684040000000323,
+                0.804070000000138
+              ]
+            },
+            "medianLegacyMilliseconds": 398.5929299999999,
+            "medianBatchMilliseconds": 0.804070000000138
+          },
+          {
+            "leaves": 1024,
+            "proofs": 1024,
+            "equal": true,
+            "outputSHA256": "140d819ab7d657c9cc02de8da8d9aad0bad7584083071ccecaa9fe9ae12fe55b",
+            "milliseconds": {
+              "legacy": [
+                1529.7762420000001,
+                1537.0235949999997,
+                1526.832896
+              ],
+              "batch": [
+                1.5810420000002523,
+                5.066827999999987,
+                2.7115109999995184
+              ]
+            },
+            "medianLegacyMilliseconds": 1529.7762420000001,
+            "medianBatchMilliseconds": 2.7115109999995184
+          }
+        ],
+        "passed": true,
+        "scope": "Synthetic proof construction in the bounded qualification container. Equality is a gate; timings are observations, not a throughput promise. Does not measure signing, JSON encoding, proxy contention, transport, arbitrary workloads or independent deployment behavior."
+      }
+    },
+    {
+      "node": 24,
+      "nodeVersion": "v24.21.0",
+      "tests": 488,
+      "testFiles": 49,
+      "packageSHA256": "3cb8782e08fa9def5f3dcecbe0454a69c284995024d68a5995de2d6d2ffdb980",
+      "containerImage": "sha256:e8c4de1e2519b4f34de27a595df6c2a32df28baa90db80bfaf2e038889d94390",
+      "consumer": {
+        "receipts": 257,
+        "legacyProofsMatched": true,
+        "checkpointMatched": true,
+        "verifiedWithExpectedKey": true
+      },
+      "proofBenchmark": {
+        "checkedAt": "2026-10-04T03:05:32.666Z",
+        "node": "v24.21.0",
+        "platform": "linux",
+        "cpu": "AMD EPYC 7763 64-Core Processor",
+        "rows": [
+          {
+            "leaves": 128,
+            "proofs": 128,
+            "equal": true,
+            "outputSHA256": "1171a398c61aaadbb2eae6096f4dfe9d83c40428ffe7b88d06526c3e650c69a3",
+            "milliseconds": {
+              "legacy": [
+                38.470471999999994,
+                23.261456999999993,
+                23.91742500000001
+              ],
+              "batch": [
+                0.5764089999999982,
+                0.42570599999999104,
+                0.19158799999999587
+              ]
+            },
+            "medianLegacyMilliseconds": 23.91742500000001,
+            "medianBatchMilliseconds": 0.42570599999999104
+          },
+          {
+            "leaves": 512,
+            "proofs": 512,
+            "equal": true,
+            "outputSHA256": "d2a9a8930ffd7e8a79429bdcf98dc9cad6f9cff021eba5e94d0cdcbff45cbf67",
+            "milliseconds": {
+              "legacy": [
+                370.678778,
+                367.292188,
+                380.905791
+              ],
+              "batch": [
+                0.7682669999999803,
+                2.1755020000000513,
+                0.8284799999998995
+              ]
+            },
+            "medianLegacyMilliseconds": 370.678778,
+            "medianBatchMilliseconds": 0.8284799999998995
+          },
+          {
+            "leaves": 1024,
+            "proofs": 1024,
+            "equal": true,
+            "outputSHA256": "140d819ab7d657c9cc02de8da8d9aad0bad7584083071ccecaa9fe9ae12fe55b",
+            "milliseconds": {
+              "legacy": [
+                1437.524661,
+                1527.6914610000003,
+                1482.740511
+              ],
+              "batch": [
+                1.5079129999999168,
+                7.935341999999764,
+                3.477708999999777
+              ]
+            },
+            "medianLegacyMilliseconds": 1482.740511,
+            "medianBatchMilliseconds": 3.477708999999777
+          }
+        ],
+        "passed": true,
+        "scope": "Synthetic proof construction in the bounded qualification container. Equality is a gate; timings are observations, not a throughput promise. Does not measure signing, JSON encoding, proxy contention, transport, arbitrary workloads or independent deployment behavior."
+      }
+    }
+  ],
+  "registryReadback": {
+    "archiveMatchesBothQualifiedBuilds": true,
+    "integrityMatches": true,
+    "slsaSubjectAlgorithm": "sha512",
+    "slsaSubjectMatchesArchive": true,
+    "slsaSourceMatchesCommit": true
+  },
+  "signatureCheck": {
+    "checkedAt": "2026-10-04T03:19:08.677720+00:00",
+    "npmCLI": "11.21.0",
+    "command": "npm audit signatures --json --include-attestations",
+    "targetProvenanceVerified": true,
+    "invalid": 0,
+    "missing": 0,
+    "scope": "Company-run verification on a disposable Ubuntu consumer install with lifecycle scripts disabled. Not an independent security audit."
+  },
+  "scope": "Reference implementation qualification and exact published bytes. Synthetic proof timings do not measure total export latency, signing, serialization, transport, proxy contention or a selected deployment."
+}

@@ -1,5 +1,7 @@
 # Reproducibility: regenerating `dist/` and the published tarball
 
+Current runtime release: [3.6.6 qualification, archive and provenance record](docs/qualification/runtime-3.6.6.md), published October 3, 2026. Earlier observations below retain their original versions and dates.
+
 Internal process doc (not shipped because the pack allowlist excludes it). It documents how to
 regenerate the published artifact from tagged source and how to verify it.
 
