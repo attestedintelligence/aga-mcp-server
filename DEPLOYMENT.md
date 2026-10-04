@@ -1,10 +1,10 @@
 # Deployment and evaluation boundary
 
-Updated September 30, 2026. The published gateway is a reference implementation with known deployment risks. Publication and a successful static verification do not establish production readiness. Begin with the [static evaluation](https://attestedintelligence.com/evaluate). Do not start a gateway on a workstation containing production credentials, customer data or private files.
+Updated October 3, 2026. The published gateway is a reference implementation with known deployment risks. Publication and a successful static verification do not establish production readiness. Begin with the [static evaluation](https://attestedintelligence.com/evaluate). Do not start a gateway on a workstation containing production credentials, customer data or private files.
 
 ## 1. Choose and test the boundary
 
-Reference runtime 3.6.5 evaluates covered `tools/call` requests and records decisions. Its agent port uses newline-delimited JSON-RPC over raw TCP and binds to 127.0.0.1 by default. `--host` explicitly changes that address. There is no client authentication: local access remains a trust boundary, and non-loopback exposure requires separate access controls. A stdio client needs a relay; SSE and Streamable HTTP require a bridge. Those adapters are not supplied by the package.
+Reference runtime 3.6.6 evaluates covered `tools/call` requests and records decisions. Its agent port uses newline-delimited JSON-RPC over raw TCP and binds to 127.0.0.1 by default. `--host` explicitly changes that address. There is no client authentication: local access remains a trust boundary, and non-loopback exposure requires separate access controls. A stdio client needs a relay; SSE and Streamable HTTP require a bridge. Those adapters are not supplied by the package.
 
 The default stdio upstream is a child process started without a shell. Version 3.6.5 uses a small environment allowlist and refuses explicitly supplied gateway-key variables. This removes implicit signing-environment inheritance, but the child still shares the proxy's account, filesystem and network privileges. The listener, control channel, filesystem privileges and alternative routes to tools need separate controls.
 
@@ -38,7 +38,7 @@ A reviewer must obtain the expected public key through a separate trusted channe
 
 The live chain is in memory and a restart starts a new chain. Export before stopping and retain the bundle together with the expected key and any outside checkpoint used to establish freshness. Test restoration separately.
 
-Export work grows with the receipt count and can block governed calls. A forwarded call can execute and later time out while export is running. Do not retry a potentially consequential call merely because the client received a timeout. Bound the lab workload and record actual upstream effects. See known issues 9, 11 and 13.
+Version 3.6.6 reuses tree levels when constructing Merkle proofs; it does not make export asynchronous. Proof material grows with receipt count and tree depth. Export work can still block governed calls. A forwarded call can execute and later time out while export is running. Do not retry a potentially consequential call merely because the client received a timeout. Bound the lab workload and record actual upstream effects. See known issues 9, 11 and 13.
 
 An earlier genuine export can still verify. A key holder can sign a different history. Retained signatures do not prove every action was captured, that the timestamp came from an independent time source or that the deployment prevented bypass.
 

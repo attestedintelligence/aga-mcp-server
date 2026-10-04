@@ -8,7 +8,7 @@ import {
   buildReceipt, leafHash,
   type SepReceipt, type Decision,
 } from './receipt.js';
-import { merkleRoot, merkleProof, type MerkleProof } from './merkle.js';
+import { merkleProofs, type MerkleProof } from './merkle.js';
 import { buildCheckpoint, type SignedCheckpoint } from './checkpoint.js';
 
 export interface SepBundle {
@@ -102,17 +102,19 @@ export class SepGateway {
     if (this.receipts.length === 0) throw new Error('No receipts to export');
     const leaves = this.receipts.map(leafHash);
     const generated_at = this.clock();
+    const bundle_id = this.idGen();
+    const proofs = merkleProofs(leaves);
     return {
       schema_version: '2.0',
-      bundle_id: this.idGen(),
+      bundle_id,
       algorithm: this.signer.algorithm,
       generated_at,
       gateway_id: this.gatewayId,
       public_key: this.signer.publicKeyHex,
       policy_reference: this.policyReference,
       receipts: [...this.receipts],
-      merkle_root: merkleRoot(leaves),
-      merkle_proofs: leaves.map((_, i) => merkleProof(leaves, i)),
+      merkle_root: proofs[0].merkle_root,
+      merkle_proofs: proofs,
       checkpoint: buildCheckpoint(this.receipts, this.gatewayId, generated_at, this.signer),
       offline_capable: true,
     };

@@ -1,6 +1,6 @@
 # Threat boundary and current limitations
 
-Updated September 30, 2026 for reference runtime 3.6.5. Documentation-only releases 3.6.3 and 3.6.4 retain the earlier runtime behavior. The README preserves thirteen historical cases; this table gives the 3.6.5 disposition. Qualification of a reference implementation does not approve a deployment or establish independent certification.
+Updated October 3, 2026 for reference runtime 3.6.6. Documentation-only releases 3.6.3 and 3.6.4 retain the earlier runtime behavior. The README preserves thirteen historical cases; this table gives the current disposition, retaining the 3.6.5 security controls. Qualification of a reference implementation does not approve a deployment or establish independent certification.
 
 ## 1. What verification establishes
 
@@ -30,7 +30,7 @@ For new governed tools, verify the actual request path, policy decision, receipt
 | 6 | Ambiguous request JSON is refused before HTTP or stdio forwarding. Refused syntax is not treated as an attributable tool decision. |
 | 7 | Missing/invalid tool names and uncanonicalizable arguments have denied receipts and responses. Invalid syntax, oversized frames and connection/resource refusals need not yield a receipt; no complete request capture is claimed. |
 | 8 | Framing preserves UTF-8 byte splits and refuses malformed UTF-8. This does not prove arbitrary downstream protocol compatibility. |
-| 9 | Export can block calls and contribute to timeouts after an upstream effect. |
+| 9 | Version 3.6.6 shares Merkle tree levels across proofs, removing the repeated whole-tree hashing. Export is still synchronous and can block calls or contribute to timeouts after an upstream effect. |
 | 10 | Policies are validated immutable snapshots and rate state is per proxy. Required paths must be strings; lexical prefixes and top-level patterns are not filesystem containment. |
 | 11 | Stdio output and pending work are bounded; malformed/oversized output rejects pending work. An upstream effect can precede failure; PERMITTED is not execution proof. |
 | 12 | Control requests require the bound loopback Host and no Origin; cross-site browser metadata is refused. Any local process can still read the ledger; no local authorization is supplied. |

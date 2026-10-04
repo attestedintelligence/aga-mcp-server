@@ -53,3 +53,38 @@ export function merkleProof(leaves: string[], leafIndex: number): MerkleProof {
   }
   return { leaf_hash: leaves[leafIndex], leaf_index: leafIndex, siblings, directions, merkle_root: level[0] };
 }
+
+/** Build every proof from shared levels, hashing each internal node only once.
+ * Proof material still occupies O(n log n) space in the returned export.
+ * The existing single-proof API and odd-node promotion rule are unchanged.
+ */
+export function merkleProofs(leaves: readonly string[]): MerkleProof[] {
+  if (leaves.length === 0) return [];
+  const levels: string[][] = [[...leaves]];
+  while (levels[levels.length - 1].length > 1) {
+    const level = levels[levels.length - 1];
+    const next: string[] = [];
+    for (let i = 0; i < level.length; i += 2) {
+      next.push(i + 1 < level.length ? nodeHash(level[i], level[i + 1]) : level[i]);
+    }
+    levels.push(next);
+  }
+  const root = levels[levels.length - 1][0];
+  return leaves.map((leaf, leafIndex) => {
+    const siblings: string[] = [];
+    const directions: Array<'left' | 'right'> = [];
+    let index = leafIndex;
+    for (let depth = 0; depth < levels.length - 1; depth++) {
+      const level = levels[depth];
+      if (index % 2 === 1) {
+        siblings.push(level[index - 1]);
+        directions.push('left');
+      } else if (index + 1 < level.length) {
+        siblings.push(level[index + 1]);
+        directions.push('right');
+      }
+      index = Math.floor(index / 2);
+    }
+    return { leaf_hash: leaf, leaf_index: leafIndex, siblings, directions, merkle_root: root };
+  });
+}

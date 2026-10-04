@@ -1,5 +1,12 @@
 # Changelog
 
+## 3.6.6 | 2026-10-03
+
+- Reuse one Merkle tree when constructing all bundle proofs. Each internal node is hashed once for the proof set instead of rebuilding the tree for each receipt. Proof material still grows with the receipt count and tree depth.
+- Preserve the canonical signed format, odd-node promotion, proof ordering, checkpoint construction and existing single-proof API. Byte-level bundle equivalence is checked for the deterministic classical and hybrid producers.
+- Add a hash-operation-count regression, installed-package producer comparison and bounded synthetic proof benchmark in disposable qualification.
+- Export remains synchronous. Signing, receipt hashing, proof materialization, JSON encoding and transport still require work; this is not an asynchronous export, durable ledger or guarantee against timeouts and duplicate effects.
+
 ## 3.6.5 | 2026-09-30
 
 - Validate and freeze policy snapshots; isolate rate-limit state by proxy owner; require typed paths and apply configured guards in allowlist and denylist modes.

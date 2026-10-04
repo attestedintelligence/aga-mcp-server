@@ -9,3 +9,4 @@ node /subject/node_modules/vitest/vitest.mjs run --no-cache --maxWorkers=1 --no-
 node fixtures/run-conformance.mjs
 node --test scripts/runtime-release-evidence.test.mjs
 node scripts/consumer-qualification.mjs
+AGA_DISPOSABLE_CHECK=1 node scripts/benchmark-export-proofs.mjs
