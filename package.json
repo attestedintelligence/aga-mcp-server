@@ -1,6 +1,6 @@
 {
   "name": "@attested-intelligence/aga-mcp-server",
-  "version": "3.6.6",
+  "version": "3.6.7",
   "mcpName": "io.github.attestedintelligence/aga-mcp-server",
   "description": "Signed decision records for agent vendors facing customer evidence reviews. Public reference gateway and static verifier; pre-pilot, with documented limits.",
   "author": "Attested Intelligence Holdings LLC",

@@ -10,3 +10,4 @@ node fixtures/run-conformance.mjs
 node --test scripts/runtime-release-evidence.test.mjs
 node scripts/consumer-qualification.mjs
 AGA_DISPOSABLE_CHECK=1 node scripts/benchmark-export-proofs.mjs
+AGA_DISPOSABLE_CHECK=1 node scripts/benchmark-export-contention.mjs

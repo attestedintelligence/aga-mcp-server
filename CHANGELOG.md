@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased | 3.6.7 candidate
+
+- Return detached signed receipts from the ledger API, including exported bundles. Mutating a returned receipt no longer corrupts later exports or the receipt chain.
+- Bound control-channel retrieval to 15 seconds and 32 MiB, reject redirects and unsupported locator hosts, and reject malformed UTF-8 instead of silently replacing input bytes. Limits apply before a complete export is written. Exported evidence still requires verification against an independently expected key.
+- Pin direct workflow action references to upstream commit identities and disable persisted checkout credentials in read-only jobs.
+- Add isolated regression cases and a synthetic full-export contention measurement with separate upstream and client processes. These controls do not add authenticated clients, durable recording, asynchronous export or a qualified production deployment.
+
 ## 3.6.6 | 2026-10-03
 
 - Reuse one Merkle tree when constructing all bundle proofs. Each internal node is hashed once for the proof set instead of rebuilding the tree for each receipt. Proof material still grows with the receipt count and tree depth.

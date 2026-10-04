@@ -11,10 +11,9 @@
  * signed artifact: GET /export (the same SepBundle exportBundle() returns), GET /status, and
  * GET /receipts. There is NO route that mutates policy or ledger state.
  *
- * Trust surface: the channel adds none. The bundle it returns is the identical signed artifact
- * exportBundle() already produces — anyone who can read the written file gets the same thing. The
- * off-host guarantee is the loopback bind itself, not auth theater; a shared-host deployment must
- * treat any local user as able to read the (already-signed, already-exportable) evidence.
+ * This channel adds a local read surface without authentication. Any local process can request
+ * exports. Its identity header is a routing check, not proof of the service's identity. A shared-host
+ * deployment needs separate access controls and independent verification of the exported evidence.
  *
  * Copyright (c) 2026 Attested Intelligence Holdings LLC
  * SPDX-License-Identifier: MIT
@@ -176,7 +175,9 @@ export function writeControlFile(dataDir: string, loc: ControlLocator): void {
 export function readControlFile(dataDir: string): ControlLocator | null {
   try {
     const parsed = JSON.parse(fs.readFileSync(controlFilePath(dataDir), 'utf-8')) as Record<string, unknown>;
-    if (typeof parsed.port !== 'number') return null;
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return null;
+    if (typeof parsed.port !== 'number' || !Number.isInteger(parsed.port) || parsed.port < 1 || parsed.port > 65535) return null;
+    if (parsed.host !== undefined && parsed.host !== CONTROL_HOST && parsed.host !== 'localhost') return null;
     return {
       host: typeof parsed.host === 'string' ? parsed.host : CONTROL_HOST,
       port: parsed.port,
@@ -215,33 +216,61 @@ export class ExportUnavailableError extends Error {
  * (409) or other HTTP error → a distinct Error so the caller does not misreport it as "no proxy".
  */
 export async function fetchBundleViaControl(loc: ControlLocator): Promise<unknown> {
-  const url = `http://${loc.host}:${loc.port}/export`;
-  let res: Response;
+  if (loc.host !== CONTROL_HOST && loc.host !== 'localhost') throw new Error('control locator must use the loopback host');
+  if (!Number.isInteger(loc.port) || loc.port < 1 || loc.port > 65535) throw new Error('invalid control locator port');
+  // Normalize localhost to the literal address: no DNS or redirect can widen this request.
+  const url = `http://${CONTROL_HOST}:${loc.port}/export`;
+  const controller = new AbortController();
+  let reader: ReadableStreamDefaultReader<Uint8Array> | undefined;
+  let response: Response | undefined;
+  let timer: ReturnType<typeof setTimeout>;
+  const deadline = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => { reject(new Error('control export exceeded the 15 second limit; no complete export was received')); controller.abort(); }, 15_000);
+  });
   try {
-    res = await fetch(url);
-  } catch {
-    // ECONNREFUSED / DNS / etc. — the recorded control port has no live listener.
-    throw new ExportUnavailableError();
+    try {
+      response = await Promise.race([fetch(url, { redirect: 'error', signal: controller.signal }), deadline]);
+    } catch (error) {
+      if (controller.signal.aborted) throw error;
+      throw new ExportUnavailableError();
+    }
+    if (response.headers.get(CONTROL_HEADER) !== CONTROL_HEADER_VALUE) throw new ExportUnavailableError();
+    if (!response.ok && response.status !== 409) throw new Error(`control channel returned HTTP ${response.status}`);
+    if (!response.body) throw new Error('control channel returned no response body');
+    const limit = 32 * 1024 * 1024;
+    const declared = response.headers.get('content-length');
+    if (declared && /^\d+$/.test(declared) && Number(declared) > limit) throw new Error('control response exceeds the 32 MiB limit');
+    reader = response.body.getReader();
+    const chunks: Uint8Array[] = [];
+    let size = 0;
+    for (;;) {
+      const chunk = await Promise.race([reader.read(), deadline]);
+      if (chunk.done) break;
+      size += chunk.value.byteLength;
+      if (size > limit) throw new Error('control response exceeds the 32 MiB limit');
+      chunks.push(chunk.value);
+    }
+    let text: string;
+    try { text = new TextDecoder('utf-8', { fatal: true }).decode(Buffer.concat(chunks)); }
+    catch { throw new Error('control response contains invalid UTF-8'); }
+    const body: unknown = JSON.parse(text);
+    if (response.status === 409) {
+      const message = body && typeof body === 'object' && 'error' in body ? body.error : undefined;
+      throw new Error(typeof message === 'string' ? message : 'the proxy has no receipts to export yet');
+    }
+    // Shape is a workflow guard only. A forged header or well-shaped object is
+    // not authenticated; the recipient must still verify against an expected key.
+    if (!isSepBundleShape(body)) throw new Error('control channel returned a response that is not a SEP evidence bundle; refusing to write it');
+    return body;
+  } finally {
+    clearTimeout(timer!);
+    controller.abort();
+    if (reader) {
+      // Cancellation of a hostile stream need not settle. Release without awaiting it.
+      void reader.cancel().catch(() => {});
+      reader.releaseLock();
+    } else if (response?.body) { void response.body.cancel().catch(() => {}); }
   }
-  if (res.status === 409) {
-    const body = (await res.json().catch(() => ({}))) as { error?: string };
-    throw new Error(body.error ?? 'the proxy has no receipts to export yet');
-  }
-  if (!res.ok) {
-    throw new Error(`control channel returned HTTP ${res.status}`);
-  }
-  // Identity guard: a recycled/stale control port could be held by an unrelated local service that
-  // returns valid JSON. Require the AGA control header before trusting the response at all.
-  if (res.headers.get(CONTROL_HEADER) !== CONTROL_HEADER_VALUE) {
-    throw new ExportUnavailableError();
-  }
-  const body = await res.json();
-  // Shape guard: never write foreign JSON labeled as evidence. (Verification would reject it, but
-  // an evidence tool must not report success on a non-bundle.)
-  if (!isSepBundleShape(body)) {
-    throw new Error('control channel returned a response that is not a SEP evidence bundle; refusing to write it');
-  }
-  return body;
 }
 
 /**

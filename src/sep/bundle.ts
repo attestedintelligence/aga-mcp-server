@@ -67,7 +67,7 @@ export class SepGateway {
   get publicKeyHex(): string { return this.signer.publicKeyHex; }
   get count(): number { return this.receipts.length; }
   setPolicyReference(ref: string): void { this.policyReference = ref; }
-  getReceipts(): readonly SepReceipt[] { return [...this.receipts]; }
+  getReceipts(): readonly SepReceipt[] { return this.receipts.map(receipt => ({ ...receipt })); }
 
   /** Record a governed tool-call decision as a signed, chained SEP receipt. */
   record(input: RecordInput): SepReceipt {
@@ -94,7 +94,9 @@ export class SepGateway {
     this.receipts.push(receipt);
     this.lastLeaf = leafHash(receipt);
     this.lastTimestamp = timestamp;
-    return receipt;
+    // Receipts contain only scalar signed fields. Return a detached object so a
+    // library caller or event listener cannot corrupt the private ledger.
+    return { ...receipt };
   }
 
   /** Assemble the canonical SEP evidence bundle (receipts + merkle + mandatory signed checkpoint). */
@@ -112,7 +114,7 @@ export class SepGateway {
       gateway_id: this.gatewayId,
       public_key: this.signer.publicKeyHex,
       policy_reference: this.policyReference,
-      receipts: [...this.receipts],
+      receipts: this.receipts.map(receipt => ({ ...receipt })),
       merkle_root: proofs[0].merkle_root,
       merkle_proofs: proofs,
       checkpoint: buildCheckpoint(this.receipts, this.gatewayId, generated_at, this.signer),

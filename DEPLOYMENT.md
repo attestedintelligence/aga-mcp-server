@@ -40,6 +40,8 @@ The live chain is in memory and a restart starts a new chain. Export before stop
 
 Version 3.6.6 reuses tree levels when constructing Merkle proofs; it does not make export asynchronous. Proof material grows with receipt count and tree depth. Export work can still block governed calls. A forwarded call can execute and later time out while export is running. Do not retry a potentially consequential call merely because the client received a timeout. Bound the lab workload and record actual upstream effects. See known issues 9, 11 and 13.
 
+The 3.6.7 candidate bounds a separate CLI control-channel download to 15 seconds and 32 MiB. It accepts only `127.0.0.1` or `localhost` locators, connects to the literal loopback address and refuses redirects. This is a client retrieval bound, not a ledger size cap or cancellation of synchronous server work. An oversized or incomplete response is refused before writing the destination. The control header and JSON shape check are routing safeguards, not authentication or signature verification. Verify the resulting artifact against an independently obtained expected key.
+
 An earlier genuine export can still verify. A key holder can sign a different history. Retained signatures do not prove every action was captured, that the timestamp came from an independent time source or that the deployment prevented bypass.
 
 ## 5. Observable runtime acceptance
