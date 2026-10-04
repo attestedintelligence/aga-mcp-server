@@ -28,8 +28,20 @@ assert.equal(exported.merkle_root, sep.merkleRoot(leaves));
 assert.deepEqual(exported.checkpoint, sep.buildCheckpoint(exported.receipts, exported.gateway_id, exported.generated_at, signer));
 const exportedResult = verifySepBundle(exported, signer.publicKeyHex);
 assert.equal(exportedResult.verdict, 'VERIFIED');assert.equal(exportedResult.issuerVerified, true);
+// Exercise ownership through the installed public package, not only source imports.
+const ownershipSurfaces = ['record', 'getReceipts', 'exportBundle'];
+for (const surface of ownershipSurfaces) {
+  const owned = new sep.SepGateway({ gatewayId: 'synthetic-consumer-ownership', signer });
+  const recorded = owned.record({ tool_name: 'read', decision: 'PERMITTED', reason: 'retained original' });
+  const detached = surface === 'record' ? recorded : surface === 'getReceipts' ? owned.getReceipts()[0] : owned.exportBundle().receipts[0];
+  detached.reason = 'consumer attempted mutation';
+  owned.record({ tool_name: 'read', decision: 'DENIED', reason: 'next decision' });
+  const snapshot = owned.exportBundle();
+  assert.equal(snapshot.receipts[0].reason, 'retained original');
+  assert.equal(verifySepBundle(snapshot, signer.publicKeyHex).verdict, 'VERIFIED');
+}
 const root = require.resolve('@attested-intelligence/aga-mcp-server/package.json').replace(/package\.json$/, '');
 const help = execFileSync(process.execPath, [root + pkg.bin['aga-proxy'], '--help'], { encoding: 'utf8', timeout: 10000 });
 assert.match(help, /Usage:/);
 const archive = `/evidence/attested-intelligence-aga-mcp-server-${pkg.version}.tgz`;
-fs.writeFileSync('/evidence/consumer-result.json', JSON.stringify({ passed: true, version: pkg.version, packageSHA256: crypto.createHash('sha256').update(fs.readFileSync(archive)).digest('hex'), exportCompatibility: { receipts: 257, legacyProofsMatched: true, checkpointMatched: true, verifiedWithExpectedKey: true }, scope: 'fresh consumer install, verify and sep exports, six fixtures, 257-receipt producer comparison and proxy help; optional native dependencies omitted; runtime deployment not qualified' }, null, 2));
+fs.writeFileSync('/evidence/consumer-result.json', JSON.stringify({ passed: true, version: pkg.version, packageSHA256: crypto.createHash('sha256').update(fs.readFileSync(archive)).digest('hex'), exportCompatibility: { receipts: 257, legacyProofsMatched: true, checkpointMatched: true, verifiedWithExpectedKey: true }, detachedReceiptSurfaces: ownershipSurfaces, scope: 'fresh consumer install, verify and sep exports, six fixtures, 257-receipt producer comparison, three receipt ownership paths and proxy help; optional native dependencies omitted; runtime deployment not qualified' }, null, 2));

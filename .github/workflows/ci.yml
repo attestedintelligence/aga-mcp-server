@@ -48,7 +48,9 @@ jobs:
         if: matrix.node-version == 22
         continue-on-error: true
         run: |
-          curl -sSfL -o "$RUNNER_TEMP/osv-scanner" https://github.com/google/osv-scanner/releases/download/v2.4.0/osv-scanner_linux_amd64
+          curl -sSfL --max-time 60 --max-filesize 60000000 -o "$RUNNER_TEMP/osv-scanner" https://github.com/google/osv-scanner/releases/download/v2.4.0/osv-scanner_linux_amd64
+          # GitHub release asset 451242336, independently resolved on 2026-10-04.
+          printf '15314940c10d26af9c6649f150b8a47c1262e8fc7e17b1d1029b0e479e8ed8a0  %s\n' "$RUNNER_TEMP/osv-scanner" | sha256sum --check --strict
           chmod +x "$RUNNER_TEMP/osv-scanner"
           "$RUNNER_TEMP/osv-scanner" -r .
 
