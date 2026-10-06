@@ -147,7 +147,7 @@ export class GovernanceProxy extends EventEmitter {
     }
 
     if (this.upstreamUrl && !this.bridge) {
-      process.stderr.write('[aga-proxy] HTTP upstream mode: the upstream URL is directly reachable — governance is BYPASSABLE unless the agent is network-isolated from it. Prefer stdio upstream. See DEPLOYMENT.md §1.\n');
+      process.stderr.write('[aga-proxy] HTTP upstream mode: the upstream URL is directly reachable; governance is BYPASSABLE unless the agent is network-isolated from it. Prefer stdio upstream. See DEPLOYMENT.md §1.\n');
     }
 
     // Start TCP server

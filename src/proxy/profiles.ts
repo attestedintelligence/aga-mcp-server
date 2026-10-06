@@ -68,7 +68,7 @@ export function auditOnlyWarningBanner(source: string): string {
   const bar = '!'.repeat(76);
   return [
     bar,
-    '!!  AUDIT-ONLY MODE — THIS PROXY WILL NOT BLOCK ANY TOOL CALL',
+    '!!  AUDIT-ONLY MODE: THIS PROXY WILL NOT BLOCK ANY TOOL CALL',
     '!!',
     `!!  The active policy (${source}) has mode 'audit_only': every tool call`,
     '!!  is PERMITTED and recorded. No call is denied in this mode. Signed',

@@ -147,7 +147,7 @@ async function startAction(opts: { port: string; host: string; controlPort: stri
     try {
       const bound = await control.start(controlPort);
       writeControlFile(dataDir, { host: bound.address, port: bound.port, pid: process.pid });
-      console.log(`Control channel (loopback ${bound.address}:${bound.port}) — a separate 'aga-proxy export' can reach this session's live ledger.`);
+      console.log(`Control channel (loopback ${bound.address}:${bound.port}): a separate 'aga-proxy export' can reach this session's live ledger.`);
     } catch (err) {
       control = null;
       console.error(`[aga-proxy] Control channel not started on port ${controlPort} (${(err as Error).message}). Governance is unaffected; out-of-process export is disabled until you retry with a free --control-port.`);
@@ -265,7 +265,7 @@ program
 program
   .command('verify <bundle>')
   .description('Verify a canonical SEP evidence bundle offline (Ed25519-SHA256-JCS). Pass --pin <hex> to also prove provenance against a known gateway key.')
-  .option('--pin <hex>', 'pinned gateway public key (64 hex) — proves WHO issued the bundle')
+  .option('--pin <hex>', 'expected signing key (64 hex), obtained independently')
   .action(async (bundlePath, opts) => {
     // ONE canonical, sound verifier for the whole package (src/sep §6): recomputes every
     // leaf, rebuilds the Merkle root as a 0..N-1 bijection, validates the signed checkpoint,
@@ -282,7 +282,7 @@ program
     const result = verifySepBundle(bundle, opts.pin);
     for (const s of result.steps) console.log(`${s.ok ? 'PASS' : 'FAIL'}  ${s.name}`);
     console.log(`\n${result.summary}`);
-    if (!opts.pin) console.log('(no --pin given: integrity only, NOT provenance — pass --pin <gateway_public_key> to prove who issued it)');
+    if (!opts.pin) console.log('(no --pin given: integrity only; use --pin <expected_public_key> with an independently obtained key)');
     // Honor the verdict trichotomy (ALGORITHM_AGILITY_SPEC / UNIFIED_SEP_SPEC §3): VERIFIED=0,
     // FAILED=1, UNSUPPORTED_PROFILE=3 (a registered profile this build does not implement — NOT a
     // failure of the bundle's content; must not be collapsed with FAILED).

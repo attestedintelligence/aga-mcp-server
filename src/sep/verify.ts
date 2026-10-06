@@ -104,7 +104,7 @@ export function verifySepBundle(bundle: any, expectedPublicKey?: string, opts?: 
   if (isRegisteredProfile(algorithm) && !supported.includes(algorithm)) {
     return {
       verdict: 'UNSUPPORTED_PROFILE',
-      summary: `UNSUPPORTED_PROFILE — this verifier does not implement profile '${algorithm}' (v${REGISTERED_PROFILES[algorithm]}); no soundness claim is made`,
+      summary: `UNSUPPORTED_PROFILE: this verifier does not implement profile '${algorithm}' (v${REGISTERED_PROFILES[algorithm]}); no soundness claim is made`,
       issuerVerified: false,
       pinned: false,
       steps: [{ name: 'profile_support', ok: false }],
@@ -214,12 +214,12 @@ export function verifySepBundle(bundle: any, expectedPublicKey?: string, opts?: 
     const failed = steps.filter((s) => !s.ok).map((s) => s.name);
     const profileTag = `${algorithm} (v${REGISTERED_PROFILES[algorithm] ?? '?'})`;
     const summary = verdict === 'FAILED'
-      ? `FAILED — bundle did not verify (failed: ${failed.join(', ') || 'unknown'})`
+      ? `FAILED: bundle did not verify (failed: ${failed.join(', ') || 'unknown'})`
       : pinned
-        ? `VERIFIED (${profileTag}; provenance verified — issued by the pinned gateway key)`
-        : `VERIFIED (${profileTag}; integrity only — NOT provenance; pass the gateway key to prove who issued it)`;
+        ? `VERIFIED (${profileTag}; provenance verified; expected signing key matched)`
+        : `VERIFIED (${profileTag}; integrity only; no independently expected signing key supplied)`;
     return { verdict, summary, issuerVerified, pinned, steps };
   } catch (e) {
-    return { verdict: 'FAILED', summary: `FAILED — verifier rejected a malformed bundle (${String(e)})`, issuerVerified: false, pinned, steps: [{ name: 'verifier_exception', ok: false }] };
+    return { verdict: 'FAILED', summary: `FAILED: verifier rejected a malformed bundle (${String(e)})`, issuerVerified: false, pinned, steps: [{ name: 'verifier_exception', ok: false }] };
   }
 }

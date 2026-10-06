@@ -80,7 +80,7 @@ export function resolveGatewaySigner(options: ResolveGatewayKeyOptions = {}): Re
   };
 
   if (options.forceEphemeral) {
-    warn(`[${prefix}] Using an EPHEMERAL gateway signing key by request (--ephemeral) — ${EPHEMERAL_NOTE}`);
+    warn(`[${prefix}] Using an EPHEMERAL gateway signing key by request (--ephemeral); ${EPHEMERAL_NOTE}`);
     return makeEphemeral('ephemeral-requested');
   }
 
@@ -101,11 +101,11 @@ export function resolveGatewaySigner(options: ResolveGatewayKeyOptions = {}): Re
   } catch (e) {
     const which = envKey ? 'AGA_GATEWAY_KEY' : 'AGA_GATEWAY_KEY_FILE';
     warn(`[${prefix}] gateway key from ${which} is invalid (${String(e)}); falling back to an ephemeral key.`);
-    warn(`[${prefix}] Using an EPHEMERAL gateway signing key — ${EPHEMERAL_NOTE}`);
+    warn(`[${prefix}] Using an EPHEMERAL gateway signing key; ${EPHEMERAL_NOTE}`);
     return makeEphemeral('ephemeral-after-error');
   }
 
-  warn(`[${prefix}] Using an EPHEMERAL gateway signing key — ${EPHEMERAL_NOTE}`);
+  warn(`[${prefix}] Using an EPHEMERAL gateway signing key; ${EPHEMERAL_NOTE}`);
   return makeEphemeral('ephemeral');
 }
 

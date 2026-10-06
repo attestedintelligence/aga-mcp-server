@@ -337,7 +337,7 @@ export async function createAGAServer(): Promise<McpServer> {
     { bundle: z.any(), pinned_public_key: z.string().optional() },
     async ({ bundle, pinned_public_key }) => {
       try { return j(verifySepBundle(bundle, pinned_public_key)); }
-      catch (e) { return j({ verdict: 'FAILED', summary: 'FAILED — could not parse or verify the bundle', error: String(e) }); }
+      catch (e) { return j({ verdict: 'FAILED', summary: 'FAILED: could not parse or verify the bundle', error: String(e) }); }
     }
   );
 
