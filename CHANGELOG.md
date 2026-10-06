@@ -197,7 +197,7 @@ it pinned a key that rotates on the next restart.
   `AGA_GATEWAY_KEY` produce different gateway public keys (measured). `dist/server.js` carries the
   `EPHEMERAL gateway signing key` stderr warning; `dist/proxy/` has none.
 - `THREAT_BOUNDARY.md` §3.4 previously described key persistence as mitigated in 3.0 while §3.1–3.3 are
-  each prefixed "Proxy —" and §3.4 was not, so it scanned as covering the package. A residual-risk
+  marked as proxy-specific and §3.4 was not, so it scanned as covering the package. A residual-risk
   register must not record an unmitigated risk as mitigated. It now states the asymmetry.
 - Both files gained an entry-point comparison table, and record that a verifier handed a key taken from
   the bundle under test will still print `provenance verified`; that check is **circular**, and only a
