@@ -1,9 +1,7 @@
 /**
- * OpenClaw Config Adapter
- * Detects and patches openclaw.json to route MCP servers through the AGA governance proxy.
- *
- * All OpenClaw assumptions are documented inline. When a real OpenClaw instance
- * becomes available, validate each assumption.
+ * Legacy OpenClaw configuration reader.
+ * Automatic mutation is retired because the assumed transport and recovery
+ * behavior are not qualified. Existing configuration and backups are preserved.
  *
  * Copyright (c) 2026 Attested Intelligence Holdings LLC
  * SPDX-License-Identifier: MIT
@@ -13,18 +11,17 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as os from 'node:os';
 
-// ── Assumptions ──────────────────────────────────────────────
-// ASSUMPTION 1: OpenClaw stores its config at ~/.openclaw/openclaw.json
-//   Source: OpenClaw documentation pattern (similar to Claude Desktop, Cursor)
-//   Fallback: Accept explicit path via detect(configPath?)
-//
-// ASSUMPTION 2: Config has a "mcpServers" field with server entries
-//   Source: MCP client config convention (matches Claude Desktop format)
-//   Format: { "mcpServers": { "name": { "command": "...", "args": [...] } } }
-//
-// ASSUMPTION 3: Each server entry has "command" + "args" (stdio) or "url" (HTTP)
-//   Source: MCP transport specification
-//   Fallback: Skip entries that don't match either pattern
+// Legacy schema reader only. No supported OpenClaw integration is established.
+// The historical path/schema guesses are retained for explicit read-only inspection.
+// The reference listener is raw TCP, not an MCP HTTP endpoint.
+
+export class UnsupportedAdapterOperationError extends Error {
+  readonly code = 'AGA_UNSUPPORTED_ADAPTER';
+  constructor(operation: 'patch' | 'restore') {
+    super(`Automatic OpenClaw configuration ${operation} is disabled. This legacy adapter has no qualified transport or recovery contract. Preserve current configuration and backup files; see DEPLOYMENT.md section 7.`);
+    this.name = 'UnsupportedAdapterOperationError';
+  }
+}
 
 export interface McpServerConfig {
   name: string;
@@ -44,7 +41,6 @@ export interface AgentConfigAdapter {
 
 export class OpenClawAdapter implements AgentConfigAdapter {
   private configPath: string | null = null;
-  private backupPath: string | null = null;
 
   private getDefaultPath(): string {
     return path.join(os.homedir(), '.openclaw', 'openclaw.json');
@@ -53,7 +49,6 @@ export class OpenClawAdapter implements AgentConfigAdapter {
   async detect(configPath?: string): Promise<{ found: boolean; path: string; version?: string }> {
     const p = configPath ?? this.getDefaultPath();
     this.configPath = p;
-    this.backupPath = p + '.aga-backup';
 
     if (!fs.existsSync(p)) {
       return { found: false, path: p };
@@ -82,43 +77,13 @@ export class OpenClawAdapter implements AgentConfigAdapter {
     }));
   }
 
-  async patchMcpServers(proxyPort: number, originals: McpServerConfig[]): Promise<void> {
-    if (!this.configPath || !this.backupPath) throw new Error('Call detect() first');
-
-    // Backup original
-    const originalContent = fs.readFileSync(this.configPath, 'utf-8');
-    fs.writeFileSync(this.backupPath, originalContent);
-
-    const config = JSON.parse(originalContent);
-
-    // Rewrite each MCP server entry to point at the proxy
-    // The proxy will forward to the original command/URL
-    for (const server of originals) {
-      if (config.mcpServers?.[server.name]) {
-        const original = config.mcpServers[server.name];
-
-        // Store original config for the proxy to use
-        config.mcpServers[server.name] = {
-          // Point at proxy instead
-          url: `http://127.0.0.1:${proxyPort}`,
-          // Preserve metadata
-          _aga_original: original,
-          _aga_governed: true,
-        };
-      }
-    }
-
-    fs.writeFileSync(this.configPath, JSON.stringify(config, null, 2));
+  /** @deprecated No supported automatic integration. Refuses without filesystem access. */
+  async patchMcpServers(_proxyPort: number, _originals: McpServerConfig[]): Promise<void> {
+    throw new UnsupportedAdapterOperationError('patch');
   }
 
+  /** @deprecated Recovery needs a reviewed comparison; never blindly replace or delete files. */
   async restore(): Promise<void> {
-    if (!this.configPath || !this.backupPath) throw new Error('Call detect() first');
-
-    if (fs.existsSync(this.backupPath)) {
-      fs.copyFileSync(this.backupPath, this.configPath);
-      fs.unlinkSync(this.backupPath);
-    } else {
-      throw new Error('No backup found - cannot restore');
-    }
+    throw new UnsupportedAdapterOperationError('restore');
   }
 }

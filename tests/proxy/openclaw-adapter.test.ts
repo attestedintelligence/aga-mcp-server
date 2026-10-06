@@ -36,7 +36,9 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  fs.rmSync(tmpDir, { recursive: true, force: true });
+  const resolved = path.resolve(tmpDir);
+  if (path.dirname(resolved) !== path.resolve(os.tmpdir()) || !path.basename(resolved).startsWith('aga-openclaw-test-')) throw new Error('Refusing unsafe test cleanup');
+  fs.rmSync(resolved, { recursive: true, force: true });
 });
 
 describe('OpenClaw Adapter', () => {
@@ -64,45 +66,52 @@ describe('OpenClaw Adapter', () => {
     expect(servers.map(s => s.name)).toContain('memory');
   });
 
-  it('patches config to route through proxy', async () => {
+  it('refuses automatic patching without changing configuration or creating a backup', async () => {
+    const before = fs.readFileSync(configPath);
     const adapter = new OpenClawAdapter();
     await adapter.detect(configPath);
-    const servers = await adapter.readMcpServers();
+    await expect(adapter.patchMcpServers(18800, await adapter.readMcpServers())).rejects.toMatchObject({ code: 'AGA_UNSUPPORTED_ADAPTER' });
+    expect(fs.readFileSync(configPath)).toEqual(before);
+    expect(fs.readdirSync(tmpDir)).toEqual(['openclaw.json']);
+  });
 
-    await adapter.patchMcpServers(18800, servers);
-
-    // Read patched config
-    const patched = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
-    for (const name of ['filesystem', 'web', 'memory']) {
-      const entry = patched.mcpServers[name];
-      expect(entry.url).toBe('http://127.0.0.1:18800');
-      expect(entry._aga_governed).toBe(true);
-      expect(entry._aga_original).toBeDefined();
+  it('preserves both current configuration and an existing backup across repeated patch attempts', async () => {
+    const before = fs.readFileSync(configPath);
+    const backup = 'synthetic retained original, different from the current configuration';
+    fs.writeFileSync(configPath + '.aga-backup', backup);
+    const adapter = new OpenClawAdapter();
+    await adapter.detect(configPath);
+    for (let attempt = 0; attempt < 2; attempt++) {
+      await expect(adapter.patchMcpServers(18800, await adapter.readMcpServers())).rejects.toMatchObject({ code: 'AGA_UNSUPPORTED_ADAPTER' });
     }
-
-    // Backup should exist
-    expect(fs.existsSync(configPath + '.aga-backup')).toBe(true);
+    expect(fs.readFileSync(configPath)).toEqual(before);
+    expect(fs.readFileSync(configPath + '.aga-backup', 'utf8')).toBe(backup);
+    expect(fs.readdirSync(tmpDir).sort()).toEqual(['openclaw.json', 'openclaw.json.aga-backup']);
   });
 
-  it('restores original config', async () => {
+  it('refuses blind restoration and preserves the backup for reviewed recovery', async () => {
+    const before = fs.readFileSync(configPath);
+    const backup = '{"retained":"synthetic backup"}';
+    fs.writeFileSync(configPath + '.aga-backup', backup);
     const adapter = new OpenClawAdapter();
     await adapter.detect(configPath);
-    const servers = await adapter.readMcpServers();
-
-    await adapter.patchMcpServers(18800, servers);
-    await adapter.restore();
-
-    // Config should match original
-    const restored = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
-    expect(restored).toEqual(FIXTURE_CONFIG);
-
-    // Backup should be gone
-    expect(fs.existsSync(configPath + '.aga-backup')).toBe(false);
+    await expect(adapter.restore()).rejects.toMatchObject({ code: 'AGA_UNSUPPORTED_ADAPTER' });
+    expect(fs.readFileSync(configPath)).toEqual(before);
+    expect(fs.readFileSync(configPath + '.aga-backup', 'utf8')).toBe(backup);
   });
 
-  it('restore fails without backup', async () => {
+  it('does not fabricate a backup or modify configuration when recovery material is missing', async () => {
+    const before = fs.readFileSync(configPath);
     const adapter = new OpenClawAdapter();
     await adapter.detect(configPath);
-    await expect(adapter.restore()).rejects.toThrow('No backup found');
+    await expect(adapter.restore()).rejects.toMatchObject({ code: 'AGA_UNSUPPORTED_ADAPTER' });
+    expect(fs.readFileSync(configPath)).toEqual(before);
+    expect(fs.readdirSync(tmpDir)).toEqual(['openclaw.json']);
+  });
+
+  it('refuses mutation even without detection or access to a configuration path', async () => {
+    const adapter = new OpenClawAdapter();
+    await expect(adapter.patchMcpServers(18800, [])).rejects.toMatchObject({ code: 'AGA_UNSUPPORTED_ADAPTER' });
+    await expect(adapter.restore()).rejects.toMatchObject({ code: 'AGA_UNSUPPORTED_ADAPTER' });
   });
 });

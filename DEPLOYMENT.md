@@ -62,3 +62,11 @@ These are acceptance requirements, not completed results for your system. Curren
 ## 6. What the record establishes
 
 A passing verification checks the receipts present under the verified signing key, their order and the signed checkpoint. It does not establish complete capture, successful execution, effective access control, legal acceptance or compliance. See [THREAT_BOUNDARY.md](THREAT_BOUNDARY.md) and the [trust model](https://attestedintelligence.com/trust).
+
+## 7. Retired automatic configuration adapter
+
+The 3.6.7 candidate disables the legacy OpenClaw adapter's automatic `patchMcpServers` and `restore` operations. Both reject with `AGA_UNSUPPORTED_ADAPTER` before reading, writing or deleting configuration. Read-only detection and inspection remain. This is an intentional removal of an unqualified mutation path, not a new supported integration. The current CLI does not call this adapter.
+
+The old implementation guessed a configuration shape, inserted an HTTP URL for a raw TCP listener, overwrote its fixed backup on repeated patches and deleted the backup after copying it during restore. Its fixture tests did not establish actual client compatibility or safe recovery after later user edits.
+
+If an earlier adapter was used, preserve the current configuration and `.aga-backup` as separate recovery material. Compare their contents before choosing a restoration: a repeated historical patch may already have replaced the original backup. Do not assume that either file is the desired current configuration. Any manual restoration must use a reviewed difference and the actual client's supported configuration and transport. No automatic migration or deletion is supplied by this release.
